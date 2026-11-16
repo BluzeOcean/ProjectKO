@@ -26,6 +26,11 @@ copy of Wispr Local or another user's customized build. On macOS, the built-in
 Dictation (System Settings > Keyboard > Dictation) types into other apps without
 a separate install.
 
+On Windows, [Hex](https://anoma.ly) dictates into other applications with its
+own keyboard listener. Its shortcut does not reach it while a Project KO window
+is focused, so the terminal hands Ctrl+T to Hex itself; see
+[Hex dictation in Project KO terminals](hex-dictation-shortcut.md).
+
 Use a separate folder for the dictation app. Start with the language you actually
 speak and a model that fits your memory budget. Verify recognition in a text
 editor before testing it in an agent terminal. A successful microphone recording
