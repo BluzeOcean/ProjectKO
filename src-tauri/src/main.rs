@@ -304,8 +304,8 @@ fn move_to_trash(path: &str) -> Result<(), trash::Error> {
 }
 
 // macOS menu-bar extras are template images that follow the menu bar's look.
-// The icon's light snout becomes the glyph and its dark nostrils become holes;
-// the 128 px source stays sharp on Retina.
+// The mark's bright strokes become the glyph and the gaps around them become
+// holes; the 128 px source stays sharp on Retina.
 #[cfg(target_os = "macos")]
 fn menu_bar_icon() -> tauri::Result<tauri::image::Image<'static>> {
     let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/128x128.png"))?;
@@ -393,7 +393,12 @@ fn main() {
             let resource_dir = app.path().resource_dir()?;
             let runtime = resource_dir.join("runtime");
             let runtime_node = if cfg!(windows) { runtime.join("node.exe") } else { runtime.join("node") };
-            let (node, script, ui) = if runtime_node.is_file() {
+            // A debug build runs the service from the repository, so a change to
+            // the service or to the interface is picked up without repackaging.
+            // A release build uses the runtime it was packaged with.
+            let (node, script, ui) = if cfg!(debug_assertions) {
+                (PathBuf::from("node"), repo.join("desktop/service/main.mjs"), repo.join("dist"))
+            } else if runtime_node.is_file() {
                 (runtime_node, runtime.join("service/main.mjs"), runtime.join("ui"))
             } else {
                 (PathBuf::from("node"), repo.join("desktop/service/main.mjs"), repo.join("dist"))
@@ -404,6 +409,9 @@ fn main() {
             let log = fs::OpenOptions::new().create(true).append(true).open(&service_log)?;
             let mut command = Command::new(node);
             command.arg(script).arg("--repo").arg(&repo).arg("--ui").arg(ui).current_dir(&repo)
+                // A debug build serves the interface from source, so the app
+                // reloads on every change while it is being worked on.
+                .env("MRMAK_DEV", if cfg!(debug_assertions) { "1" } else { "0" })
                 .env("MRMAK_PARENT_PID", std::process::id().to_string()).stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::from(log));
             #[cfg(target_os = "macos")]
             login_environment(&mut command);

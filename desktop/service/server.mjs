@@ -37,7 +37,7 @@ import { isThemePreference } from './appearance.mjs';
 
 const listen = server => new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`)); });
 
-export async function createService({ repo, uiDir, stateDir, token = secret(), native = () => {}, restoreSessions = false, mcpOptions, mobileOptions }) {
+export async function createService({ repo, uiDir, stateDir, token = secret(), native = () => {}, restoreSessions = false, mcpOptions, mobileOptions, dev = false }) {
   repo = await realpath(repo);
   stateDir ||= path.join(repo, '.mrmak');
   const dictation = mobileOptions?.dictation || new MobileDictation(repo);
@@ -200,6 +200,27 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
     if (request.headers.origin && request.headers.origin !== origin) throw Object.assign(new Error('Unexpected origin'), { status: 403 });
     if (!equalSecret(request.headers.authorization, `Bearer ${token}`)) throw Object.assign(new Error('Open Project KO from its desktop launcher'), { status: 401 });
   }
+
+  // The Vite dev server, created once the HTTP server exists so its hot
+  // reload socket rides on the same origin and port as the API.
+  let vite = null;
+  const serveFromVite = async (request, response, url) => {
+    request.originalUrl = request.url;
+    let passed = false;
+    await new Promise(resolve => {
+      const done = () => resolve();
+      response.once('finish', done);
+      response.once('close', done);
+      vite.middlewares(request, response, () => { passed = true; done(); });
+    });
+    if (response.writableEnded) return;
+    // Vite leaves the document itself to the host: transform the entry
+    // document so the client script and the hot reload client are injected.
+    const html = await vite.transformIndexHtml(url.pathname, await readFile(path.join(repo, 'index.html'), 'utf8'));
+    response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    response.end(html);
+  };
+
   const server = http.createServer(async (request, response) => {
     try {
       const url = new URL(request.url, origin);
@@ -444,6 +465,10 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         throw Object.assign(new Error('Endpoint not found'), { status: 404 });
       }
       if (!['GET', 'HEAD'].includes(request.method)) throw Object.assign(new Error('Not allowed'), { status: 405 });
+      // Development: Vite serves the UI from source, so a change reloads the
+      // running app. The API stays on this origin, so the frontend keeps one
+      // server and one credential.
+      if (dev) return await serveFromVite(request, response, url);
       const relative = url.pathname === '/' ? 'index.html' : decodeURIComponent(url.pathname.slice(1));
       const { file, info } = await realFile(uiDir, relative);
       if (!info.isFile()) throw new Error('File not found');
@@ -455,10 +480,24 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   });
   const origin = await listen(server);
   files.uiOrigin = origin;
+  if (dev) {
+    // Vite is a development dependency of the repository, not of the bundled
+    // runtime, so it is imported only when this service runs in dev mode.
+    const { createServer: createViteServer } = await import('vite');
+    vite = await createViteServer({
+      root: repo,
+      appType: 'custom',
+      logLevel: 'warn',
+      server: { middlewareMode: true, ws: { server, path: '/__vite_hmr' } },
+    });
+  }
   mobile = await new MobileGateway({ ...mobileOptions, transcripts, readAloud, dictation, chooseDictation, repo, uiDir, stateDir, sessions, attachments, closeChat, settings: () => settings, changed: state => broadcast('mobile-state', { mobile: state }) }).init();
   const wss = new WebSocketServer({ noServer: true, maxPayload: 128 * 1024 });
   server.on('upgrade', (request, socket, head) => {
     const url = new URL(request.url, origin);
+    // The dev server's hot reload socket shares this server; it has its own
+    // listener and must not be dropped with the event stream.
+    if (dev && url.pathname === '/__vite_hmr') return;
     if (request.headers.host !== new URL(origin).host || request.headers.origin !== origin || url.pathname !== '/events') { socket.destroy(); return; }
     wss.handleUpgrade(request, socket, head, ws => wss.emit('connection', ws));
   });

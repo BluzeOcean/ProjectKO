@@ -168,6 +168,28 @@ service install is needed. If you disable npm lifecycle scripts, run
 `npm --prefix desktop/service ci` explicitly before tests or the service; on
 macOS, also run `node scripts/fix-pty-permissions.mjs` so terminals can start.
 
+### Work on the app
+
+A debug build serves the interface from source, so the running app reloads on
+every change:
+
+```powershell
+npm run desktop:dev -- -- -- --repo "V:\06_App\ProjectKO"
+```
+
+The `--repo` argument is the workspace the app opens. Without it the app asks
+for a folder that holds a `workspace/workspace.json`. A debug build runs the
+service from `desktop/service/` rather than from the packaged runtime, so a
+change to the service is picked up when the app restarts.
+
+To work on the interface alone, without the desktop windows:
+
+```powershell
+npm run dev
+```
+
+That serves the interface on <http://localhost:3009> with hot reload.
+
 Install [Node.js](https://nodejs.org/en/download), Rust's MSVC toolchain and
 [Tauri's Windows prerequisites](https://v2.tauri.app/start/prerequisites/#windows):
 Microsoft C++ Build Tools and WebView2. Node.js 22.20+ is required by this template.

@@ -11,7 +11,10 @@ const repo = path.resolve(option('--repo') || process.env.MRMAK_REPO || path.joi
 const uiDir = path.resolve(option('--ui') || path.join(directory, '../../dist'));
 const stateDir = path.resolve(option('--state') || path.join(repo, '.mrmak'));
 const writeNative = value => process.stdout.write(JSON.stringify(value) + '\n');
-const service = await createService({ repo, uiDir, stateDir, native: writeNative, restoreSessions: true });
+// Development mode serves the UI from source through Vite, so the running
+// app reloads on every change. A release build keeps the packaged interface.
+const dev = process.env.MRMAK_DEV === '1' || args.includes('--dev');
+const service = await createService({ repo, uiDir, stateDir, native: writeNative, restoreSessions: true, dev });
 // Diagnostics are readable project state. Window credentials travel only over
 // the private startup pipe to the desktop shell, never through this file.
 await saveJson(path.join(stateDir, 'runtime.json'), { pid: process.pid, origin: service.origin });
