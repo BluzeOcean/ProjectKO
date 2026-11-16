@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Mr. Mak Workspace",
+  "productName": "Project KO",
   "version": "0.6.4",
-  "identifier": "com.mrmak.workspace",
+  "identifier": "com.projectko.workspace",
   "build": {
     "beforeBuildCommand": "npm run desktop:prepare",
     "frontendDist": "../desktop/splash"

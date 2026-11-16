@@ -1,8 +1,8 @@
 [package]
-name = "mrmak-workspace"
+name = "projectko"
 version = "0.6.4"
-description = "Mr. Mak workspace and independent agent terminals"
-authors = ["Mr. Mak Workspace contributors"]
+description = "Project KO workspace and independent agent terminals"
+authors = ["Project KO contributors"]
 edition = "2021"
 rust-version = "1.77.2"
 

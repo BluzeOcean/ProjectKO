@@ -2205,25 +2205,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mrmak-workspace"
-version = "0.6.4"
-dependencies = [
- "drag",
- "libc",
- "rfd",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-single-instance",
- "tauri-plugin-window-state",
- "trash",
- "windows 0.61.3",
- "windows-sys 0.60.2",
-]
-
-[[package]]
 name = "muda"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2857,6 +2838,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "projectko"
+version = "0.6.4"
+dependencies = [
+ "drag",
+ "libc",
+ "rfd",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-window-state",
+ "trash",
+ "windows 0.61.3",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
