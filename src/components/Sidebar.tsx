@@ -3,7 +3,7 @@ import type { WorkspaceEntity } from '../types'
 import { entityHash } from '../lib/route'
 import { categoryIcon } from '../lib/categories'
 import { contentUrl } from '../desktop/client'
-import MakLogo from './MakLogo'
+import PkoLogo from './PkoLogo'
 import MakText from './MakText'
 import { EntityStatusButton } from './EntityControls'
 
@@ -61,7 +61,7 @@ export default function Sidebar({
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <MakLogo size={54} animated={activeId !== 'my-dream-game'} />
+        <PkoLogo size={54} animated={activeId !== 'my-dream-game'} />
         <div className="brand-text">
           <MakText height={26} animated={activeId !== 'my-dream-game'} />
           <span className="brand-sub">workspace</span>

@@ -1,7 +1,7 @@
 import type { WorkspaceEntity } from '../types'
 import { categoryIcon } from '../lib/categories'
 import MakCard from './MakCard'
-import MakLogo from './MakLogo'
+import PkoLogo from './PkoLogo'
 
 interface HomeGridProps {
   entities: WorkspaceEntity[]
@@ -35,7 +35,7 @@ export default function HomeGrid({
   return (
     <div className="home">
       <header className="home-hero">
-        <MakLogo size={84} />
+        <PkoLogo size={84} />
         <div>
           <h1 className="home-title">{greeting()}</h1>
           <p className="home-sub">

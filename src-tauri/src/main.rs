@@ -577,8 +577,8 @@ mod tests {
         let icon = super::menu_bar_icon().unwrap();
         assert_eq!((icon.width(), icon.height()), (128, 128));
         let alpha: Vec<u8> = icon.rgba().chunks_exact(4).map(|pixel| pixel[3]).collect();
-        // Opaque between the nostrils, cut out inside the left nostril.
-        assert_eq!((alpha[64 * 128 + 64], alpha[64 * 128 + 44]), (255, 0));
+        // The fist is the glyph; the space around it is cut out.
+        assert_eq!((alpha[64 * 128 + 64], alpha[8 * 128 + 8], alpha[120 * 128 + 100]), (255, 0, 0));
     }
 
     #[test]

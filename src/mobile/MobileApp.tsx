@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { AgentLogo, Icon, Nose } from '../desktop/Icons'
+import { AgentLogo, Icon, PkoMark } from '../desktop/Icons'
 import SystemEvent, { type SystemEventData } from './SystemEvent'
 import type { ChatSession, RecentProject } from '../desktop/types'
 import { chatActivityLabel } from '../desktop/chatActivity'
@@ -57,7 +57,7 @@ function Connect() {
     catch (err) { setError(err instanceof Error ? err.message : String(err)) }
     finally { setBusy(false) }
   }
-  return <main className="mobile-connect"><Nose size={64} /><span className="mobile-eyebrow">YOUR AGENTS, CLOSE AT HAND</span><h1>Project KO<br /><span>on your phone.</span></h1>
+  return <main className="mobile-connect"><PkoMark size={64} /><span className="mobile-eyebrow">YOUR AGENTS, CLOSE AT HAND</span><h1>Project KO<br /><span>on your phone.</span></h1>
     {pending ? <div className="mobile-connect-card"><Icon name="phone" size={28} /><h2>Confirm on your computer</h2><p>Open the phone button in Project KO Chats. Check this code, then choose Connect phone.</p><code className="mobile-pair-code">{pending.code}</code><span className="mobile-waiting">Waiting for confirmation…</span><button onClick={() => { sessionStorage.removeItem('mrmak.mobile.pending'); setPending(null); setError('Scan a new QR code in Chats to try again.') }}>Cancel</button></div>
     : pairToken ? <form className="mobile-connect-card" onSubmit={connect}><h2>Connect this phone</h2><p>Your agents and files stay on your computer.</p><label>Device name<input autoComplete="off" maxLength={60} value={name} onChange={event => setName(event.target.value)} /></label><button className="mobile-primary" disabled={busy}>{busy ? 'Connecting…' : 'Request connection'}<Icon name="arrow" size={17} /></button></form>
     : <form className="mobile-connect-card" onSubmit={connect}><h2>Start in Project KO Chats</h2><p>On your computer, press the phone icon. Scan the QR code or enter its connection code below. Keep Tailscale connected on both devices.</p><label>Connection code<input inputMode="numeric" autoComplete="off" maxLength={8} value={code} onChange={event => setCode(event.target.value.replace(/[^0-9]/g, ''))} placeholder="8 digits" /></label><button className="mobile-primary" disabled={busy || code.length !== 8}>Request connection<Icon name="arrow" size={17} /></button><button type="button" onClick={() => void startMobile()}>Check existing connection</button></form>}
@@ -214,13 +214,13 @@ export default function MobileApp() {
     catch (err) { setCloseError(err instanceof Error ? err.message : String(err)) }
     finally { setClosing(false) }
   }
-  if (!state.ready) return <div className="mobile-app mobile-loading"><Nose size={52} /><p>Connecting to Project KO…</p></div>
+  if (!state.ready) return <div className="mobile-app mobile-loading"><PkoMark size={52} /><p>Connecting to Project KO…</p></div>
   if (!state.authenticated) return <div className="mobile-app"><Connect /></div>
   const items = [...state.sessions].filter(item => (history || item.open) && `${item.name} ${item.agent}`.toLowerCase().includes(query.toLowerCase())).sort((a, b) => Number(b.pinned) - Number(a.pinned) || (history ? b.updatedAt.localeCompare(a.updatedAt) : a.tabOrder - b.tabOrder))
   const title = view === 'chat' && session ? session.name : view === 'results' ? 'Workspace' : history ? 'History' : 'Chats'
   return <div className="mobile-app"><header className={`mobile-header ${view === 'chat' ? 'mobile-header-chat' : ''}`}>
     {view === 'chat' && <button className="mobile-icon" aria-label="Back to chats" onClick={() => setMobileView('list')}><Icon name="back" /></button>}
-    <button className={`mobile-nose-refresh ${refreshing ? 'refreshing' : ''}`} aria-label="Reconnect" title="Reconnect without leaving this page" onClick={refreshPage} disabled={refreshing}><span className={`mobile-connection-logo ${state.connected ? 'online' : ''}`} role="status" aria-label={state.connected ? 'Connected to your computer' : 'Reconnecting · your agents keep working'} title={state.connected ? 'Connected to your computer' : 'Reconnecting · your agents keep working'}><Nose size={26} /></span></button>
+    <button className={`mobile-nose-refresh ${refreshing ? 'refreshing' : ''}`} aria-label="Reconnect" title="Reconnect without leaving this page" onClick={refreshPage} disabled={refreshing}><span className={`mobile-connection-logo ${state.connected ? 'online' : ''}`} role="status" aria-label={state.connected ? 'Connected to your computer' : 'Reconnecting · your agents keep working'} title={state.connected ? 'Connected to your computer' : 'Reconnecting · your agents keep working'}><PkoMark size={26} /></span></button>
     <div className="mobile-header-title" ref={setResultsHeader} id={view === 'results' ? 'mobile-results-header' : undefined}>{view !== 'results' && <h1>{title}</h1>}{view === 'list' && <span className="mobile-header-count" aria-label={`${items.length} ${items.length === 1 ? 'chat' : 'chats'}`}>· {items.length}</span>}</div>
     {view === 'chat' && session?.open && <button className="mobile-icon" aria-label="Close chat" title="Close chat" disabled={!state.connected || closing} onClick={() => void closeChat()}><Icon name="trash" size={19} /></button>}
     <nav className="mobile-main-nav" aria-label="Mobile sections">

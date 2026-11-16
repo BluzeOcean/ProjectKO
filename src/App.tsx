@@ -2,7 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import type { WorkspaceEntity } from './types'
 import { useWorkspace, archiveCutoff } from './lib/workspace'
 import { parseHash, entityHash, resolveStep, type Route } from './lib/route'
-import MakLogo from './components/MakLogo'
+import PkoLogo from './components/PkoLogo'
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
 import HomeGrid from './components/HomeGrid'
@@ -88,7 +88,7 @@ export default function App() {
   if (!workspace) {
     return (
       <div className="boot">
-        <MakLogo size={76} />
+        <PkoLogo size={76} />
       </div>
     )
   }
@@ -150,7 +150,7 @@ export default function App() {
         title="Show menu — press Project KO's nose ( [ )"
         aria-label="Show menu"
       >
-        <MakLogo size={38} animated={route.id !== 'my-dream-game'} />
+        <PkoLogo size={38} animated={route.id !== 'my-dream-game'} />
       </button>
 
       <main className="main">
@@ -169,13 +169,13 @@ export default function App() {
           {entity && reportUrl && step?.viewer === 'card' ? (
             <Suspense fallback={<div className="report-loading">Opening card…</div>}><EditableCard key={`${entity.id}:${stepIndex}`} url={reportUrl} entityId={entity.id} step={stepIndex} /></Suspense>
           ) : entity && reportUrl && step?.viewer === 'compare3d' ? (
-            <Suspense fallback={<div className="boot"><MakLogo size={56} animated={false} /></div>}><Compare3D
+            <Suspense fallback={<div className="boot"><PkoLogo size={56} animated={false} /></div>}><Compare3D
               key={reportUrl}
               manifestUrl={reportUrl}
               baseUrl={reportUrl.slice(0, reportUrl.lastIndexOf('/'))}
             /></Suspense>
           ) : entity && reportUrl ? (
-            <Suspense fallback={<div className="boot"><MakLogo size={56} animated={false} /></div>}><ReportViewer key={reportUrl} url={reportUrl} title={step?.name ?? entity.title} relativePath={`workspace/${entity.folder}/${step?.path}`} /></Suspense>
+            <Suspense fallback={<div className="boot"><PkoLogo size={56} animated={false} /></div>}><ReportViewer key={reportUrl} url={reportUrl} title={step?.name ?? entity.title} relativePath={`workspace/${entity.folder}/${step?.path}`} /></Suspense>
           ) : (
             <HomeGrid
               entities={entities}

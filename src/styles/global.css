@@ -709,7 +709,7 @@ button:focus-visible {
 }
 
 /* ─── Project KO logo container ─── */
-.mak-logo { flex-shrink: 0; }
+.pko-logo { flex-shrink: 0; }
 
 /* ─── Scrollbars ─── */
 ::-webkit-scrollbar { width: 8px; height: 8px; }

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="fist" x1="20" y1="26" x2="112" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffb8d0"/>
+      <stop offset=".38" stop-color="#f281a8"/>
+      <stop offset=".72" stop-color="#d478d4"/>
+      <stop offset="1" stop-color="#9d80ee"/>
+    </linearGradient>
+    <linearGradient id="wrist" x1="40" y1="94" x2="96" y2="128" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c9628f"/>
+      <stop offset=".6" stop-color="#a85fb0"/>
+      <stop offset="1" stop-color="#7a5cc4"/>
+    </linearGradient>
+    <linearGradient id="thumb" x1="16" y1="62" x2="86" y2="102" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffb0cb"/>
+      <stop offset=".55" stop-color="#ea7ba2"/>
+      <stop offset="1" stop-color="#b370cd"/>
+    </linearGradient>
+  </defs>
+  <!-- the forearm, behind the fist -->
+  <path d="M48 92h32c8 0 14 6 14 14v10c0 8-6 14-14 14H48c-8 0-14-6-14-14v-10c0-8 6-14 14-14Z" fill="url(#wrist)"/>
+  <!-- the fist: knuckles forward -->
+  <g fill="url(#fist)">
+    <rect x="20" y="30" width="96" height="70" rx="28"/>
+    <circle cx="40" cy="33" r="11.5"/>
+    <circle cx="66" cy="30" r="12"/>
+    <circle cx="92" cy="33" r="11.5"/>
+  </g>
+  <!-- the fingers, curled -->
+  <g stroke="#4a1e39" stroke-opacity=".22" stroke-width="5" stroke-linecap="round">
+    <path d="M56 48v22"/>
+    <path d="M80 46v24"/>
+    <path d="M101 50v20"/>
+  </g>
+  <!-- the thumb, across the front -->
+  <g transform="rotate(-8 50 83)">
+    <rect x="14" y="64" width="72" height="38" rx="19" fill="url(#thumb)"/>
+    <rect x="14" y="64" width="72" height="38" rx="19" fill="none" stroke="#ffd7e6" stroke-opacity=".28" stroke-width="2.5"/>
+  </g>
+  <!-- the light on the knuckles -->
+  <ellipse cx="41" cy="27" rx="7" ry="4" fill="#fff" opacity=".32" transform="rotate(-22 41 27)"/>
+</svg>
