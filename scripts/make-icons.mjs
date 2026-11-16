@@ -15,20 +15,42 @@ const assets = path.join(root, 'public/assets');
 const icons = path.join(root, 'src-tauri/icons');
 
 // The mark keeps its own proportions inside a square canvas: it is scaled to
-// the full width, with a margin, and centred, so a wide wordmark is neither
-// squashed nor cut against the edge of the icon.
-const render = async (browser, svg, size) => {
+// fill the icon with a small margin, so nothing is squashed or clipped.
+const render = async (browser, file, size) => {
   const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
-  const width = Number(svg.match(/width="(\d+)"/)?.[1] || size);
-  const height = Number(svg.match(/height="(\d+)"/)?.[1] || size);
-  const scale = (size * 0.86) / width;
-  await page.setContent(
-    `<style>html,body{margin:0;padding:0;background:transparent}svg{position:absolute;left:${(size - width * scale) / 2}px;top:${(size - height * scale) / 2}px}</style>` +
-    svg.replace(/width="\d+"/, `width="${width * scale}"`).replace(/height="\d+"/, `height="${height * scale}"`),
-  );
-  const buffer = await page.screenshot({ omitBackground: true, clip: { x: 0, y: 0, width: size, height: size } });
+  const dataUrl = 'data:image/png;base64,' + (await readFile(file)).toString('base64');
+  await page.setContent(`<canvas id="c" width="${size}" height="${size}"></canvas>`);
+  const out = await page.evaluate(async ({ dataUrl, size }) => {
+    const image = new Image();
+    image.src = dataUrl;
+    await image.decode();
+    const probe = document.createElement('canvas');
+    probe.width = image.naturalWidth; probe.height = image.naturalHeight;
+    const probeContext = probe.getContext('2d');
+    probeContext.drawImage(image, 0, 0);
+    const pixels = probeContext.getImageData(0, 0, probe.width, probe.height).data;
+    let left = probe.width, top = probe.height, right = 0, bottom = 0;
+    for (let y = 0; y < probe.height; y += 1) {
+      for (let x = 0; x < probe.width; x += 1) {
+        if (pixels[(y * probe.width + x) * 4 + 3] > 8) {
+          if (x < left) left = x;
+          if (x > right) right = x;
+          if (y < top) top = y;
+          if (y > bottom) bottom = y;
+        }
+      }
+    }
+    const width = right - left + 1, height = bottom - top + 1;
+    const canvas = document.getElementById('c');
+    const context = canvas.getContext('2d');
+    context.imageSmoothingQuality = 'high';
+    const scale = (size * 0.92) / Math.max(width, height);
+    const drawWidth = width * scale, drawHeight = height * scale;
+    context.drawImage(probe, left, top, width, height, (size - drawWidth) / 2, (size - drawHeight) / 2, drawWidth, drawHeight);
+    return canvas.toDataURL('image/png');
+  }, { dataUrl, size });
   await page.close();
-  return buffer;
+  return Buffer.from(out.split(',')[1], 'base64');
 };
 
 // An ICO file may carry PNG images directly. One directory entry per size.
@@ -66,16 +88,16 @@ const icns = (entries) => {
   return Buffer.concat([head, body]);
 };
 
-const mark = await readFile(path.join(assets, 'pko-mark.svg'), 'utf8');
-const ink = await readFile(path.join(assets, 'pko-mark-chats.svg'), 'utf8');
+const mark = path.join(assets, 'pko-mark.png');
+const chats = path.join(assets, 'pko-mark-chats.png');
 
 const browser = await chromium.launch({ channel: 'msedge' });
 try {
-  const png = async (svg, size) => render(browser, svg, size);
+  const png = async (file, size) => render(browser, file, size);
 
   await writeFile(path.join(icons, '32x32.png'), await png(mark, 32));
   await writeFile(path.join(icons, '128x128.png'), await png(mark, 128));
-  await writeFile(path.join(icons, 'chats-128x128.png'), await png(ink, 128));
+  await writeFile(path.join(icons, 'chats-128x128.png'), await png(chats, 128));
   await writeFile(path.join(assets, 'mak-mobile-192.png'), await png(mark, 192));
   await writeFile(path.join(assets, 'mak-mobile-512.png'), await png(mark, 512));
 
@@ -84,7 +106,7 @@ try {
   const chatIcons = [];
   for (const size of sizes) {
     windowIcons.push({ size, data: await png(mark, size) });
-    chatIcons.push({ size, data: await png(ink, size) });
+    chatIcons.push({ size, data: await png(chats, size) });
   }
   await writeFile(path.join(icons, 'icon.ico'), ico(windowIcons));
   await writeFile(path.join(icons, 'chats.ico'), ico(chatIcons));
