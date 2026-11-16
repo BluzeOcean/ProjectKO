@@ -41,3 +41,7 @@ Thumbs.db
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# Local previews written by the icon and development helpers.
+/mark-preview.png
+/dev-mode.png
