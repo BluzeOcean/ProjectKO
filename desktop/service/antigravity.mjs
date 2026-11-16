@@ -12,7 +12,7 @@ export function antigravityLogPath(stateDir, chatId) {
   return path.join(stateDir, 'antigravity', `${chatId}.log`);
 }
 
-// agy 1.3.4 writes these native lifecycle messages to --log-file. Each Mr. Mak
+// agy 1.3.4 writes these native lifecycle messages to --log-file. Each Project KO
 // tab owns its log; never guess from the workspace's shared "last conversation".
 // Require the native logger prefix, not a UUID echoed by a prompt or tool.
 export function antigravityConversation(text) {
@@ -67,7 +67,7 @@ export function watchAntigravity(stateDir, chatId, onConversation) {
   return () => { closed = true; clearInterval(timer); };
 }
 
-// agy keeps each conversation in its own SQLite file. Mr. Mak opens it
+// agy keeps each conversation in its own SQLite file. Project KO opens it
 // read-only and reads only the context metadata of the latest generation.
 export const antigravityConversationFile = (id, home = os.homedir()) => path.join(home, '.gemini', 'antigravity-cli', 'conversations', `${id}.db`);
 

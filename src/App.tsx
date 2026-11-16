@@ -72,7 +72,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    document.title = entity ? `Mr. Mak — ${entity.title}` : 'Mr. Mak — Workspace'
+    document.title = entity ? `Project KO — ${entity.title}` : 'Project KO — Workspace'
   }, [entity])
 
   const goHome = useCallback(() => {
@@ -147,7 +147,7 @@ export default function App() {
       <button
         className="sidebar-reopen"
         onClick={() => setCollapsed(false)}
-        title="Show menu — press Mr. Mak's nose ( [ )"
+        title="Show menu — press Project KO's nose ( [ )"
         aria-label="Show menu"
       >
         <MakLogo size={38} animated={route.id !== 'my-dream-game'} />

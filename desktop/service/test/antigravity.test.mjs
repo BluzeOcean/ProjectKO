@@ -276,7 +276,7 @@ test('Antigravity Conversation shows a long reply whole and with its list lines'
   await mkdir(logDir, { recursive: true });
   const head = `${'Com essas 3 funcionalidades, o editor passa a ser uma estação de trabalho. '.repeat(26)}\n\n#### 2.`;
   const cut = ' Chat com Agente Integrado (`Collapsible & Resizable Sidecar Chat`)\n* **Interface:**\n  - Painel lateral direito, colapsável com um clique.\n  - Seletores no topo do chat:\n    - **Agente:** Dropdown din';
-  const tail = `âmico com os agentes disponíveis no Mr. Mak (*Antigravity/Gemini, Claude, Codex, OpenCode*).\n    - **Effort / Reasoning:** Seleção de esforço (*Medium, High, Max*).\n* **Ciclo de Vida da Sessão:**\n  - ${'O agente já nasce com o contexto do projeto. '.repeat(44)}`;
+  const tail = `âmico com os agentes disponíveis no Project KO (*Antigravity/Gemini, Claude, Codex, OpenCode*).\n    - **Effort / Reasoning:** Seleção de esforço (*Medium, High, Max*).\n* **Ciclo de Vida da Sessão:**\n  - ${'O agente já nasce com o contexto do projeto. '.repeat(44)}`;
   const reply = { step_index: 1, source: 'MODEL', type: 'PLANNER_RESPONSE', status: 'DONE', created_at: '2026-10-28T00:59:06Z', content: head + cut + tail };
   const prompt = { step_index: 0, source: 'USER_EXPLICIT', type: 'USER_INPUT', status: 'DONE', created_at: '2026-10-28T00:58:00Z', content: '<USER_REQUEST>\nConecte o editor aos projetos.\n</USER_REQUEST>' };
   const shortened = { ...reply, content: `${head}\n<truncated ${Buffer.byteLength(cut)} bytes>\n${tail}`, truncated_fields: ['content'] };

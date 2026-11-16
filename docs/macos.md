@@ -1,4 +1,4 @@
-# Mr. Mak Workspace on macOS
+# Project KO on macOS
 
 The desktop app was built for Windows (and Linux). This document covers the macOS port:
 what changed, how to build and run it, how it was verified, and what is still open.
@@ -17,18 +17,18 @@ Prerequisites: Node.js 22.20+, [Rust](https://rustup.rs), Xcode Command Line Too
 
 ```bash
 ./setup.sh check      # report prerequisites
-./setup.sh desktop    # npm ci + build Mr. Mak Workspace.app and a .dmg
+./setup.sh desktop    # npm ci + build Project KO.app and a .dmg
 ./setup.sh preview    # optional: browser-only report preview, no Rust or Xcode needed
 ```
 
-Output: `src-tauri/target/release/bundle/macos/Mr. Mak Workspace.app` (and `bundle/dmg/`).
-Copy the app to Applications and double-click **Start Mr. Mak.command** in the repository,
+Output: `src-tauri/target/release/bundle/macos/Project KO.app` (and `bundle/dmg/`).
+Copy the app to Applications and double-click **Start Project KO.command** in the repository,
 which opens the app on this repository. The launcher warns when the build folder holds a
 newer app than Applications and prints the replace command. The build is signed ad hoc
 (`signingIdentity "-"`, no hardened runtime) and sealed, but not notarised. A copy you
 build yourself opens without a Gatekeeper prompt. A downloaded copy may be blocked: use
 System Settings › Privacy & Security › Open Anyway, or, if macOS calls it damaged, run
-`xattr -dr com.apple.quarantine "/Applications/Mr. Mak Workspace.app"` once. macOS asks
+`xattr -dr com.apple.quarantine "/Applications/Project KO.app"` once. macOS asks
 again for permissions (e.g. microphone) after each rebuild, because an ad-hoc signature
 changes with every build. Image and report downloads go to `~/Downloads` and are selected
 in Finder. To update, follow the
@@ -97,8 +97,8 @@ Development: `./node_modules/.bin/tauri dev -- -- --repo "$PWD"`. Without `--rep
   in IndexedDB as bytes, not Blobs (Safari Private Browsing).
 
 ### Scripts
-`setup.sh` (macOS/Linux counterpart of `Setup.ps1`), `Start Mr. Mak.command`
-(counterpart of `Start Mr. Mak.cmd`), `scripts/check-macos-native.sh`.
+`setup.sh` (macOS/Linux counterpart of `Setup.ps1`), `Start Project KO.command`
+(counterpart of `Start Project KO.cmd`), `scripts/check-macos-native.sh`.
 
 ## Verification
 

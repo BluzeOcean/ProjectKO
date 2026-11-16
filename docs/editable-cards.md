@@ -23,7 +23,7 @@ Drafts survive switching cards and reloading the same app window when browser
 session storage is available. Save before closing the app; a draft is not a
 replacement for a saved file.
 
-If an agent or another window edits the file while your draft is open, Mr. Mak
+If an agent or another window edits the file while your draft is open, Project KO
 keeps your draft and stops the save. **Review latest version** shows the disk
 version. You can download your draft before choosing **Discard my draft and
 load latest**, then reapply the changes you want. There is no silent force-save.

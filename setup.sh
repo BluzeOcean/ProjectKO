@@ -5,7 +5,7 @@ mode="${1:-check}"
 cd "$(dirname "$0")"
 [ -f workspace/workspace.json ] || { echo "Run setup.sh from the complete repository folder." >&2; exit 1; }
 has() { command -v "$1" >/dev/null 2>&1 && echo true || echo false; }
-echo "Mr. Mak Workspace setup"
+echo "Project KO setup"
 echo "Node: $(has node) | npm: $(has npm) | Rust (desktop source build only): $(has cargo)"
 echo "Codex CLI: $(has codex) | Claude Code CLI: $(has claude) | OpenCode: $(has opencode)"
 # xcrun fails both without the Command Line Tools and with a stale developer path after a macOS upgrade.
@@ -45,7 +45,7 @@ if [ "$(uname)" = Darwin ]; then
     npm run desktop:build -- --bundles app dmg
   fi
   echo "App ready in src-tauri/target/release/bundle/macos (disk image in bundle/dmg)."
-  echo "Drag Mr. Mak Workspace.app to Applications, then double-click 'Start Mr. Mak.command'."
+  echo "Drag Project KO.app to Applications, then double-click 'Start Project KO.command'."
 else
   npm run desktop:build:appimage
   echo "AppImage ready in src-tauri/target/release/bundle/appimage."

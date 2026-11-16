@@ -13,7 +13,7 @@ const png = Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), Buffe
 const inlinePng = `data:image/png;base64,${png.toString('base64')}`;
 const current = 'ses_mrmakFixtureCurrent', legacy = 'ses_mrmakFixtureLegacy';
 
-// The tables and columns Mr. Mak reads, as OpenCode 1.x and 2.x create them.
+// The tables and columns Project KO reads, as OpenCode 1.x and 2.x create them.
 const schema = ['session', 'session_v2'].map(table => `create table ${table} (id text primary key, project_id text not null, directory text not null, version text not null, time_created integer not null, time_updated integer not null, revert text);`).join('\n') + `
 create table message (id text primary key, session_id text not null, time_created integer not null, time_updated integer not null, data text not null);
 create index message_session_time_created_id_idx on message (session_id, time_created, id);

@@ -1,6 +1,6 @@
 # Getting started
 
-Mr. Mak is a local desktop workspace for working with several agents. Its files
+Project KO is a local desktop workspace for working with several agents. Its files
 are ordinary project files, and its chats are ordinary CLI sessions. You can
 keep using the same agents outside the app.
 
@@ -23,7 +23,7 @@ runtime and local service and installs for the current Windows user. WebView2
 is installed by its bootstrapper if needed. No administrator terminal is needed
 for ordinary app use.
 
-Run **Start Mr. Mak.cmd** from the cloned folder. The app remembers the selected
+Run **Start Project KO.cmd** from the cloned folder. The app remembers the selected
 repository. It opens Workspace and Chats as separate windows with separate
 taskbar identities. Closing a chat saves it to History; restoring its full
 conversation also relies on that CLI's native session files.
@@ -55,24 +55,24 @@ my game. Ask me for the missing game idea before replacing the example.”
 ## Subscriptions, API keys and OpenCode
 
 Claude Code can use a Claude Pro or Max login. Codex can use an eligible ChatGPT
-subscription login. You do not need to add an API key to Mr. Mak for those chats:
+subscription login. You do not need to add an API key to Project KO for those chats:
 it starts the real installed CLI and keeps its normal authentication and limits.
 See [Claude authentication](https://code.claude.com/docs/en/authentication) and
 [Codex authentication](https://developers.openai.com/codex/auth).
 
 For OpenCode, install and configure it first using its own provider setup. Check
-that `opencode` runs from a terminal, then choose **+ > OpenCode** in Mr. Mak.
+that `opencode` runs from a terminal, then choose **+ > OpenCode** in Project KO.
 Your chosen provider determines authentication and billing. A native Claude Code
 subscription does not automatically provide access through third-party clients.
 
 OpenCode chats support History, pinned tabs, files and clipboard screenshots.
 The app observes native session events to keep the correct conversation ID;
 your native OpenCode data must remain available for resume. Keep one conversation
-per Mr. Mak tab. Use a new tab for a new task. OpenCode controls its model and
+per Project KO tab. Use a new tab for a new task. OpenCode controls its model and
 reasoning settings. Auto-approve is off by default, and explicit deny rules still
 apply when it is enabled.
 
-OpenCode 1.x and 2.x use different plugin APIs. Mr. Mak selects the corresponding
+OpenCode 1.x and 2.x use different plugin APIs. Project KO selects the corresponding
 small session observer at launch, without writing global configuration. OpenCode
 2.x runs a private server for each terminal so tab histories stay separate.
 The MCP inspector currently lists Claude, Codex, Kimi and Cursor configurations;
@@ -111,20 +111,20 @@ terminals is described in [voice dictation](../knowledge/voice-dictation.md).
 ## macOS
 
 On an Apple Silicon Mac, download the macOS `.dmg` from
-[GitHub Releases](https://github.com/witnesstodark/mr-mak-workspace/releases/latest),
+[GitHub Releases](https://github.com/BluzeOcean/ProjectKO/releases/latest),
 or build the app once from source (about five minutes). To build, install
 Node.js 22.20+, [Rust](https://rustup.rs) and the Xcode Command Line Tools
 (`xcode-select --install`), then run:
 
 ```bash
 ./setup.sh check      # report prerequisites
-./setup.sh desktop    # build Mr. Mak Workspace.app and a .dmg
+./setup.sh desktop    # build Project KO.app and a .dmg
 ./setup.sh preview    # optional: browser-only report preview (Node and npm only)
 ```
 
-Drag `Mr. Mak Workspace.app` to Applications, from the opened `.dmg` or from
+Drag `Project KO.app` to Applications, from the opened `.dmg` or from
 `src-tauri/target/release/bundle/macos/`, then double-click
-**Start Mr. Mak.command** in the cloned folder. The build bundles a
+**Start Project KO.command** in the cloned folder. The build bundles a
 self-contained Node runtime, so a Homebrew Node is fine.
 
 The app is signed ad hoc but not notarised. A copy you build yourself opens
@@ -133,11 +133,11 @@ Privacy & Security and choose **Open Anyway**. If it reports the app as damaged,
 remove the download quarantine once:
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/Mr. Mak Workspace.app"
+xattr -dr com.apple.quarantine "/Applications/Project KO.app"
 ```
 
 To update a source build, follow the [macOS update steps](updating.md#macos-source-build).
-**Start Mr. Mak.command** warns when the build folder holds a newer app than
+**Start Project KO.command** warns when the build folder holds a newer app than
 Applications and prints the replace command; after a normal launch its Terminal
 window closes itself.
 
@@ -190,11 +190,11 @@ powershell -ExecutionPolicy Bypass -File .\Setup.ps1 -Mode Update
 ```
 
 Run Update in a separate Windows PowerShell window opened from Start, outside
-Mr. Mak. An updater inside a managed chat would stop when you quit the app;
+Project KO. An updater inside a managed chat would stop when you quit the app;
 Setup detects that case before building. Update waits for you to quit from the
 tray, checks that the bundled service has exited, installs the build silently
 and opens the same repository again. Finish active chats before quitting.
-The registered installation folder is reused. Pass `-InstallDirectory 'D:\Apps\Mr. Mak Workspace'`
+The registered installation folder is reused. Pass `-InstallDirectory 'D:\Apps\Project KO'`
 if you need to choose it explicitly. The update never terminates your chats itself.
 Update mode is Windows-only; on macOS, follow the
 [macOS update steps](updating.md#macos-source-build).

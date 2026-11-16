@@ -31,7 +31,7 @@ configured model. Larger execution tasks go to visible worker terminals. The
 provider's native conversation ID is recorded when available for later resume.
 Codex discovery checks both local and UTC date folders, keeps waiting through
 delayed first prompts, and reads bounded metadata records larger than one small
-buffer. Closing or resuming a tab can recover a missing ID from its exact Mr. Mak
+buffer. Closing or resuming a tab can recover a missing ID from its exact Project KO
 origin marker. Shared working directories alone are not proof of ownership.
 
 New Codex, Claude and Antigravity chats default to `xhigh`; explicit saved effort
@@ -46,7 +46,7 @@ current app view stays open.
 New chat lists recent projects from `recent-projects.mjs`: the Workspace, pinned
 favorites, folders recorded in Claude Code's `.claude.json` (`CLAUDE_CONFIG_DIR`
 is respected), Codex session metadata from the latest 60 day folders (`CODEX_HOME`
-is respected) and the folders of earlier Mr. Mak chats. Only folder names are read
+is respected) and the folders of earlier Project KO chats. Only folder names are read
 from those files. Worktrees, scratch folders, the Codex app's dated folders and
 missing folders are skipped. Pins are saved in `settings.pinnedProjects`. A phone
 may start a chat only in a listed folder. The voice coordinator uses the same list
@@ -124,7 +124,7 @@ text has a minimum contrast ratio of 4.5; Original and Focus remain separate cho
 ## Terminal appearance
 
 Settings → Chats → Terminal appearance offers **Original CLI colors** (the default)
-and **Mr. Mak Focus** (muted colors). Original preserves CLI diff colors for added
+and **Project KO Focus** (muted colors). Original preserves CLI diff colors for added
 and removed lines. The choice is saved for all desktop chats and applies to open
 terminals immediately without restarting sessions. Existing saved preferences
 are retained. The same choice is available in each chat’s options menu.

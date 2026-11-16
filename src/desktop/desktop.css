@@ -188,7 +188,7 @@
 .group-field>span{display:block}.group-field small{font-size:9px;color:var(--text-dim);font-weight:400;margin-left:5px}
 .chat-options .group-setting{padding:10px 10px 12px;border-top:1px solid var(--hairline);margin-top:5px}.chat-options .group-setting>span{display:block;font-size:10px;color:var(--text-dim);margin-bottom:10px}.chat-options .group-setting select{width:100%;font-size:11px;padding:7px 8px}.chat-options .group-setting .group-new button{width:auto}
 
-/* New chat project list: recent folders from Claude Code and Mr. Mak chats. */
+/* New chat project list: recent folders from Claude Code and Project KO chats. */
 .project-field-heading>small{font-size:9px;color:var(--text-dim);margin-left:5px}
 .project-search{display:flex;align-items:center;gap:6px;padding-left:10px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent);border-radius:7px;background:color-mix(in srgb,var(--text) 2%,transparent);color:var(--text-dim)}.project-search input{flex:1;border:0!important;background:transparent!important;padding:7px 8px!important;font-size:11px!important}
 .project-list{display:flex;flex-direction:column;gap:3px;max-height:188px;overflow-y:auto;padding:3px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent);border-radius:9px;background:color-mix(in srgb,var(--text) 1%,transparent)}.project-list>.desk-muted{padding:8px;margin:0}

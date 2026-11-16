@@ -8,7 +8,7 @@ import { validSessionId } from './opencode/observer.mjs';
 // same path on Windows: ~/.local/share/opencode/opencode.db. OpenCode 1.x writes
 // `session`, `message` and `part` rows; 2.x writes `session_v2` and
 // `session_message` rows, and copies the 1.x sessions there when it first opens
-// the store. Mr. Mak only opens it read-only, never while holding a transaction.
+// the store. Project KO only opens it read-only, never while holding a transaction.
 export const opencodeDataDir = (env = process.env, home = os.homedir()) => path.join(env.XDG_DATA_HOME || path.join(home, '.local', 'share'), 'opencode');
 
 let sqlite;

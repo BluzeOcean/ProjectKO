@@ -1,6 +1,6 @@
 # Mobile access
 
-Mobile access connects a phone to the agent chats running in Mr. Mak Desktop.
+Mobile access connects a phone to the agent chats running in Project KO Desktop.
 The computer keeps the CLI processes, their sign-ins and project files. The
 phone can read conversations, dictate drafts, send messages and images, resume a saved chat,
 start an installed agent, and read Workspace reports.
@@ -9,7 +9,7 @@ start an installed agent, and read Workspace reports.
 
 1. Install [Tailscale](https://tailscale.com/download) on your computer and phone.
    Sign in to the same Tailscale account on both and keep them connected.
-2. Open Mr. Mak **Chats** and select the **phone icon** in the top bar.
+2. Open Project KO **Chats** and select the **phone icon** in the top bar.
 3. Choose **Enable & show QR code**. If Tailscale requests HTTPS permission,
    follow its [Serve setup](https://tailscale.com/docs/features/tailscale-serve)
    and try again. On Windows, Tailscale may require administrator permission
@@ -19,14 +19,14 @@ start an installed agent, and read Workspace reports.
    select **Request connection**.
 5. Compare the six-digit confirmation code on both screens, then choose
    **Connect phone** in Chats. A QR code alone does not grant access.
-6. After connecting, tap Install when the browser makes installation available, or open Phone settings for Install Mr. Mak. Not now dismisses the invitation for this browser session; the settings button remains available. You can also use your browser’s Install app or Add to Home Screen menu (Safari’s Share menu on iPhone). If the installed
+6. After connecting, tap Install when the browser makes installation available, or open Phone settings for Install Project KO. Not now dismisses the invitation for this browser session; the settings button remains available. You can also use your browser’s Install app or Add to Home Screen menu (Safari’s Share menu on iPhone). If the installed
    web app asks to connect again, enter the eight-digit connection code shown
    under a fresh desktop QR code and confirm it on the computer.
 
-Every owner connects their own devices. Typed chat access needs no shared Mr. Mak
+Every owner connects their own devices. Typed chat access needs no shared Project KO
 server, public domain or new model API key. Existing CLI account limits still apply.
 The optional microphone button uses a separately billed transcription API.
-Mr. Mak configures a private Tailscale Serve route on an available HTTPS port
+Project KO configures a private Tailscale Serve route on an available HTTPS port
 between 8443 and 8446. It preserves existing routes and never enables Funnel.
 
 ## Using the phone
@@ -108,7 +108,7 @@ Each command is optional. It creates a separate environment under `.cache`,
 installs pinned Python packages and verifies the model files against SHA-256
 checksums. Whisper's model download is about 486 MB; the reading model and
 voices total about 142 MB, plus Python dependencies. Setup checks that the
-model can load on your computer. It does not restart Mr. Mak. Refresh Phone
+model can load on your computer. It does not restart Project KO. Refresh Phone
 settings afterward and select your provider. Windows PowerShell wrappers
 `setup-local-dictation.ps1` and `setup-local-read-aloud.ps1` call the same setup.
 Nothing is downloaded automatically by opening the app.
@@ -160,19 +160,19 @@ selected cloud provider). Local transcription uses a temporary audio file on the
 computer and deletes it after the attempt; pending recordings stay in the
 recording device's browser storage.
 Your phone keyboard's microphone remains an alternative without configuring
-Mr. Mak's transcription service.
+Project KO's transcription service.
 
 ## Connections and delivery
 
-Keep the computer awake, online and running Mr. Mak. Minimizing or hiding its
-windows is fine. Quitting Mr. Mak or letting the computer sleep makes it
+Keep the computer awake, online and running Project KO. Minimizing or hiding its
+windows is fine. Quitting Project KO or letting the computer sleep makes it
 unavailable; closing the phone does not stop agents.
 
-After a restart, open Mr. Mak on the computer and the same mobile shortcut on
+After a restart, open Project KO on the computer and the same mobile shortcut on
 the phone. The saved pairing is reused. Tailscale must be connected on both
-devices; opening Mr. Mak restores its private route. If Tailscale was not ready
-when Mr. Mak started, enable mobile access again from the phone panel in Chats.
-Mr. Mak does not add itself to operating-system startup automatically.
+devices; opening Project KO restores its private route. If Tailscale was not ready
+when Project KO started, enable mobile access again from the phone panel in Chats.
+Project KO does not add itself to operating-system startup automatically.
 On Android, use the system's Always-on VPN option for Tailscale if you want it
 to start with the phone; some devices also need background autostart permission.
 See [Android VPN settings](https://developer.android.com/develop/connectivity/vpn#always-on)
