@@ -1,0 +1,309 @@
+/* ────────────────────────────────────────────────────────────────
+   Project KO — the Workspace deck
+   The overview page: a banner, a gallery of board thumbnails and a
+   thin inspector that holds the facts of the board you are pointing
+   at. The board's own page is not part of this sheet.
+
+   Ported from the lab mock (Mock 1, page one) so the app and the
+   proposal stay the same drawing.
+   ──────────────────────────────────────────────────────────────── */
+
+/* ── The banner ──────────────────────────────────────────────── */
+.deck-banner {
+  display: flex;
+  align-items: center;
+  /* Columns keep their gap; the bottom row is placed by its own
+     margin, so the banner never grows a second gap. */
+  column-gap: 18px;
+  row-gap: 0;
+  flex-wrap: wrap;
+  /* The left room clears the floating nose that brings the menu back. */
+  padding: 10px 30px 11px 60px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--surface-1);
+  flex-shrink: 0;
+}
+.deck-banner-text { min-width: 0; }
+/* The bottom row of the banner: the genre filter, on its own line. */
+.deck-banner-bottom { flex-basis: 100%; margin-top: 10px; }
+.deck-banner-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 460;
+  letter-spacing: -.012em;
+  line-height: 1.25;
+  color: var(--text-bright);
+}
+.deck-banner-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+/* The way to make a board, in the banner. */
+.deck-banner .deck-new-board {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 30px;
+  margin-left: 0;
+  padding: 5px 14px;
+  border: 1px solid color-mix(in srgb, var(--pink) 24%, transparent);
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--pink), var(--pink-bright));
+  color: var(--on-accent);
+  font-size: 11.5px;
+  font-weight: 600;
+  box-shadow: var(--glow-pink);
+  transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.deck-banner .deck-new-board:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--glow-pink-strong);
+  border-color: color-mix(in srgb, var(--pink) 24%, transparent);
+  background: linear-gradient(135deg, var(--pink), var(--pink-bright));
+}
+
+/* ── The genre group in the banner ────────────────────────────── */
+/* Buttons stuck together: one segmented group, no gaps. */
+.deck-genres { display: flex; }
+.deck-genre {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 27px;
+  padding: 0 12px;
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 11.5px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+.deck-genre + .deck-genre { border-left: 0; }
+.deck-genre:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+.deck-genre:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.deck-genre:hover { color: var(--text-bright); background: var(--surface-2); }
+.deck-genre.active { color: var(--on-accent); background: var(--pink); border-color: var(--pink); }
+
+/* ── The deck of board thumbnails ────────────────────────────── */
+/* The cell is a fixed width, so a long name wraps inside its own
+   column instead of pushing the next board away. The marks stay close
+   together, however long the name is. */
+.deck-tiles {
+  display: grid;
+  /* 92px is the narrowest cell that still breaks every board name into
+     two lines — measured, not guessed. */
+  grid-template-columns: repeat(auto-fill, 92px);
+  gap: 18px 12px;
+  justify-content: start;
+}
+.deck-tile {
+  width: auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+}
+.deck-mark {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
+  line-height: 1;
+  transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.deck-tile:hover .deck-mark { transform: translateY(-2px); }
+.deck-tile.active .deck-mark {
+  box-shadow: 0 0 0 2px var(--pink), 0 0 14px color-mix(in srgb, var(--pink) 26%, transparent);
+}
+.deck-tile-name {
+  margin-top: 9px;
+  min-height: 32px;
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 550;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.deck-tile.active .deck-tile-name { color: var(--text-bright); }
+.deck-tile-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 9.5px;
+  color: var(--text-muted);
+}
+/* The tile is a way in: the arrow says so before you click it. */
+.deck-tile-open {
+  color: var(--pink);
+  opacity: 0;
+  transform: translateX(-3px);
+  transition: opacity var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+.deck-tile:hover .deck-tile-open,
+.deck-tile:focus-visible .deck-tile-open { opacity: 1; transform: none; }
+
+/* ── The stage: the deck of boards ───────────────────────────── */
+/* The deck fills the content area: the banner above, the boards below. */
+.content.deck-content { display: flex; flex-direction: column; }
+.deck { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.deck-page { flex: 1; min-height: 0; display: flex; }
+.deck-stage {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  /* The foot of the stage clears the voice dock, which floats over the
+     bottom-left corner of the window. */
+  padding: 28px 34px 84px;
+}
+.deck-stage-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.deck-label {
+  font-size: 9.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.deck-stage-count { font-size: 10.5px; color: var(--text-muted); }
+.deck-stage-note { font-size: 10.5px; color: var(--text-muted); }
+.deck-offline { font-size: 10.5px; color: var(--red); }
+.deck-empty { margin-top: 40px; font-size: 12.5px; color: var(--text-muted); }
+
+/* ── The bottom band: the workspace's own facts ──────────────── */
+/* About the boards, not about what is inside them. It sits at the
+   foot of the stage, so the room above it stays deliberate. */
+.deck-status {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+.deck-status b { color: var(--text-dim); font-weight: 500; }
+
+/* ── The inspector: a thin column that holds facts, not cards ─── */
+.deck-inspector {
+  flex: 0 0 400px;
+  width: 400px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--hairline);
+  background: var(--surface-1);
+  overflow-y: auto;
+  padding: 28px 26px 40px;
+  display: flex;
+  flex-direction: column;
+}
+.deck-insp-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.deck-insp-title {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 460;
+  letter-spacing: -.012em;
+  color: var(--text-bright);
+}
+.deck-insp-meta { font-size: 11px; color: var(--text-muted); }
+.deck-insp-desc { margin-top: 12px; font-size: 12.5px; line-height: 1.72; color: var(--text-dim); max-width: 58ch; }
+
+/* ── The tag block: what this board is, and what else it could be ─ */
+.deck-tags { margin-top: 28px; }
+.deck-tag-label {
+  font-size: 9.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.deck-tag-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 13px;
+  border: 1px solid color-mix(in srgb, var(--pink) 34%, transparent);
+  border-radius: var(--radius-pill);
+  background: var(--pink-dim);
+  color: var(--pink-bright);
+  font-size: 12px;
+}
+.deck-tag-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.deck-tag-option {
+  padding: 6px 11px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+.deck-tag-option:hover:not(:disabled) { border-color: var(--hairline-strong); color: var(--text-dim); background: var(--surface-2); }
+.deck-tag-option:disabled { opacity: .45; cursor: default; }
+.deck-tag-error { margin-top: 10px; font-size: 11.5px; line-height: 1.5; color: var(--red); }
+
+/* ── The inspector's foot: what the board is, and the way in ──── */
+.deck-insp-foot {
+  margin-top: auto;
+  padding-top: 22px;
+  border-top: 1px solid var(--hairline);
+}
+.deck-facts { display: flex; flex-direction: column; gap: 15px; }
+.deck-fact b {
+  display: block;
+  font-size: 9.5px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.deck-fact span { display: block; font-size: 12.5px; color: var(--text-dim); overflow-wrap: anywhere; }
+.deck-fact-status { display: flex !important; align-items: center; gap: 8px; }
+.deck-fact-status .entity-status-button { width: 20px; height: 20px; flex: 0 0 20px; margin-left: -6px; }
+.deck-insp-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 22px;
+  padding: 9px 14px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+  color: var(--text);
+  font-size: 11.5px;
+  transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.deck-insp-action:hover { background: var(--surface-2); border-color: color-mix(in srgb, var(--pink) 40%, transparent); color: var(--text-bright); }
+
+/* ── Narrow windows ──────────────────────────────────────────── */
+/* The inspector drops under the deck when there is no room for a
+   column beside it. */
+@media (max-width: 760px) {
+  .deck-banner { padding-left: 60px; padding-right: 18px; }
+  .deck-banner-title { font-size: 1.1rem; }
+  /* The genre group stays in one piece and scrolls sideways. */
+  .deck-banner-bottom { overflow-x: auto; scrollbar-width: none; }
+  .deck-banner-bottom::-webkit-scrollbar { display: none; }
+  .deck-genres { width: max-content; }
+  .deck-page { flex-direction: column; overflow-y: auto; }
+  .deck-stage { overflow: visible; padding: 20px 16px 84px; }
+  .deck-inspector {
+    flex: 0 0 auto;
+    width: 100%;
+    border-left: 0;
+    border-top: 1px solid var(--hairline);
+    padding: 22px 18px 32px;
+  }
+  .deck-insp-foot { margin-top: 26px; }
+}

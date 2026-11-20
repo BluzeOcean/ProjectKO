@@ -30,8 +30,8 @@ function NewCardDialog({ onClose }: { onClose: () => void }) {
   </form></dialog>, document.body)
 }
 
-export default function NewCard() {
+export default function NewCard({ label = '+ New card', className = '' }: { label?: string; className?: string }) {
   const [open, setOpen] = useState(false)
   const button = useRef<HTMLButtonElement>(null)
-  return <><button ref={button} className="new-card-button" onClick={() => setOpen(true)}>+ New card</button>{open && <NewCardDialog onClose={() => { setOpen(false); button.current?.focus() }} />}</>
+  return <><button ref={button} className={`new-card-button ${className}`.trim()} onClick={() => setOpen(true)}>{label}</button>{open && <NewCardDialog onClose={() => { setOpen(false); button.current?.focus() }} />}</>
 }

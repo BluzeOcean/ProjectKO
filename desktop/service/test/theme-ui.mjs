@@ -66,7 +66,7 @@ try {
   await expect(page.locator('html')).toHaveAttribute('data-workspace-theme', 'light');
   await expect(second.locator('html')).toHaveAttribute('data-workspace-theme', 'light');
   await expect(second.locator('.content')).toHaveCSS('background-color', 'rgb(247, 248, 250)');
-  await expect(second.locator('.entity-card')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+  await expect(second.locator('.deck-banner')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   await expect(chats.locator('html')).toHaveAttribute('data-workspace-theme', 'dark');
   await expect(report().locator('html')).toHaveAttribute('data-mrmak-theme', 'light');
   assert.equal(await report().locator('body').evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(255, 255, 255)');

@@ -10,10 +10,6 @@
 .sidebar-item-row > .entity-status-button { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); }
 .entity-status-button:hover, .entity-status-button[aria-expanded="true"] { background: var(--surface-2); border-color: var(--hairline-strong); }
 .entity-status-button:focus-visible { outline: 2px solid var(--pink); outline-offset: 1px; }
-.entity-card-wrap { position: relative; display: flex; min-width: 0; }
-.entity-card-wrap .entity-card { width: 100%; }
-.entity-card-wrap .card-top { padding-right: 24px; }
-.entity-card-wrap > .entity-status-button { position: absolute; right: 8px; top: 10px; }
 .entity-menu {
   position: fixed; inset: auto; margin: 0; padding: 16px; box-sizing: border-box;
   width: min(292px, calc(100vw - 24px)); max-height: calc(100dvh - 24px);

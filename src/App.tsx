@@ -5,7 +5,7 @@ import { parseHash, entityHash, resolveStep, type Route } from './lib/route'
 import PkoLogo from './components/PkoLogo'
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
-import HomeGrid from './components/HomeGrid'
+import WorkspaceDeck from './components/WorkspaceDeck'
 import EntityControls from './components/EntityControls'
 import ReportBoundary from './components/ReportBoundary'
 import { contentUrl, isDesktop } from './desktop/client'
@@ -27,6 +27,7 @@ export default function App() {
   const [route, setRoute] = useState<Route>(parseHash)
   const [query, setQuery] = useState('')
   const [showArchived, setShowArchived] = useState(false)
+  const [genre, setGenre] = useState('all')
   const [collapsed, setCollapsed] = useState(
     () => isDesktop || localStorage.getItem('mak.sidebarCollapsed') === '1',
   )
@@ -44,6 +45,9 @@ export default function App() {
     : -1
   const step = entity?.steps[stepIndex]
   const reportUrl = entity && step ? contentUrl(`/workspace/${entity.folder}/${step.path}`) : null
+  // A board is open only when it has something to show. Otherwise the
+  // Workspace overview answers, and it brings its own banner.
+  const showingBoard = Boolean(entity && reportUrl)
 
   // Hash → state: entity links navigate natively; this also covers back/forward.
   useEffect(() => {
@@ -114,6 +118,12 @@ export default function App() {
 
   const pinned = visible.filter(e => e.pinned).sort(byFreshness)
   const rest = visible.filter(e => !e.pinned).sort(byFreshness)
+  // The deck shows the boards themselves: the pinned ones first, then the
+  // freshest. The genre filter groups them, it does not rearrange them.
+  const boards = [...pinned, ...rest]
+  const genres = [...new Set(boards.map(e => e.category || 'other'))]
+  // A genre that no board carries any more falls back to the whole deck.
+  const activeGenre = genre === 'all' || genres.includes(genre) ? genre : 'all'
   // Category grouping is for the short working set only. With the archive open or a
   // search running the list is long and the useful order is purely "what did I touch
   // last", so buckets are dropped and everything stays in one date-sorted run.
@@ -154,6 +164,9 @@ export default function App() {
       </button>
 
       <main className="main">
+        {/* The overview carries its own banner, so the topbar belongs to the
+            board that is open. */}
+        {showingBoard && (
         <Topbar
           entity={entity}
           stepIndex={stepIndex}
@@ -163,8 +176,9 @@ export default function App() {
           // tab helps nobody, so the external link is hidden for those.
           reportUrl={step?.viewer === 'compare3d' || step?.viewer === 'card' ? null : reportUrl}
         />
+        )}
 
-        <div className="content">
+        <div className={`content${showingBoard ? '' : ' deck-content'}`}>
           <ReportBoundary key={reportUrl || 'home'} onHome={goHome}>
           {entity && reportUrl && step?.viewer === 'card' ? (
             <Suspense fallback={<div className="report-loading">Opening card…</div>}><EditableCard key={`${entity.id}:${stepIndex}`} url={reportUrl} entityId={entity.id} step={stepIndex} /></Suspense>
@@ -177,13 +191,14 @@ export default function App() {
           ) : entity && reportUrl ? (
             <Suspense fallback={<div className="boot"><PkoLogo size={56} animated={false} /></div>}><ReportViewer key={reportUrl} url={reportUrl} title={step?.name ?? entity.title} relativePath={`workspace/${entity.folder}/${step?.path}`} /></Suspense>
           ) : (
-            <HomeGrid
-              entities={entities}
-              pinned={pinned}
-              grouped={grouped}
-              offline={offline}
+            <WorkspaceDeck
+              boards={boards}
+              genres={genres}
+              genre={activeGenre}
+              onGenre={setGenre}
               searching={searching}
               query={query}
+              offline={offline}
             />
           )}
           </ReportBoundary>

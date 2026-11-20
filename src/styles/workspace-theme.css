@@ -24,10 +24,9 @@ html[data-workspace-theme] .report-frame,html[data-workspace-theme] .file-previe
 html[data-workspace-theme] .workspace-root .sidebar{box-shadow:var(--shadow-2)}
 html[data-workspace-theme] .app-layout .step-tab{border-color:var(--hairline);color:var(--text-dim)}
 html[data-workspace-theme] .app-layout .step-tab.active{border-color:var(--hairline-strong);background:var(--pink-dim);color:var(--pink-bright)}
-html[data-workspace-theme] .home .entity-card{background:var(--surface-solid);border-color:var(--hairline-strong);box-shadow:var(--shadow-1)}
-html[data-workspace-theme] .home .entity-card:hover{background:var(--surface-solid);border-color:var(--pink);box-shadow:var(--shadow-2)}
-html[data-workspace-theme] .home .entity-card .card-desc{color:var(--text-dim)}
-html[data-workspace-theme] .home .entity-card .card-foot{color:var(--text-muted);border-color:var(--hairline)}
+html[data-workspace-theme] .deck-inspector{background:var(--surface-1)}
+html[data-workspace-theme] .deck-insp-action{background:var(--surface-2);border-color:var(--hairline-strong)}
+html[data-workspace-theme] .deck-insp-action:hover{background:var(--surface-3);border-color:var(--pink)}
 html[data-workspace-theme] .report-document,html[data-workspace-theme] .report-document>.report-loading,
 html[data-workspace-theme] .markdown-document,html[data-workspace-theme] .markdown-reader,
 html[data-workspace-theme] .markdown-editor,html[data-workspace-theme] .file-preview,
@@ -89,7 +88,7 @@ html[data-workspace-theme] .desktop-error{background:var(--surface-solid);color:
 
 /* Semantic surfaces cover both independent windows and every named palette. */
 html[data-workspace-theme]{background:var(--bg)}
-html[data-workspace-theme] .home .entity-card{background:var(--surface-solid)}
+html[data-workspace-theme] .deck-banner{background:var(--surface-1)}
 .theme-preview{border:1px solid;border-radius:9px;overflow:hidden;margin:10px 0 8px;font-size:11px;line-height:1.5}
 .theme-preview-bar{display:flex;align-items:center;gap:7px;padding:8px 10px;font-size:10px}
 .theme-preview-bar i{width:7px;height:7px;border-radius:50%}.theme-preview-bar i:last-child{margin-left:auto}
@@ -103,7 +102,7 @@ html[data-workspace-theme] .desktop-root :is(button,input,select,textarea,summar
 html[data-workspace-theme] .desktop-root ::selection{background:var(--pink-dim);color:var(--text-bright)}
 html[data-workspace-theme] .desktop-root .conversation-send{color:var(--on-accent)}
 html[data-color-scheme=light] .agent-label{color:var(--text-dim)!important;opacity:1}
-html[data-color-scheme=light] :is(.session-logo,.agent-mark,.choice-check){color:var(--pink)!important}
+html[data-color-scheme=light] :is(.session-logo,.agent-mark){color:var(--pink)!important}
 html[data-color-scheme=light] .chat-tab.has-color .chat-tab-name{color:var(--text)}
 html[data-color-scheme=light] .chat-group-chip{color:var(--text)!important}
 

@@ -1,9 +1,9 @@
 import ContextUsage from './ContextUsage'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, reportError, selectChat, sendEvent, useDesktop, windowAction } from './client'
 import type { AgentId, ChatSession, Effort } from './types'
 import { defaultEffort, effortAgents, efforts } from './effort'
-import { AgentLogo, Icon, PkoMark } from './Icons'
+import { Icon, PkoMark } from './Icons'
 import TerminalPane from './TerminalPane'
 import BrowserSettings from '../components/BrowserSettings'
 import SessionLogo from './SessionLogo'
@@ -13,7 +13,9 @@ import { groupCounts, groupNames, orderedChats, projectGrouped, projectKey, proj
 import HandoffOffer from './HandoffOffer'
 import MobileAccess from './MobileAccess'
 import DictationComposer from './DictationComposer'
-import ProjectPicker from './ProjectPicker'
+import FolderDropdown from './FolderDropdown'
+import AgentDropdown from './AgentDropdown'
+import { recentAgents } from './agentMeta'
 import Conversation from './Conversation'
 import { modelLabel, useChatModel } from './chatModel'
 import { chatView, hasConversationView, saveChatView, type ChatView } from './chatView'
@@ -45,8 +47,11 @@ function NewChat({ close }: { close: () => void }) {
   const [group, setGroup] = useState<string | null>(() => state.sessions.find(item => item.id === state.selectedId)?.group || null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const current = state.agents.find(item => item.id === agent)
+  const recent = useMemo(() => recentAgents(state.sessions), [state.sessions])
   async function launch(event: React.FormEvent) {
     event.preventDefault(); setBusy(true); setError('')
+    if (!cwd.trim()) { setError('Choose the folder this chat should work in.'); setBusy(false); return }
     try {
       const session = await api<ChatSession>('/sessions', { agent, name: name.trim() || undefined, cwd, bypass, effort: effortAgents.includes(agent) ? effort : undefined, resumeId: resumeId.trim() || undefined, group: group || undefined })
       await api('/settings', { defaultAgent: agent, defaultBypass: bypass, defaultEffort: effort })
@@ -55,20 +60,32 @@ function NewChat({ close }: { close: () => void }) {
   }
   return <div className="desk-scrim" onClick={close}><form className="desk-dialog" onClick={event => event.stopPropagation()} onSubmit={launch}>
     <div className="desk-dialog-heading"><div><span className="desk-eyebrow">A PLACE FOR THE NEXT THING</span><h2>New chat</h2></div><button type="button" className="desk-icon" onClick={close} aria-label="Close"><Icon name="close" /></button></div>
-    <div className="agent-picker">{state.agents.map(item => <button type="button" key={item.id} className={`agent-choice ${agent === item.id ? 'selected' : ''}`} onClick={() => setAgent(item.id)} disabled={!item.available} style={{ '--agent-color': item.color } as React.CSSProperties}><span className="agent-mark"><AgentLogo agent={item.id} size={23} /></span><span>{item.label}<small>{item.available ? item.id === 'shell' ? 'Local terminal' : item.id === 'opencode' ? 'Your providers' : 'Your CLI account' : 'Not installed'}</small></span>{agent === item.id && <span className="choice-check">✓</span>}</button>)}</div>
-    <label className="desk-field">Chat name <small>English only</small><input autoFocus placeholder="e.g. Dream Game · animations" value={name} onChange={event => setName(event.target.value)} maxLength={100} /></label>
-    {agent !== 'shell' && <label className="desk-check"><input type="checkbox" checked={bypass} onChange={event => setBypass(event.target.checked)} /><span>{agent === 'opencode' ? 'Auto-approve permission prompts' : 'Bypass agent permission prompts'}<small>{agent === 'opencode' ? 'Explicit deny rules in OpenCode still apply.' : `Same ${isMac ? 'macOS' : isWindows ? 'Windows' : 'user'} account and file access as your usual terminal.`}</small></span></label>}
-    <details className="desk-details new-chat-advanced">
-      <summary>Advanced</summary>
-      <ProjectPicker cwd={cwd} choose={setCwd} />
-      <label className="desk-field">Working folder<input value={cwd} onChange={event => setCwd(event.target.value)} onInvalid={event => { const advanced = event.currentTarget.closest('details'); if (advanced) advanced.open = true }} required spellCheck={false} /></label>
+    <label className="desk-field"><span>Name <small>Optional — the agent can name it</small></span><input autoFocus placeholder="e.g. Dream Game · animations" value={name} onChange={event => setName(event.target.value)} maxLength={100} /></label>
+    <div className="new-chat-block">
+      <span className="desk-label">Where <small>Working folder</small></span>
+      <FolderDropdown cwd={cwd} onChange={setCwd} />
+    </div>
+    <div className="new-chat-block">
+      <span className="desk-label">Agent</span>
+      <AgentDropdown agents={state.agents} value={agent} onChange={setAgent} recent={recent} />
+      {current && !current.available && <p className="agent-hint warn">{current.label} is not installed. Install it from a terminal first, then start the chat.</p>}
+    </div>
+    <div className="new-chat-options">
+      {effortAgents.includes(agent) && <label className="desk-field"><span>Reasoning effort <small>Default for new chats</small></span><select value={effort} onChange={event => setEffort(event.target.value as Effort)}>{efforts.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
       <div className="desk-field group-field"><span>Group <small>Tabs of a group sit together</small></span><GroupPicker value={group} groups={groupNames(state.sessions)} onChange={setGroup} /></div>
-      {effortAgents.includes(agent) && <label className="desk-field">Reasoning effort <small>Default for new chats</small><select value={effort} onChange={event => setEffort(event.target.value as Effort)}>{efforts.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
-      {agent === 'antigravity' && <p className="desk-muted">Sign in to Google in the terminal, then use /model to choose an available model. Access and usage limits come from your Google account or API billing.</p>}
-      {agent !== 'shell' && <details className="desk-details"><summary>Resume an existing CLI conversation</summary><p>For a conversation started outside Project KO, copy its ID from your CLI's session details or resume picker. Chats created here return automatically.</p><label className="desk-field">Native session ID<input value={resumeId} onChange={event => setResumeId(event.target.value)} placeholder="Optional session ID" /></label></details>}
-    </details>
+    </div>
+    {agent === 'antigravity' && <p className="new-chat-note">Access and usage limits come from your Google account or API billing.</p>}
+    {agent !== 'shell' && <details className="desk-details new-chat-resume"><summary><Icon name="arrow" size={12} /><span>Resume an existing CLI conversation</span></summary><p>For a conversation started outside Project KO, copy its ID from your CLI's session details or resume picker. Chats created here return automatically.</p><label className="desk-field"><span>Native session ID</span><input value={resumeId} onChange={event => setResumeId(event.target.value)} placeholder="Optional session ID" /></label></details>}
     {error && <p className="desk-error-inline" role="alert">{error}</p>}
-    <button className="desk-primary" disabled={busy || !state.connected}>{busy ? 'Opening…' : 'Open chat'}<Icon name="arrow" size={16} /></button>
+    <div className="action-row">
+      {agent !== 'shell' && <label className={`switch ${bypass ? 'warn' : ''}`}>
+        <input type="checkbox" checked={bypass} onChange={event => setBypass(event.target.checked)} aria-label={agent === 'opencode' ? 'Auto-approve permission prompts' : 'Bypass agent permission prompts'} />
+        <span className="track" />
+        <span>{agent === 'opencode' ? 'Auto-approve' : 'Skip permissions'}</span>
+      </label>}
+      <button className="desk-primary" disabled={busy || !state.connected}>{busy ? 'Opening…' : 'Open chat'}<Icon name="arrow" size={16} /></button>
+    </div>
+    {agent !== 'shell' && <p className="permission-note">{agent === 'opencode' ? 'Explicit deny rules in OpenCode still apply.' : `Same ${isMac ? 'macOS' : isWindows ? 'Windows' : 'user'} account and file access as your usual terminal.`}</p>}
   </form></div>
 }
 

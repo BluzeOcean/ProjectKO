@@ -132,7 +132,47 @@ try {
 
   // New chat offers the known groups and files the new tab under the chosen one.
   await page.getByRole('button', { name: 'New chat', exact: true }).click();
-  await page.locator('.desk-dialog summary', { hasText: /^Advanced$/ }).click();
+  // The agent roster floats over the panel and every agent stays selectable.
+  const roster = page.locator('.desk-dialog .agent-menu');
+  const dialog = page.locator('.desk-dialog');
+  const before = await dialog.boundingBox();
+  const actionBefore = await page.locator('.desk-dialog .action-row').boundingBox();
+  await page.locator('.desk-dialog .agent-select').click();
+  await roster.waitFor({ state: 'visible' });
+  const after = await dialog.boundingBox();
+  const actionAfter = await page.locator('.desk-dialog .action-row').boundingBox();
+  assert.equal(Math.round(after.height), Math.round(before.height), 'the panel keeps its height');
+  assert.equal(Math.round(actionAfter.y), Math.round(actionBefore.y), 'nothing below the roster moves');
+  assert.equal(await roster.evaluate(node => getComputedStyle(node).position), 'fixed', 'the roster floats over the panel');
+  const menu = await roster.boundingBox();
+  assert.ok(menu.y + menu.height <= (page.viewportSize()?.height ?? 600) + 1, 'the roster is not clipped by the window');
+  assert.equal(await roster.locator('.agent-option').count(), 6, 'every agent is offered, installed or not');
+  assert.equal(await roster.locator('.agent-option:disabled').count(), 0, 'an agent that is not installed is still selectable');
+  assert.equal(await roster.locator('.agent-option.missing .opt-tag').count(), await roster.locator('.agent-option.missing').count(), 'an agent that is not installed says so');
+  const pick = roster.locator('.agent-option:not(.missing)').first();
+  const picked = await pick.getAttribute('data-agent');
+  await pick.click();
+  assert.equal(await roster.locator(`.agent-option[data-agent="${picked}"]`).getAttribute('aria-selected'), 'true', 'the chosen agent is marked in the roster');
+  assert.equal(await page.locator('.desk-dialog .agent-select').getAttribute('aria-expanded'), 'false', 'the roster closes after a choice');
+
+  // The working folder opens the same floating popover: the panel keeps its size.
+  const folders = page.locator('.desk-dialog .folder-menu');
+  await page.locator('.desk-dialog .where').click();
+  await folders.waitFor({ state: 'visible' });
+  const withFolders = await dialog.boundingBox();
+  assert.equal(Math.round(withFolders.height), Math.round(before.height), 'the panel keeps its height when the folder list opens');
+  assert.equal(await folders.evaluate(node => getComputedStyle(node).position), 'fixed', 'the folder list floats over the panel');
+  const folderBox = await folders.boundingBox();
+  const folderChip = await page.locator('.desk-dialog .where').boundingBox();
+  assert.ok(Math.abs(folderBox.x - folderChip.x) <= 1, 'the folder list lines up with the chip');
+  assert.ok(folderBox.y >= folderChip.y + folderChip.height - 1, 'the folder list opens below the chip');
+  assert.ok(folderBox.y + folderBox.height <= (page.viewportSize()?.height ?? 600) + 1, 'the folder list is not clipped by the window');
+  assert.ok(await folders.locator('.folder-choice').count() > 0, 'the folders are listed');
+  await page.keyboard.press('Escape');
+  await folders.waitFor({ state: 'hidden' });
+  assert.ok(await page.locator('.desk-dialog').isVisible(), 'Escape closes the folder list, not the panel');
+
+  // The options sit on the panel, always visible.
   const picker = page.locator('.desk-dialog select[aria-label="Group"]');
   assert.deepEqual(await picker.locator('option').allTextContents(), ['No group', 'Dungeon', 'ThugLife', 'New group…']);
   await page.locator('.desk-dialog input[placeholder*="Dream Game"]').fill('Producer');
