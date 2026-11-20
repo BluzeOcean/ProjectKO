@@ -59,7 +59,7 @@ export default function MakComposer({ connected, sending, onSend }: {
     <form className="voice-compose" onSubmit={send}>
       <input ref={picker} type="file" hidden multiple accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" aria-label="Choose images for Project KO" onChange={event => { const files = Array.from(event.target.files || []); event.target.value = ''; void attach(files) }} />
       <button type="button" title="Attach images" aria-label="Attach images" disabled={disabled} onClick={() => picker.current?.click()}><Icon name="attach" size={17} /></button>
-      <textarea value={draft} rows={2} onChange={event => setDraft(event.target.value)} placeholder="Or tell Mak here…" aria-label="Message Project KO" aria-describedby="mak-compose-hint" disabled={disabled}
+      <textarea value={draft} rows={2} onChange={event => setDraft(event.target.value)} placeholder="Or tell Mr.KO here…" aria-label="Message Project KO" aria-describedby="mak-compose-hint" disabled={disabled}
         onPaste={event => { const files = Array.from(event.clipboardData.files).filter(file => file.type.startsWith('image/')); if (files.length) { event.preventDefault(); void attach(files) } }}
         onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229) { event.preventDefault(); event.currentTarget.form?.requestSubmit() } }} />
       <VoiceInput id="desktop-mak" connected={connected} disabled={disabled} config={dictation} hotkey transcriber={transcribeDesktopAudio} onBusy={setVoiceBusy} onText={(text, recordingId) => { if (voiceIds.current.has(recordingId)) return; voiceIds.current.add(recordingId); setDraft(current => current ? `${current}\n${text}` : text) }} />

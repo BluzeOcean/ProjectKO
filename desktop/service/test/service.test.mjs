@@ -122,7 +122,7 @@ test('coordinator operation IDs prevent replay, including after a restart', asyn
   try {
     service.coordinator.operations.set('already-routed', { id: 'already-routed', status: 'completed', result: 'Delivered once.' });
     assert.equal((await service.coordinator.ask({ id: 'already-routed', text: 'Send it again' })).result, 'Delivered once.');
-    assert.equal(service.coordinator.child, null);
+    assert.equal(service.coordinator.engine, null, 'a replay must not start the model');
     await service.coordinator.save();
     const { Coordinator } = await import('../coordinator.mjs');
     const restored = await new Coordinator({ repo: service.sessions.repo, stateDir: service.sessions.stateDir }).init();

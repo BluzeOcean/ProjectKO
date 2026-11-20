@@ -12,8 +12,12 @@ const repo = await mkdtemp(path.join(root, '.cache/voice-ui-'));
 await mkdir(path.join(repo, 'workspace'));
 const uiDir = path.join(repo, 'ui');
 await cp(path.join(root, 'dist'), uiDir, { recursive: true });
-for (const name of ['mak-nose.svg', 'mak-nose-chats.svg']) await copyFile(path.join(root, 'public/assets', name), path.join(uiDir, 'assets', name));
 await writeFile(path.join(repo, 'workspace/workspace.json'), '{"entities":[]}');
+// The microphone is a separate account from the conversation. The fixture repo
+// has no key, so the test supplies one to reach the microphone path; the keyless
+// path is checked at the end.
+const originalKey = process.env.OPENAI_API_KEY;
+process.env.OPENAI_API_KEY = 'sk-fixture-never-used';
 const service = await createService({ repo, uiDir, mcpOptions: { home: repo, env: {} } });
 const requests = [];
 let fail = false;
@@ -39,7 +43,7 @@ try {
   });
   for (const surface of ['chats', 'workspace']) {
     await page.goto(service.urls[surface]);
-    await page.getByRole('button', { name: 'Start voice', exact: true }).click();
+    await page.getByRole('button', { name: 'Talk to Mr.KO', exact: true }).click();
     await page.getByRole('alert').filter({ hasText: 'Permission denied' }).waitFor();
     await page.getByRole('button', { name: 'Dismiss voice error' }).click();
     assert.equal(await page.getByRole('alert').count(), 0);
@@ -88,7 +92,19 @@ try {
     await attached.getByRole('button', { name: /^Remove / }).click();
     assert.equal(await attached.count(), 0);
   }
+  // Without a key the microphone cannot work. The nose must say so quietly and
+  // never open the microphone.
+  delete process.env.OPENAI_API_KEY;
+  await page.goto(service.urls.workspace);
+  await page.getByRole('button', { name: 'Talk to Mr.KO', exact: true }).click();
+  await page.locator('.voice-note').waitFor();
+  assert.equal(await page.evaluate(() => window.fixtureMicRequests), 0);
+  assert.equal(await page.getByRole('alert').count(), 0);
   assert.deepEqual(errors, []);
-  console.log('Talk to Mak: newline/send/IME, dismissable errors, image paste/upload/preview/removal, retry and hidden-panel draft retention passed in both windows.');
+  console.log('Talk to Mr.KO: newline/send/IME, dismissable errors, image paste/upload/preview/removal, retry and hidden-panel draft retention passed in both windows.');
+  console.log('Without a microphone key the nose shows a muted note, opens no microphone and raises no error.');
   console.log(`Screenshots: ${repo}`);
-} finally { await browser?.close(); await service.close(); }
+} finally {
+  if (originalKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = originalKey;
+  await browser?.close(); await service.close();
+}

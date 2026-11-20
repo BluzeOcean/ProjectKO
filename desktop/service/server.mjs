@@ -156,7 +156,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         case 'read_context': return knowledge.read(args.path, args.offset);
         case 'list_skills': return knowledge.skills(args.query || '');
         case 'list_mcp': return mcp.list();
-        case 'get_app_settings': return { voice: settings.voiceName, style: settings.voiceStyle, model: coordinator.model || 'Codex default', effort: settings.coordinatorEffort, billing: 'Codex subscription for the coordinator; OpenAI API for voice' };
+        case 'get_app_settings': return { voice: settings.voiceName, style: settings.voiceStyle, model: coordinator.model || `${coordinator.engineLabel} default`, effort: settings.coordinatorEffort, billing: coordinator.billing };
         case 'update_voice': {
           if (typeof args.style === 'string' && args.style.trim()) settings.voiceStyle = args.style.trim().slice(0, 1800);
           if (['cedar', 'marin'].includes(args.voice)) settings.voiceName = args.voice;
@@ -266,7 +266,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         if (method === 'POST' && url.pathname === '/api/mobile/revoke') return json(response, 200, await mobile.revoke(data.id));
         if (method === 'GET' && url.pathname === '/api/bootstrap') {
           const keys = parseEnv(await readFile(path.join(repo, '.env'), 'utf8').catch(() => ''));
-          return json(response, 200, { repo, contentBase: `${files.origin}/view/${files.repoGrant}`, agents: inventory(), sessions: sessions.list(), settings, selectedId, notices, coordinator: coordinator.state, voice: { configured: !!(keys.OPENAI_API_KEY || keys.OPENAI_KEY || process.env.OPENAI_API_KEY), owner: voiceOwner }, voiceHistory, operations: [...coordinator.operations.values(), ...quick.operations.values()].sort((a, b) => a.at.localeCompare(b.at)).slice(-30) });
+          return json(response, 200, { repo, contentBase: `${files.origin}/view/${files.repoGrant}`, agents: inventory(), sessions: sessions.list(), settings, selectedId, notices, coordinator: coordinator.state, coordinatorEngine: { name: coordinator.engineName, label: coordinator.engineLabel, note: coordinator.engineNote }, voice: { configured: !!(keys.OPENAI_API_KEY || keys.OPENAI_KEY || process.env.OPENAI_API_KEY), owner: voiceOwner }, voiceHistory, operations: [...coordinator.operations.values(), ...quick.operations.values()].sort((a, b) => a.at.localeCompare(b.at)).slice(-30) });
         }
         if (method === 'GET' && url.pathname === '/api/workspace') return json(response, 200, await registry());
         if (method === 'POST' && url.pathname === '/api/workspace/cards') return json(response, 201, await cards.create(data));
@@ -456,7 +456,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           if (typeof data.sdp !== 'string' || !data.sdp.trim() || typeof data.clientId !== 'string') throw new Error('A microphone connection is required');
           const keys = parseEnv(await readFile(path.join(repo, '.env'), 'utf8').catch(() => ''));
           const key = keys.OPENAI_API_KEY || keys.OPENAI_KEY || process.env.OPENAI_API_KEY;
-          if (!key) throw new Error('Add OPENAI_API_KEY to the repository .env, then press the nose again.');
+          if (!key) throw Object.assign(new Error('The microphone needs an OpenAI key in the repository .env.'), { status: 503 });
           voiceOwner = { clientId: data.clientId, surface: data.surface === 'chats' ? 'chats' : 'workspace' };
           broadcast('voice-owner', { owner: voiceOwner });
           try {
@@ -517,7 +517,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         if (!ws.authenticated) {
           if (message.type !== 'auth' || !equalSecret(message.token, token)) return ws.close(1008, 'Authentication failed');
           ws.authenticated = true; ws.clientId = message.clientId; ws.surface = message.surface; clients.add(ws); clearTimeout(authTimer);
-          send(ws, 'connected', { sessions: sessions.list(), selectedId, coordinator: coordinator.state }); return;
+          send(ws, 'connected', { sessions: sessions.list(), selectedId, coordinator: coordinator.state, coordinatorEngine: { name: coordinator.engineName, label: coordinator.engineLabel, note: coordinator.engineNote } }); return;
         }
         if (message.type === 'subscribe') {
           ws.sessionId = message.id;

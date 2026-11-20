@@ -1,4 +1,4 @@
-// Explicit integration check against the user's signed-in Codex subscription.
+// Explicit integration check against the user's signed-in coordinator account.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

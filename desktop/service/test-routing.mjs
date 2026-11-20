@@ -7,7 +7,7 @@ import { Coordinator } from './coordinator.mjs';
 import { taskEffort } from './effort.mjs';
 import { taskTitle } from './titles.mjs';
 
-if (!process.argv.includes('--use-subscription')) throw new Error('Pass --use-subscription to check routing with the signed-in Codex account.');
+if (!process.argv.includes('--use-subscription')) throw new Error('Pass --use-subscription to check routing with the signed-in coordinator account.');
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 await mkdir(path.join(repo, '.cache'), { recursive: true });
 const stateDir = await mkdtemp(path.join(repo, '.cache', 'routing-smoke-'));

@@ -2,11 +2,11 @@ import { api, clientId, desktopState, surface } from './client'
 import type { Operation } from './types'
 
 export interface Caption { role: 'user' | 'assistant'; text: string; start: number; end: number }
-export interface LiveState { status: 'off' | 'connecting' | 'live' | 'closing' | 'error'; error: string; captions: Caption[]; startedAt: number | null; audible: boolean }
+export interface LiveState { status: 'off' | 'connecting' | 'live' | 'closing' | 'error'; error: string; captions: Caption[]; startedAt: number | null; audible: boolean; unavailable: boolean }
 interface LiveEvent { type: string; delta?: string; start_ms?: number; end_ms?: number; offset_ms?: number; delegation?: { id: string }; session?: { id: string }; error?: { message?: string }; message?: string }
 
 export class LiveVoice {
-  state: LiveState = { status: 'off', error: '', captions: [], startedAt: null, audible: true }
+  state: LiveState = { status: 'off', error: '', captions: [], startedAt: null, audible: true, unavailable: false }
   private peer: RTCPeerConnection | null = null
   private channel: RTCDataChannel | null = null
   private microphone: MediaStream | null = null
@@ -39,8 +39,12 @@ export class LiveVoice {
   announce(text: string) { this.event({ type: 'session.commentary.append', event_id: crypto.randomUUID(), delegation_id: null, content: text.slice(0, 1500) }) }
   async start() {
     if (['live', 'connecting', 'closing'].includes(this.state.status)) return
+    // The microphone is a separate account from the conversation. When the
+    // service has no key for it, the talk still works by typing: say so
+    // quietly instead of opening a microphone that cannot be used.
+    if (!desktopState().voice.configured) { this.update({ status: 'off', error: '', unavailable: true }); return }
     const generation = ++this.generation
-    this.update({ status: 'connecting', error: '', captions: [], startedAt: null })
+    this.update({ status: 'connecting', error: '', captions: [], startedAt: null, unavailable: false })
     this.inputFragments = []; this.nextInputSequence = 0; this.lastHandledSequence = -1
     this.delegated.clear(); this.lastContext = ''; this.ready = false
     try {

@@ -45,7 +45,7 @@ test('direct card actions and date lookups bypass the model and never open worke
     await request('pin-card', 'Закрепи эту карточку', { selectedId: 'unrelated-chat' }); assert.equal((await service.workspace.registry()).entities[0].pinned, true);
     assert.equal(await service.quick.ask({ id: 'ambiguous-surface', text: 'Открой Animation Review' }), null);
     assert.equal(await service.quick.ask({ id: 'compound', text: 'Что делали вчера и архивируй Animation Review' }), null);
-    assert.equal(service.sessions.list().length, 0); assert.equal(service.coordinator.child, null);
+    assert.equal(service.sessions.list().length, 0); assert.equal(service.coordinator.engine, null);
     assert.deepEqual(await request('archive', 'Архивируй эту карточку'), archive);
     assert.equal((await service.workspace.registry()).entities[0].status, 'done');
     assert.equal(await service.quick.ask({ id: 'ambiguous', text: 'Архивируй Review' }), null);
@@ -70,7 +70,11 @@ test('reasoning is medium or above, research uses xhigh, and max needs an explic
   for (const agent of ['codex', 'claude']) {
     if (!inventory().find(item => item.id === agent)?.available) continue;
     const command = terminalCommand(agent, { effort: 'xhigh', bypass: false });
-    const script = process.platform === 'win32' ? Buffer.from(command.args.at(-1), 'base64').toString('utf16le') : command.args.join(' ');
+    // A native .exe takes its flags directly; anything else goes through a
+    // PowerShell script that carries the same flags inside.
+    const script = process.platform === 'win32' && !/\.exe$/i.test(command.file)
+      ? Buffer.from(command.args.at(-1), 'base64').toString('utf16le')
+      : [command.file, ...command.args].join(' ');
     assert.match(script, agent === 'codex' ? /model_reasoning_effort="xhigh"/ : /--effort[' ]+xhigh/);
   }
 });

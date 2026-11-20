@@ -21,18 +21,13 @@ test('coordinator receives image content and paths; retries never replay a compl
   try {
     const image = await new Attachments(repo).save(png, 'Reference.png');
     const turns = [];
-    service.coordinator.start = async () => { service.coordinator.threadId = 'fixture'; };
-    service.coordinator.rpc = async (method, params) => {
-      assert.equal(method, 'turn/start'); turns.push(params);
-      service.coordinator.active.resolve('Image reviewed.');
-      return { turn: { id: 'fixture-turn' } };
-    };
+    service.coordinator.engine = { alive: true, close() {}, ask: async ({ prompt, images }) => { turns.push({ prompt, images }); return 'Image reviewed.'; } };
     service.quick.ask = async () => { throw new Error('An image must not take a text-only shortcut.'); };
     const response = await request('/coordinator', { id: 'with-image', text: 'Read this card', images: [image.path] });
     assert.equal(response.status, 200);
     assert.equal((await response.json()).status, 'completed');
-    assert.deepEqual(turns[0].input[1], { type: 'localImage', path: image.path });
-    assert.ok(turns[0].input[0].text.includes(JSON.stringify([image.path])));
+    assert.deepEqual(turns[0].images, [image.path]);
+    assert.ok(turns[0].prompt.includes(JSON.stringify([image.path])));
     assert.deepEqual(service.coordinator.operations.get('with-image').images, [image.path]);
     await request('/coordinator', { id: 'with-image', text: 'Retry this', images: [image.path] });
     assert.equal(turns.length, 1);

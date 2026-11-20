@@ -28,10 +28,12 @@ export interface VoiceOwner { clientId: string; surface: 'chats' | 'workspace' }
 export interface FileEntry { name: string; path: string; directory: boolean; size: number; modifiedAt: string | null }
 export interface Folder { path: string; parent: string; entries: FileEntry[]; truncated: boolean; mode: string }
 export interface Preview { path: string; name: string; size: number; kind: 'document' | 'image' | 'video' | 'audio' | 'text' | 'unsupported'; url?: string; text?: string; revision?: string; reason?: string }
+/** Which program answers as Mr. KO: Claude Code, or Codex when it is not installed. */
+export interface CoordinatorEngine { name: 'claude' | 'codex'; label: string; note: string }
 export interface DesktopState {
   ready: boolean; connected: boolean; error: string | null; repo: string; contentBase: string
   agents: AgentInfo[]; sessions: ChatSession[]; selectedId: string | null; notices: Notice[]
-  settings: Settings; coordinator: string; voice: { configured: boolean; owner: VoiceOwner | null }
+  settings: Settings; coordinator: string; coordinatorEngine: CoordinatorEngine; voice: { configured: boolean; owner: VoiceOwner | null }
   operations: Operation[]; preview: Preview | null
   voiceHistory: { id: string; at: string; captions: { role: 'user' | 'assistant'; text: string; start: number; end: number }[] }[]
 }
@@ -39,4 +41,5 @@ export interface ServiceEvent {
   type: string; id?: string; data?: string; sequence?: number; session?: ChatSession; sessions?: ChatSession[]
   selectedId?: string; sessionId?: string; state?: string; error?: string; notice?: Notice
   operation?: Operation; settings?: Settings; owner?: VoiceOwner | null; window?: string; route?: string; preview?: Preview; handoff?: Handoff
+  coordinatorEngine?: CoordinatorEngine
 }

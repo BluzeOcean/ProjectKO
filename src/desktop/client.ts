@@ -19,7 +19,7 @@ const listeners = new Set<() => void>()
 const events = new Set<(event: ServiceEvent) => void>()
 let state: DesktopState = {
   ready: false, connected: false, error: null, repo: '', contentBase: '', agents: [], sessions: [], selectedId: null, notices: [],
-  settings: { defaultAgent: 'codex', defaultBypass: false }, coordinator: 'idle', voice: { configured: false, owner: null }, operations: [], preview: null, voiceHistory: [],
+  settings: { defaultAgent: 'codex', defaultBypass: false }, coordinator: 'idle', coordinatorEngine: { name: 'codex', label: 'Codex', note: 'Codex subscription' }, voice: { configured: false, owner: null }, operations: [], preview: null, voiceHistory: [],
 }
 let socket: WebSocket | null = null
 let started = false
@@ -107,7 +107,7 @@ function connect() {
   socket.onopen = () => socket?.send(JSON.stringify({ type: 'auth', token, clientId, surface }))
   socket.onmessage = ({ data }) => {
     const event = JSON.parse(data) as ServiceEvent
-    if (event.type === 'connected') update({ connected: true, sessions: event.sessions || state.sessions, selectedId: event.selectedId ?? state.selectedId, coordinator: event.state || state.coordinator, error: null })
+    if (event.type === 'connected') update({ connected: true, sessions: event.sessions || state.sessions, selectedId: event.selectedId ?? state.selectedId, coordinator: event.state || state.coordinator, coordinatorEngine: event.coordinatorEngine || state.coordinatorEngine, error: null })
     if (event.type === 'selection') update({ selectedId: event.selectedId || null })
     if (event.type === 'session' && event.session) {
       const next = event.session
