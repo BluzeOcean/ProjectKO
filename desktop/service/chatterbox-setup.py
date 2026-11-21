@@ -18,6 +18,11 @@ import venv
 from pathlib import Path
 
 TORCH_INDEX = 'https://download.pytorch.org/whl/cu128'
+CUDA_INDEX = {  # the CUDA build that matches each torch line chatterbox pins
+    '2.6': 'https://download.pytorch.org/whl/cu124',
+    '2.7': 'https://download.pytorch.org/whl/cu126',
+    '2.8': 'https://download.pytorch.org/whl/cu128',
+}
 ROOT = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(os.environ.get('LOCALAPPDATA', str(Path.home()))) / 'ProjectKO' / 'voice' / 'chatterbox'
 VENV = ROOT / 'venv'
 MODELS = ROOT / 'models'
@@ -30,9 +35,19 @@ def say(phase, percent, message):
 
 
 def env():
+    """Everything the downloader reads, pointed inside the install folder.
+
+    This machine already exports HF_HUB_CACHE (and quotes it), which outranks
+    HF_HOME, so the inherited values are dropped rather than overridden: the
+    weights belong to this install, on this drive, or uninstalling leaves a
+    gigabyte behind on another one.
+    """
     values = dict(os.environ)
+    for key in ('HF_HOME', 'HF_HUB_CACHE', 'HUGGINGFACE_HUB_CACHE', 'TRANSFORMERS_CACHE', 'TORCH_HOME', 'HF_XET_CACHE'):
+        values.pop(key, None)
     values.update({
         'HF_HOME': str(MODELS / 'hf'),
+        'HF_HUB_CACHE': str(MODELS / 'hf' / 'hub'),
         'TORCH_HOME': str(MODELS / 'torch'),
         'HF_HUB_DISABLE_TELEMETRY': '1',
         'PYTHONIOENCODING': 'utf-8',
@@ -70,8 +85,15 @@ def main():
         say('install', 3, 'Python environment already present')
 
     run([str(PY), '-m', 'pip', 'install', '--upgrade', 'pip', '--progress-bar', 'off'], 5, 8, 'Updating pip')
-    run([str(PY), '-m', 'pip', 'install', '--progress-bar', 'off', '--index-url', TORCH_INDEX, 'torch', 'torchaudio'], 8, 55, 'Downloading PyTorch for CUDA (about 2.5 GB)')
-    run([str(PY), '-m', 'pip', 'install', '--progress-bar', 'off', 'chatterbox-tts==0.1.7'], 55, 80, 'Installing Chatterbox (about 300 MB)')
+    # Chatterbox pins its own torch and pip would fetch the CPU wheel from PyPI.
+    # Install it first, then swap in the CUDA build of the same version, or the
+    # engine silently speaks on the processor.
+    run([str(PY), '-m', 'pip', 'install', '--progress-bar', 'off', 'chatterbox-tts==0.1.7'], 8, 45, 'Installing Chatterbox (about 300 MB)')
+    probe = subprocess.run([str(PY), '-c', 'import torch; print(torch.__version__.split("+")[0])'], capture_output=True, text=True, env=env())
+    version = (probe.stdout or '').strip() or '2.6.0'
+    index = CUDA_INDEX.get(version.rsplit('.', 1)[0], TORCH_INDEX)
+    tag = 'cu' + index.rsplit('/cu', 1)[-1]
+    run([str(PY), '-m', 'pip', 'install', '--progress-bar', 'off', '--index-url', index, f'torch=={version}+{tag}', f'torchaudio=={version}+{tag}'], 45, 78, f'Swapping PyTorch {version} for its CUDA build (about 2.5 GB)')
 
     say('model', 82, 'Downloading the Chatterbox voice (about 2 GB, once)')
     probe = (

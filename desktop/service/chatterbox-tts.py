@@ -21,8 +21,11 @@ import torchaudio
 
 root = sys.argv[1] if len(sys.argv) > 1 else None
 if root:
-    os.environ.setdefault('HF_HOME', os.path.join(root, 'models', 'hf'))
-    os.environ.setdefault('TORCH_HOME', os.path.join(root, 'models', 'torch'))
+    # The weights live with the engine: an inherited HF_HUB_CACHE would send the
+    # loader looking on another drive.
+    os.environ['HF_HOME'] = os.path.join(root, 'models', 'hf')
+    os.environ['HF_HUB_CACHE'] = os.path.join(root, 'models', 'hf', 'hub')
+    os.environ['TORCH_HOME'] = os.path.join(root, 'models', 'torch')
 
 with contextlib.redirect_stdout(sys.stderr):
     from chatterbox.tts import ChatterboxTTS

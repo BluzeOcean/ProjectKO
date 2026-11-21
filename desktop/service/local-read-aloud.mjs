@@ -150,8 +150,9 @@ export class LocalReadAloud {
     } finally {
       clearTimeout(timeout); signal?.removeEventListener('abort', abort); this.pending = null;
       clearTimeout(this.idle);
-      // Keep the model warm for a couple of minutes; a reload costs one second.
-      this.idle = setTimeout(() => this.close(), 120000); this.idle.unref?.();
+      // Chatloading Chatterbox takes about twenty seconds, so the worker stays
+      // up for ten minutes after the last sentence rather than two.
+      this.idle = setTimeout(() => this.close(), 600000); this.idle.unref?.();
     }
   }
 
