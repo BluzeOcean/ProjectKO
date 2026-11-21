@@ -296,7 +296,18 @@ export default function Conversation({ session, connected, agentLabel, openTermi
         onPaste={event => { const files = Array.from(event.clipboardData.files).filter(file => file.type.startsWith('image/')); if (files.length) { event.preventDefault(); void addImages(files) } }} />
       <div className="conversation-actions">
         <button type="button" className="desk-icon" title="Attach files or folders" aria-label="Attach files" onClick={() => window.dispatchEvent(new Event('mrmak-attach-file'))}><Icon name="attach" size={16} /></button>
-        {session.agent === 'dsh' && <PermissionPicker value={session.permissionMode || 'workspace-write'} disabled={!connected} onChange={mode => { setStatus(''); api(`/sessions/${session.id}/permission`, { mode }).catch(error => setStatus(error instanceof Error ? error.message : String(error))); api('/settings', { dshPermissionMode: mode }).catch(() => { /* The chat already changed; the next one falls back. */ }) }} />}
+        {session.agent === 'dsh' && <PermissionPicker value={session.permissionMode || 'workspace-write'} disabled={!connected} onChange={mode => {
+            setStatus('')
+            const failed = (error: unknown) => {
+              const text = error instanceof Error ? error.message : String(error)
+              // A service started before this route existed answers 404 here, and
+              // "Endpoint not found" reads like a bug in the chat rather than in
+              // the build that is running.
+              setStatus(/endpoint not found/i.test(text) ? 'Restart Project KO to change the permission mode.' : text)
+            }
+            api(`/sessions/${session.id}/permission`, { mode }).catch(failed)
+            api('/settings', { dshPermissionMode: mode }).catch(() => { /* The chat already changed; the next one falls back. */ })
+          }} />}
         <span className="conversation-status" role="status">{status || hexNote || (uploading ? 'Saving images…' : session.agent === 'dsh' ? '' : 'Enter to send · Shift+Enter for a new line')}</span>
         <div className="terminal-dictation">{hexReady
           ? <button type="button" className="desk-icon hex-mic" title="Dictate with Hex" aria-label="Dictate with Hex" disabled={!connected} onClick={dictate}><Icon name="mic" size={16} /></button>
