@@ -3,7 +3,7 @@ import type { AgentId, AgentInfo, ChatSession } from './types'
 // Where an agent's account lives, in the words the New chat panel already used.
 const account: Record<AgentId, string> = {
   codex: 'Your CLI account', claude: 'Your CLI account', antigravity: 'Your CLI account',
-  kimi: 'Your CLI account', opencode: 'Your providers', shell: 'Local terminal',
+  kimi: 'Your CLI account', dsh: 'Your DeepSeek account', opencode: 'Your providers', shell: 'Local terminal',
 }
 
 /** The account line under an agent, or the plain truth when its CLI is missing. */

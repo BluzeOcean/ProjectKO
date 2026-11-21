@@ -1,6 +1,6 @@
 import type { ThemePreference } from '../../desktop/service/appearance.mjs'
 
-export type AgentId = 'codex' | 'claude' | 'antigravity' | 'opencode' | 'kimi' | 'shell'
+export type AgentId = 'codex' | 'claude' | 'antigravity' | 'opencode' | 'kimi' | 'dsh' | 'shell'
 export type Effort = 'medium' | 'high' | 'xhigh' | 'max'
 export interface AgentInfo { id: AgentId; label: string; color: string; available: boolean; subscription: boolean }
 export interface ChatSession {
@@ -13,9 +13,16 @@ export interface ChatSession {
   tabOrder: number; tabColor: string | null; group: string | null
   open: boolean; pinned: boolean; updatedAt: string; preview?: string; hasConversation?: boolean; restoreError?: string | null
   contextUsage?: ContextUsage
+  usage?: ChatUsage | null
+}
+// What a chat has spent, as the harness reports it: the footer's four facts.
+export interface ChatUsage {
+  turns: number; steps: number; tokens: number; cost: number; cacheHit: number
+  model: string | null; limit: number | null; contextUsed: number
+  contextPercent: number | null; updatedAt: string | null
 }
 export interface ContextUsage {
-  usedTokens: number | null; limitTokens: number | null; source: AgentId
+  usedTokens: number | null; limitTokens: number | null; source: AgentId | 'dsh'
   updatedAt: string | null; reason: 'waiting' | 'compacted' | 'unavailable'
 }
 export interface RecentProject { path: string; name: string; sources: ('workspace' | 'mrmak' | 'claude' | 'codex')[]; pinned: boolean; lastUsedAt: string | null }

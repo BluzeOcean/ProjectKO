@@ -6,12 +6,15 @@ const key = (id: string) => `mrmak.chatView.${id}`
 const read = (name: string) => { try { return localStorage.getItem(name) } catch { return null } }
 
 // Only these CLIs write a transcript Project KO can read as a conversation; OpenCode's is its session store.
-export const hasConversationView = (session: ChatSession) => session.agent === 'claude' || session.agent === 'codex' || session.agent === 'antigravity' || session.agent === 'opencode'
+export const hasConversationView = (session: ChatSession) => session.agent === 'claude' || session.agent === 'codex' || session.agent === 'antigravity' || session.agent === 'opencode' || session.agent === 'dsh'
 
 export function chatView(session: ChatSession): ChatView {
   if (!hasConversationView(session)) return 'terminal'
   const saved = read(key(session.id))
   if (saved === 'conversation' || saved === 'terminal') return saved
+  // A harness that speaks a protocol has no terminal prompts to miss: the
+  // conversation is the chat, and the terminal shows the same words.
+  if (session.agent === 'dsh') return session.hasConversation ? 'conversation' : 'terminal'
   // A new CLI can open with folder-trust or sign-in questions that only the
   // terminal shows, so the preferred view applies once a conversation exists.
   return session.hasConversation && read(key('default')) === 'conversation' ? 'conversation' : 'terminal'

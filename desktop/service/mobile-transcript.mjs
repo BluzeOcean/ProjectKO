@@ -6,6 +6,7 @@ import { claudeTranscript } from './native-events.mjs';
 import { codexSegments } from './codex-history.mjs';
 import { antigravityFullTranscript } from './antigravity.mjs';
 import { readOpencodeSession } from './opencode-history.mjs';
+import { messagesFrom, readRecords, usageFrom } from './dsh.mjs';
 
 export function transcriptActivity(records, agent) {
   const tools = new Map();
@@ -304,6 +305,7 @@ export class ConversationTranscripts {
   cache = new Map();
   subagents = new Map();
   async read(session) {
+    if (session.agent === 'dsh') return this.readDsh(session);
     if (session.agent === 'opencode' && session.nativeId) return this.readOpencode(session);
     if (!['codex', 'claude', 'antigravity'].includes(session.agent) || !session.nativeId) return { supported: false, messages: [] };
     const files = session.agent === 'claude' ? [await claudeTranscript(session.cwd, session.nativeId)]
@@ -329,6 +331,32 @@ export class ConversationTranscripts {
       // Subagents write their own files, so the chat's transcript may be unchanged while they work.
       return session.agent === 'claude' ? { ...cached.value, ...await this.backgroundWork(files[0], session, cached).catch(() => ({ agents: [], commands: [] })) } : cached.value;
     } catch { return { supported: false, messages: [] }; }
+  }
+
+  // The DeepSeek harness writes its own log beside the chat, so the
+  // conversation is the same records the footer reads — one source, no parsing
+  // of a terminal's scrollback.
+  async readDsh(session) {
+    if (!session.dshLog) return { supported: false, messages: [] };
+    const cached = this.cache.get(session.id);
+    try {
+      const info = await stat(session.dshLog);
+      const key = info.size + ':' + info.mtimeMs;
+      if (cached?.key === key) return cached.value;
+      const records = readRecords(session.dshLog);
+      const { messages, activity } = messagesFrom(records);
+      const value = {
+        supported: messages.length > 0,
+        messages: messages.slice(-100),
+        userMessages: messages.filter(item => item.role === 'user').length,
+        activity,
+        model: usageFrom(records).model,
+        truncated: false,
+      };
+      this.cache.set(session.id, { key, value });
+      if (this.cache.size > 25) this.cache.delete(this.cache.keys().next().value);
+      return value;
+    } catch { return cached?.value || { supported: false, messages: [] }; }
   }
 
   // OpenCode keeps chats in its SQLite store rather than a transcript file. The

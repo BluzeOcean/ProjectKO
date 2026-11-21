@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect } from '@playwright/test';
 import { createService } from '../server.mjs';
+import { dshCli } from '../dsh.mjs';
 import { launchBrowser, desktopAuth } from './browser.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -136,6 +137,35 @@ try {
   await expect(page.getByLabel('Check the quota every')).toHaveValue('15');
   await page.keyboard.press('Escape');
 
+
+  // A DeepSeek Harness chat answers about itself on the same line; every other
+  // chat keeps the quota. Skipped when the harness is not installed.
+  if (dshCli()) {
+    const create = body => fetch(service.origin + '/api/sessions', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + service.token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...body, cwd: repo }),
+    }).then(response => response.json());
+
+    const harness = await create({ agent: 'dsh', name: 'Harness' });
+    assert.equal(harness.agent, 'dsh');
+    const status = page.getByRole('status', { name: 'Chat status' });
+    await expect(status).toBeVisible({ timeout: 30000 });
+    await expect(status).toContainText('turn');
+    await expect(status).toContainText('tok');
+    await expect(status).toContainText('¥');
+    // The context strip steps aside: the footer carries the same numbers.
+    assert.equal(await page.locator('.chat-context-usage').count(), 0, 'no context strip on a harness chat');
+    await page.screenshot({ path: path.join(repo, 'chat-status.png') });
+
+    // Back to a chat that is not the harness: the quota line returns.
+    await create({ agent: 'shell', name: 'Shell' });
+    await expect(quota).toBeVisible({ timeout: 20000 });
+    await expect(quota.locator('.qf-pct')).toHaveCount(2);
+  } else {
+    console.log('skipped: DeepSeek Harness is not installed on this machine');
+  }
+
   // Without the CLI the line is simply absent, not a broken meter.
   failing = true;
   await patch({ quotaRefreshMinutes: 10 });
@@ -145,7 +175,7 @@ try {
   await expect(quota).toContainText('0%');
 
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ ok: true, fixture: repo, checks: ['order and shares', 'threshold colours', 'countdown title', 'focus waits for the interval', '320/400/500/900/1440px', 'short window keeps the line', 'absent without the CLI', 'interval default, refusal and persistence', 'appearance popover writes it too', 'no page errors'] }));
+  console.log(JSON.stringify({ ok: true, fixture: repo, checks: ['order and shares', 'threshold colours', 'countdown title', 'focus waits for the interval', '320/400/500/900/1440px', 'short window keeps the line', 'absent without the CLI', 'interval default, refusal and persistence', 'appearance popover writes it too', 'deepseek chat shows its own status', 'claude chat keeps the quota', 'no page errors'] }));
 } finally {
   await browser?.close();
   await service?.close();

@@ -1,10 +1,12 @@
 import { execFile } from 'node:child_process';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { parse as parseEnv } from 'dotenv';
 import { isWindows, macLocale, powerShellLiteral, resolveCommand, shellCommand, shellLabel } from './platform.mjs';
 import { validAntigravityId } from './antigravity.mjs';
+import { dshCli } from './dsh.mjs';
 
 export { shellCommand };
 
@@ -20,6 +22,7 @@ export const AGENTS = [
   { id: 'antigravity', label: 'Antigravity', color: '#8ab4f8', command: 'agy', subscription: true },
   { id: 'opencode', label: 'OpenCode', color: '#c8d2dc', command: 'opencode', subscription: false },
   { id: 'kimi', label: 'Kimi', color: '#b3a3f7', command: 'kimi', subscription: true },
+  { id: 'dsh', label: 'DeepSeek Harness', color: '#6f9dff', command: 'dsh', subscription: true },
   { id: 'shell', label: shellLabel(), color: '#89b7ed', command: 'shell', subscription: false },
 ];
 
@@ -30,7 +33,12 @@ export function commandPath(name, env = process.env, home) {
 export function inventory(env = process.env) {
   const shell = shellCommand(env);
   const shellAvailable = path.isAbsolute(shell.file) ? existsSync(shell.file) : !!commandPath(shell.file, env);
-  return AGENTS.map(agent => ({ ...agent, available: agent.id === 'shell' ? shellAvailable : !!commandPath(agent.command, env) }));
+  return AGENTS.map(agent => ({
+    ...agent,
+    available: agent.id === 'shell' ? shellAvailable
+      : agent.id === 'dsh' ? !!dshCli(env)
+      : !!commandPath(agent.command, env),
+  }));
 }
 
 // Resolve the real Codex binary when available so JSON-RPC does not pass through a shell.
@@ -88,12 +96,25 @@ export function codexSupportsNoDaemon(env = process.env) {
   return codexHelp.get(key);
 }
 
-export function terminalCommand(agent, { bypass = false, resumeId, nativeId, effort, opencodeMajor = 1, antigravityLog, initialPrompt, readDir, noDaemon = false } = {}) {
+const dshBridge = fileURLToPath(new URL('./dsh-bridge.mjs', import.meta.url));
+
+export function terminalCommand(agent, { bypass = false, resumeId, nativeId, effort, opencodeMajor = 1, antigravityLog, initialPrompt, readDir, noDaemon = false, dshLog, dshModel = 'deepseek-v4-flash' } = {}) {
   if (!AGENTS.some(item => item.id === agent)) throw new Error('Unknown agent');
   resumeId = nativeConversationId(resumeId); nativeId = nativeConversationId(nativeId);
   initialPrompt = initialPromptArgument(initialPrompt);
-  if (initialPrompt && (resumeId || !['codex', 'claude'].includes(agent))) throw new Error('Only a new Codex or Claude chat can start with a message.');
+  if (initialPrompt && (resumeId || !['codex', 'claude', 'dsh'].includes(agent))) throw new Error('Only a new Codex or Claude chat can start with a message.');
   if (readDir != null && (typeof readDir !== 'string' || !path.isAbsolute(readDir) || /[\x00-\x1f]/.test(readDir))) throw new Error('Choose an absolute folder.');
+  if (agent === 'dsh') {
+    // The harness has no interactive terminal: the bridge is the terminal, and
+    // it speaks the SDK profile the desktop app already ships.
+    const launcher = dshCli(process.env) || commandPath('dsh');
+    if (!launcher) throw new Error('DeepSeek Harness is not installed on this computer');
+    if (!dshLog) throw new Error('A DeepSeek chat needs its event log');
+    const bridgeArgs = [dshBridge, '--dsh', launcher, '--log', dshLog, '--model', dshModel, '--session', nativeId || `session-${resumeId || Date.now().toString(36)}`];
+    if (bypass) bridgeArgs.push('--allow');
+    if (initialPrompt) bridgeArgs.push('--initial', initialPrompt);
+    return { file: process.execPath, args: bridgeArgs };
+  }
   const command = agent === 'shell' ? shellCommand() : { file: commandPath(AGENTS.find(item => item.id === agent).command), args: [] };
   if (!command || !command.file) throw new Error(`${agent} is not installed on this computer`);
   if (agent === 'shell' && (path.isAbsolute(command.file) ? !existsSync(command.file) : !commandPath(command.file))) throw new Error('The local shell is not available on this computer');

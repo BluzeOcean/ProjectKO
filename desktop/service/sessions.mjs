@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
-import { mkdir, realpath, stat } from 'node:fs/promises';
+import { mkdir, open, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import pty from 'node-pty';
 import headless from '@xterm/headless';
@@ -17,6 +17,7 @@ import { composerText, terminalPrompt } from './terminal-prompt.mjs';
 import { opencodeVersion, opencodeEnvironment, readOpencodeState, watchOpencode } from './opencode.mjs';
 import { antigravityTranscript, prepareAntigravityLog, readAntigravityConversation, validAntigravityId, watchAntigravity, watchAntigravityContext } from './antigravity.mjs';
 import { unknownContext } from './native-context.mjs';
+import { dshLogPath, usageFrom } from './dsh.mjs';
 
 const { Terminal } = headless;
 // Native CLIs record getcwd(): symlinks resolved (/tmp -> /private/tmp, cloud
@@ -28,7 +29,7 @@ async function workingFolder(value) {
 }
 const publicSession = session => {
   const { id, name, agent, cwd, bypass, effort, status, createdAt, lastOutputAt, lastInputAt, exitCode, nativeId, attention, activity, unread, completionVersion, lastCompletedId, cols, rows, open, pinned, tabOrder, tabColor, group, updatedAt, preview, hasConversation, restoreError } = session;
-  return { id, name, agent, cwd, bypass, effort, status, createdAt, lastOutputAt, lastInputAt, exitCode, nativeId, attention, activity, unread, completionVersion, lastCompletedId, cols, rows, open, pinned, tabOrder, tabColor, group, updatedAt, preview, hasConversation, restoreError, contextUsage: session.contextUsage };
+  return { id, name, agent, cwd, bypass, effort, status, createdAt, lastOutputAt, lastInputAt, exitCode, nativeId, attention, activity, unread, completionVersion, lastCompletedId, cols, rows, open, pinned, tabOrder, tabColor, group, updatedAt, preview, hasConversation, restoreError, contextUsage: session.contextUsage, usage: session.usage || null };
 };
 
 // Grouped tabs sit together at the position of their earliest open member; a tab
@@ -75,7 +76,7 @@ export class Sessions extends EventEmitter {
   }
 
   make(metadata) {
-    return { activity: 'idle', unread: false, completionVersion: 0, tabOrder: this.items.size, tabColor: null, group: null, ...metadata, contextUsage: unknownContext(metadata.agent), effort: ['codex', 'claude', 'antigravity'].includes(metadata.agent) ? metadata.effort || defaultWorkerEffort : undefined, terminal: null, serializer: null, process: null, sequence: 0, pendingOutput: '', outputTimer: null };
+    return { activity: 'idle', unread: false, completionVersion: 0, tabOrder: this.items.size, tabColor: null, group: null, ...metadata, contextUsage: unknownContext(metadata.agent), effort: ['codex', 'claude', 'antigravity'].includes(metadata.agent) ? metadata.effort || defaultWorkerEffort : undefined, terminal: null, serializer: null, process: null, sequence: 0, pendingOutput: '', outputTimer: null, usage: null, dshOffset: 0, dshRecords: [] };
   }
 
   async hydrate(session) {
@@ -132,7 +133,7 @@ export class Sessions extends EventEmitter {
       tabOrder: Math.max(-1, ...this.list().map(item => item.tabOrder)) + 1,
       cwd, bypass: options.bypass === true, createdAt: now, lastInputAt: null, lastOutputAt: null,
       effort: options.effort, group: groupLabel(options.group),
-      status: 'starting', nativeId: options.resumeId || (agent === 'claude' ? randomUUID() : null),
+      status: 'starting', nativeId: options.resumeId || (agent === 'claude' ? randomUUID() : agent === 'dsh' ? `session-${randomUUID()}` : null),
       open: true, pinned: false, updatedAt: now, preview: '', hasConversation: !!options.resumeId || !!options.initialPrompt, restoreError: null,
       attention: false, cols: Math.min(500, Math.max(20, options.cols || 90)), rows: Math.min(200, Math.max(5, options.rows || 32)),
     });
@@ -188,9 +189,11 @@ export class Sessions extends EventEmitter {
     if (this.closed || !session.open) throw new Error('The chat was closed before its terminal started.');
     if (session.agent === 'antigravity' && resumeId && !validAntigravityId(resumeId)) throw new Error('Use the Antigravity conversation UUID from its /resume picker.');
     const antigravityLog = session.agent === 'antigravity' ? await prepareAntigravityLog(this.stateDir, session.id) : undefined;
+    let dshLog;
+    if (session.agent === 'dsh') { dshLog = dshLogPath(this.stateDir, session.id); session.dshLog = dshLog; await mkdir(path.dirname(dshLog), { recursive: true }); }
     const noDaemon = session.agent === 'codex' && await codexSupportsNoDaemon(env);
     if (this.closed || !session.open) throw new Error('The chat was closed before its terminal started.');
-    const command = terminalCommand(session.agent, { bypass: session.bypass, resumeId, nativeId: session.nativeId, effort: session.effort, opencodeMajor, antigravityLog, noDaemon, ...first });
+    const command = terminalCommand(session.agent, { bypass: session.bypass, resumeId, nativeId: session.nativeId, effort: session.effort, opencodeMajor, antigravityLog, noDaemon, dshLog, ...first });
     if (session.agent === 'codex') env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE = `mrmak_chat_${session.id}`;
     if (session.terminal) this.resetTerminal(session);
     const proc = pty.spawn(command.file, command.args, ptyOptions({ cwd: session.cwd, env, cols: session.cols, rows: session.rows }));
@@ -266,6 +269,7 @@ export class Sessions extends EventEmitter {
       else if (state.activity === 'waiting') this.nativeEvent(session, { kind: 'attention' });
       else if (state.activity === 'idle' && session.activity !== 'idle') this.nativeEvent(session, { kind: 'turn-interrupted' });
     });
+    if (session.agent === 'dsh') session.stopNativeWatch = this.watchDsh(session, dshLog);
     if (nativeWatch) this.watchNative(session, nativeWatch.file, nativeWatch.offset);
     else if (session.agent === 'claude' && session.nativeId) claudeTranscript(session.cwd, session.nativeId).then(file => {
       if (session.process === proc) this.watchNative(session, file);
@@ -277,6 +281,48 @@ export class Sessions extends EventEmitter {
     if (session.discovering || session.nativeId || session.agent !== 'codex') return;
     session.discovering = true;
     this.discoverNative(session).catch(() => {}).finally(() => { session.discovering = false; });
+  }
+
+  // The bridge appends every session event to a JSONL file beside the chat.
+  // Reading it is the whole of the harness's telemetry: tokens, cache share,
+  // cost and the context window all arrive there, with no extra request.
+  watchDsh(session, file) {
+    let stopped = false;
+    const read = async () => {
+      if (stopped || session.process === null) return;
+      let info;
+      try { info = await stat(file); } catch { return; }
+      if (info.size < session.dshOffset) { session.dshOffset = 0; session.dshRecords = []; }
+      if (info.size === session.dshOffset) return;
+      try {
+        const handle = await open(file, 'r');
+        try {
+          const buffer = Buffer.alloc(info.size - session.dshOffset);
+          const { bytesRead } = await handle.read(buffer, 0, buffer.length, session.dshOffset);
+          session.dshOffset += bytesRead;
+          for (const line of buffer.subarray(0, bytesRead).toString('utf8').split('\n')) {
+            if (!line.trim()) continue;
+            try { session.dshRecords.push(JSON.parse(line)); } catch { /* A torn line is read again next tick. */ }
+          }
+          if (session.dshRecords.length > 4000) session.dshRecords = session.dshRecords.slice(-2000);
+        } finally { await handle.close(); }
+      } catch { return; }
+      const usage = usageFrom(session.dshRecords);
+      session.usage = usage;
+      session.contextUsage = {
+        usedTokens: usage.contextUsed || null,
+        limitTokens: usage.limit || null,
+        source: 'dsh',
+        updatedAt: usage.updatedAt,
+        reason: usage.limit ? undefined : 'unavailable',
+      };
+      session.hasConversation = true;
+      this.changed(session);
+    };
+    const timer = setInterval(read, 700);
+    timer.unref();
+    void read();
+    return () => { stopped = true; clearInterval(timer); };
   }
 
   watchNative(session, file, offset = 0) {
@@ -430,7 +476,10 @@ export class Sessions extends EventEmitter {
     // the previous snapshot until fresh telemetry arrives; do not parse the TUI
     // input editor or assume that submitted text was accepted as a command.
     if (data.includes('\r') || data.includes('\n') || submit) session.contextUsage = unknownContext(session.agent);
-    if (coordinator) {
+    if (coordinator && session.agent === 'dsh') {
+      // The bridge reads lines: the message goes in whole, then Enter ends it.
+      session.process.write(`${data.replaceAll('\r', '')}\r`);
+    } else if (coordinator) {
       // Bracketed paste keeps multi-line text a single CLI prompt, then Enter submits it.
       const clean = data.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '').replaceAll('\r', '');
       const target = session.process;

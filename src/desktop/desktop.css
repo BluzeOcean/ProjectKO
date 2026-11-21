@@ -314,3 +314,23 @@
    when the window turns over. */
 @media(max-width:400px){.qf-reset{display:none}}
 @media(max-width:340px){.qf-pct{min-width:22px}}
+
+/* The DeepSeek Harness chat's own numbers, on the line the quota uses.
+   Four facts and a ring: turns, tokens, the cache share, the price — and the
+   context window as an arc, because it has to sit inside 12 px beside a
+   percentage. The numbers are the bright ink; the words are what they mean. */
+.quota-footer.ds-status{--tone:var(--pink);gap:14px}
+.ds-fact{display:inline-flex;align-items:baseline;gap:3px;white-space:nowrap;font:9.5px/1 var(--font-mono);font-variant-numeric:tabular-nums;color:var(--text-muted)}
+.ds-fact b{font-weight:500;color:var(--text)}
+.ds-cost{margin-left:auto;display:inline-flex;align-items:baseline;gap:2px;white-space:nowrap;font:9.5px/1 var(--font-mono);font-variant-numeric:tabular-nums;color:var(--text-muted)}
+.ds-cost b{font-weight:500;color:var(--text)}
+.ds-ring{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font:9.5px/1 var(--font-mono);font-variant-numeric:tabular-nums;color:var(--text)}
+.ds-ring svg{color:var(--tone)}
+.ds-ring svg .ds-track{stroke:color-mix(in srgb,var(--text) 16%,transparent)}
+.ds-ring b{font-weight:500}
+.ds-ring[data-tone=warm]{--tone:var(--amber)}
+.ds-ring[data-tone=low]{--tone:var(--red)}
+/* The line gives up its least urgent fact first: cache at 430 px, turns at 370.
+   Tokens, price and the ring survive to the last 40 px. */
+@media(max-width:430px){.ds-status .ds-cache{display:none}}
+@media(max-width:370px){.ds-status .ds-turns{display:none}}
