@@ -95,3 +95,7 @@
 .ra-progress>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:34ch}
 .ra-progress b{font:500 10px/1 var(--font-mono);color:var(--text);font-variant-numeric:tabular-nums}
 .ra-failed{flex:1 1 220px;font-size:10.5px;color:var(--amber)}
+
+/* The voice can come from a recording: one clip, about ten seconds. */
+.conversation-read-aloud .ra-clip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent);border-radius:7px;background:transparent;color:var(--text-dim);font-size:10px}
+.conversation-read-aloud .ra-clip:hover{border-color:color-mix(in srgb,var(--pink) 30%,transparent);color:var(--pink)}

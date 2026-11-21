@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { access, mkdir, readdir, readFile } from 'node:fs/promises';
+import { access, copyFile, mkdir, readdir, readFile, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -60,7 +60,37 @@ export class LocalReadAloud {
       installing: !!this.installing,
       progress: this.progress,
       voices: readingVoices,
+      // A clip in voices/ is the owner's voice: the worker prefers it to the
+      // one that ships with the model.
+      custom: await this.customVoice(),
     };
+  }
+
+  async customVoice() {
+    for (const name of ['voice.wav', 'voice.flac', 'voice.mp3', 'voice.m4a']) {
+      try { await access(path.join(this.root, 'voices', name)); return name; } catch { /* Keep looking. */ }
+    }
+    return null;
+  }
+
+  // Point the voice at a recording: one clip, copied in, engine reloaded.
+  async setVoice(file) {
+    const extension = path.extname(String(file || '')).toLowerCase();
+    if (!['.wav', '.flac', '.mp3', '.m4a', '.ogg'].includes(extension)) throw fail('Choose a WAV, FLAC, MP3, M4A or OGG recording.');
+    if (!(await this.installed())) throw fail('Set up read aloud first.', 503);
+    const folder = path.join(this.root, 'voices');
+    await mkdir(folder, { recursive: true });
+    for (const name of await readdir(folder).catch(() => [])) if (/^voice\./.test(name)) await rm(path.join(folder, name), { force: true });
+    await copyFile(file, path.join(folder, 'voice' + extension));
+    this.close(); // the clip is read once, at start
+    return { custom: await this.customVoice() };
+  }
+
+  async clearVoice() {
+    const folder = path.join(this.root, 'voices');
+    for (const name of await readdir(folder).catch(() => [])) if (/^voice\./.test(name)) await rm(path.join(folder, name), { force: true });
+    this.close();
+    return { custom: null };
   }
 
   // One install at a time; the second caller joins the first.

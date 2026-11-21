@@ -326,6 +326,8 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           return json(response, 200, await projectList());
         }
         if (method === 'GET' && url.pathname === '/api/read-aloud') return json(response, 200, await readAloud.status());
+        if (method === 'POST' && url.pathname === '/api/read-aloud/voice') return json(response, 200, await readAloud.setVoice(data.path));
+        if (method === 'DELETE' && url.pathname === '/api/read-aloud/voice') return json(response, 200, await readAloud.clearVoice());
         if (method === 'POST' && url.pathname === '/api/read-aloud/setup') {
           if (await readAloud.installed()) return json(response, 200, { ready: true });
           // The install takes minutes: answer at once and let the window poll.
