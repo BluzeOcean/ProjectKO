@@ -15,6 +15,7 @@ import { spokenText, useReadAloud } from '../mobile/useReadAloud'
 import { readingVoiceChanged, readingVoices, saveReadingVoice, savedReadingVoice } from '../mobile/readingVoices'
 import { commandToken, completeCommand, matchingCommands, terminalCommand, type ChatCommand } from './commandSuggestions'
 import TerminalPrompt, { type PromptChoice, type TerminalPromptData } from '../components/TerminalPrompt'
+import PermissionPicker from './PermissionPicker'
 import './conversation.css'
 import { keepUrl, linkTarget } from '../components/messageLinks'
 
@@ -56,6 +57,10 @@ function CopyButton({ text }: { text: string }) {
 
 export default function Conversation({ session, connected, agentLabel, openTerminal, systemEvents = 'compact' }: { session: ChatSession; connected: boolean; agentLabel: string; openTerminal: () => void; systemEvents?: SystemEventsMode }) {
   const [transcript, setTranscript] = useState<Transcript | null>(null)
+  // On a machine with Hex installed, the microphone is Hex: it dictates into the
+  // focused box, so there is nothing to record in the page.
+  const [hexReady, setHexReady] = useState(false)
+  const [hexNote, setHexNote] = useState('')
   const [readError, setReadError] = useState('')
   const [changedAt, setChangedAt] = useState(() => Date.now()), [now, setNow] = useState(() => Date.now())
   const fingerprint = useRef('')
@@ -170,6 +175,19 @@ export default function Conversation({ session, connected, agentLabel, openTermi
     return () => { window.removeEventListener('mrmak-attach-file', pick); window.removeEventListener('mrmak-file-drop', nativeDrop) }
   }, [])
 
+  useEffect(() => {
+    let live = true
+    api<{ available: boolean; enabled: boolean }>('/hex')
+      .then(reply => { if (live) setHexReady(!!reply.available && !!reply.enabled) })
+      .catch(() => { /* No Hex on this machine: the page records instead. */ })
+    return () => { live = false }
+  }, [])
+  function dictate() {
+    api<{ ok: boolean; message?: string }>('/hex/dictation', {}, 'POST')
+      .then(reply => setHexNote(reply.ok ? 'Hex is dictating…' : reply.message || 'Hex did not start'))
+      .catch(error => { reportError(error); setHexNote('Hex did not start') })
+  }
+
   async function send() {
     const text = draft.text.trimEnd()
     if (sending || uploading || voiceBusy || !connected || !running || (!text.trim() && !draft.paths.length)) return
@@ -278,8 +296,11 @@ export default function Conversation({ session, connected, agentLabel, openTermi
         onPaste={event => { const files = Array.from(event.clipboardData.files).filter(file => file.type.startsWith('image/')); if (files.length) { event.preventDefault(); void addImages(files) } }} />
       <div className="conversation-actions">
         <button type="button" className="desk-icon" title="Attach files or folders" aria-label="Attach files" onClick={() => window.dispatchEvent(new Event('mrmak-attach-file'))}><Icon name="attach" size={16} /></button>
-        <div className="terminal-dictation"><VoiceInput id={`desktop-conversation-${session.id}`} connected={connected} disabled={sending} config={dictation} hotkey transcriber={transcribeDesktopAudio} onBusy={setVoiceBusy} onText={text => setDraft(current => ({ ...current, text: current.text ? `${current.text}${/\s$/.test(current.text) ? '' : '\n'}${text}` : text }))} /></div>
-        <span className="conversation-status" role="status">{status || (uploading ? 'Saving images…' : 'Enter to send · Shift+Enter for a new line')}</span>
+        {session.agent === 'dsh' && <PermissionPicker value={session.permissionMode || 'workspace-write'} disabled={!connected} onChange={mode => { setStatus(''); api(`/sessions/${session.id}/permission`, { mode }).catch(error => setStatus(error instanceof Error ? error.message : String(error))); api('/settings', { dshPermissionMode: mode }).catch(() => { /* The chat already changed; the next one falls back. */ }) }} />}
+        <span className="conversation-status" role="status">{status || hexNote || (uploading ? 'Saving images…' : session.agent === 'dsh' ? '' : 'Enter to send · Shift+Enter for a new line')}</span>
+        <div className="terminal-dictation">{hexReady
+          ? <button type="button" className="desk-icon hex-mic" title="Dictate with Hex" aria-label="Dictate with Hex" disabled={!connected} onClick={dictate}><Icon name="mic" size={16} /></button>
+          : <VoiceInput id={`desktop-conversation-${session.id}`} connected={connected} disabled={sending} config={dictation} hotkey transcriber={transcribeDesktopAudio} onBusy={setVoiceBusy} onText={text => setDraft(current => ({ ...current, text: current.text ? `${current.text}${/\s$/.test(current.text) ? '' : '\n'}${text}` : text }))} />}</div>
         {working && <button type="button" className="conversation-stop" onClick={stop} title="Interrupt the agent (Esc)"><Icon name="stop" size={14} />Stop</button>}
         <button type="submit" className="conversation-send" aria-label={sending ? 'Sending…' : 'Send'} title="Send" disabled={!connected || !running || sending || uploading || voiceBusy || (!draft.text.trim() && !draft.paths.length)}><Icon name="send" size={16} /></button>
       </div>

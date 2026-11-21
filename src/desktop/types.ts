@@ -2,6 +2,7 @@ import type { ThemePreference } from '../../desktop/service/appearance.mjs'
 
 export type AgentId = 'codex' | 'claude' | 'antigravity' | 'opencode' | 'kimi' | 'dsh' | 'shell'
 export type Effort = 'medium' | 'high' | 'xhigh' | 'max'
+export type PermissionMode = 'read-only' | 'workspace-write' | 'danger-full-access'
 export interface AgentInfo { id: AgentId; label: string; color: string; available: boolean; subscription: boolean }
 export interface ChatSession {
   id: string; name: string; agent: AgentId; cwd: string; bypass: boolean
@@ -14,6 +15,7 @@ export interface ChatSession {
   open: boolean; pinned: boolean; updatedAt: string; preview?: string; hasConversation?: boolean; restoreError?: string | null
   contextUsage?: ContextUsage
   usage?: ChatUsage | null
+  permissionMode?: PermissionMode | null
 }
 // What a chat has spent, as the harness reports it: the footer's four facts.
 export interface ChatUsage {
@@ -29,7 +31,7 @@ export interface RecentProject { path: string; name: string; sources: ('workspac
 export interface Handoff { status: 'summarizing' | 'opening' | 'done' | 'failed'; error?: string | null; sessionId?: string | null; file?: string | null; at: string }
 export interface Notice { id: string; sessionId: string; name: string; kind: string; text: string; at: string }
 export interface Operation { id: string; text: string; status: string; result?: string; at: string; images?: string[] }
-export interface Settings { defaultAgent: AgentId; transcribeProvider?: 'local' | 'openai' | 'openrouter' | 'off'; defaultBypass: boolean; defaultEffort?: Effort; terminalFontSize?: number; terminalAppearance?: 'focus' | 'original'; workspaceTheme?: ThemePreference; chatTheme?: ThemePreference; workspaceRoute?: string | null; selectedId?: string | null; coordinatorEffort?: 'medium' | 'high'; voiceName?: string; voiceStyle?: string; handoffAfter?: number; quotaRefreshMinutes?: number; terminalOptionMeta?: boolean; collapsedGroups?: string[]; groupColors?: Record<string, string>; systemEvents?: SystemEventsMode; hexShortcut?: boolean }
+export interface Settings { defaultAgent: AgentId; transcribeProvider?: 'local' | 'openai' | 'openrouter' | 'off'; defaultBypass: boolean; defaultEffort?: Effort; terminalFontSize?: number; terminalAppearance?: 'focus' | 'original'; workspaceTheme?: ThemePreference; chatTheme?: ThemePreference; workspaceRoute?: string | null; selectedId?: string | null; coordinatorEffort?: 'medium' | 'high'; voiceName?: string; voiceStyle?: string; handoffAfter?: number; quotaRefreshMinutes?: number; dshPermissionMode?: PermissionMode; terminalOptionMeta?: boolean; collapsedGroups?: string[]; groupColors?: Record<string, string>; systemEvents?: SystemEventsMode; hexShortcut?: boolean }
 export type SystemEventsMode = 'full' | 'compact' | 'hidden'
 export interface VoiceOwner { clientId: string; surface: 'chats' | 'workspace' }
 export interface FileEntry { name: string; path: string; directory: boolean; size: number; modifiedAt: string | null }

@@ -35,6 +35,14 @@ export default function VoiceInput({ id, connected, disabled, config, hotkey = f
     return () => { alive.current = false; controller.current?.abort(); stop(); document.removeEventListener('visibilitychange', hidden) }
   }, [id, stop])
   useEffect(() => { onBusy(phase === 'permission' || phase === 'recording' || phase === 'transcribing') }, [phase, onBusy])
+  // A note about dictation belongs to the click that asked for it: clicking
+  // anywhere else puts it away, the way every other transient note behaves.
+  useEffect(() => {
+    if (!error) return
+    const dismiss = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setError('') }
+    document.addEventListener('pointerdown', dismiss)
+    return () => document.removeEventListener('pointerdown', dismiss)
+  }, [error])
   const root = useRef<HTMLDivElement>(null), toggle = useRef<() => boolean>(() => false)
   useEffect(() => {
     toggle.current = () => {

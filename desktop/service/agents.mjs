@@ -98,7 +98,7 @@ export function codexSupportsNoDaemon(env = process.env) {
 
 const dshBridge = fileURLToPath(new URL('./dsh-bridge.mjs', import.meta.url));
 
-export function terminalCommand(agent, { bypass = false, resumeId, nativeId, effort, opencodeMajor = 1, antigravityLog, initialPrompt, readDir, noDaemon = false, dshLog, dshModel = 'deepseek-v4-flash' } = {}) {
+export function terminalCommand(agent, { bypass = false, resumeId, nativeId, effort, opencodeMajor = 1, antigravityLog, initialPrompt, readDir, noDaemon = false, dshLog, dshModel = 'deepseek-v4-flash', permissionMode } = {}) {
   if (!AGENTS.some(item => item.id === agent)) throw new Error('Unknown agent');
   resumeId = nativeConversationId(resumeId); nativeId = nativeConversationId(nativeId);
   initialPrompt = initialPromptArgument(initialPrompt);
@@ -111,6 +111,7 @@ export function terminalCommand(agent, { bypass = false, resumeId, nativeId, eff
     if (!launcher) throw new Error('DeepSeek Harness is not installed on this computer');
     if (!dshLog) throw new Error('A DeepSeek chat needs its event log');
     const bridgeArgs = [dshBridge, '--dsh', launcher, '--log', dshLog, '--model', dshModel, '--session', nativeId || `session-${resumeId || Date.now().toString(36)}`];
+    if (permissionMode) bridgeArgs.push('--permission', permissionMode);
     if (bypass) bridgeArgs.push('--allow');
     if (initialPrompt) bridgeArgs.push('--initial', initialPrompt);
     return { file: process.execPath, args: bridgeArgs };

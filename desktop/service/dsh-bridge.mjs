@@ -35,6 +35,7 @@ const cwd = String(args.get('cwd') || process.cwd());
 const model = String(args.get('model') || 'deepseek-v4-flash');
 const sessionId = String(args.get('session') || `session-${Date.now().toString(36)}`);
 const allow = args.get('allow') === true;
+const permission = typeof args.get('permission') === 'string' ? args.get('permission') : null;
 
 const dim = text => `\x1b[2m${text}\x1b[0m`;
 const say = text => process.stdout.write(`${text}\r\n`);
@@ -45,9 +46,13 @@ const record = event => {
   try { appendFileSync(logFile, JSON.stringify({ at: new Date().toISOString(), event }) + '\n'); } catch { /* The chat still runs without its log. */ }
 };
 
+// The profile reads this before it composes: it sets both the sandbox mode and
+// the approval policy, so the chat starts in the mode the picker shows.
+const env = { ...process.env };
+if (permission) env.DSH_PERMISSION_MODE = permission;
 const child = process.platform === 'win32'
-  ? spawn('cmd.exe', ['/c', launcher, '--profile', 'sdk'], { cwd, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
-  : spawn(launcher, ['--profile', 'sdk'], { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
+  ? spawn('cmd.exe', ['/c', launcher, '--profile', 'sdk'], { cwd, env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
+  : spawn(launcher, ['--profile', 'sdk'], { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
 
 child.stderr.on('data', () => { /* Startup diagnostics stay out of the chat. */ });
 child.on('error', error => { say(`\x1b[31mdsh could not start: ${error.message}\x1b[0m`); process.exit(1); });
@@ -116,7 +121,9 @@ function show(event) {
 
 async function submit(text) {
   if (!text.trim()) return;
-  record({ type: 'query', data: { text } });
+  // A native command changes the session; it is not something you said, so it
+  // stays out of the transcript the conversation shows.
+  if (!/^\/[a-z-]+(?:\s|$)/i.test(text.trim())) record({ type: 'query', data: { text } });
   try {
     await request('session/query', { sessionId, contentBlocks: [{ type: 'text', text }] });
   } catch (error) {

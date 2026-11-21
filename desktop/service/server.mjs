@@ -38,6 +38,7 @@ import { chatCommands } from './chat-commands.mjs';
 import { HexBridge } from './hex-bridge.mjs';
 import { isThemePreference } from './appearance.mjs';
 import { Quota } from './quota.mjs';
+import { permissionModes } from './dsh.mjs';
 
 const listen = server => new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`)); });
 
@@ -63,7 +64,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const environment = parseEnv(await readFile(path.join(repo, '.env'), 'utf8').catch(() => ''));
   const settingsPath = path.join(stateDir, 'settings.json');
   const savedSettings = await readJson(settingsPath, null);
-  let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, hexShortcut: true, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', ...savedSettings };
+  let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, dshPermissionMode: 'workspace-write', terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, hexShortcut: true, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', ...savedSettings };
   if (settings.groupTabsByProject === true) {
     await sessions.groupByProject(settings.projectOrder);
     settings.groupTabsByProject = false;
@@ -371,6 +372,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           if (typeof data.terminalOptionMeta === 'boolean') settings.terminalOptionMeta = data.terminalOptionMeta;
           if (Number.isInteger(data.handoffAfter) && (data.handoffAfter === 0 || (data.handoffAfter >= 10 && data.handoffAfter <= 500))) settings.handoffAfter = data.handoffAfter;
           if ([1, 3, 5, 10, 15, 30].includes(data.quotaRefreshMinutes)) settings.quotaRefreshMinutes = data.quotaRefreshMinutes;
+          if (permissionModes.includes(data.dshPermissionMode)) settings.dshPermissionMode = data.dshPermissionMode;
           if (typeof data.hexShortcut === 'boolean') settings.hexShortcut = data.hexShortcut;
           if (['full', 'compact', 'hidden'].includes(data.systemEvents)) settings.systemEvents = data.systemEvents;
           if (isThemePreference(data.workspaceTheme)) settings.workspaceTheme = data.workspaceTheme;
@@ -381,7 +383,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           if (Array.isArray(data.collapsedGroups)) settings.collapsedGroups = [...new Set(data.collapsedGroups.filter(item => typeof item === 'string' && item.length <= 60))].slice(0, 200);
           await saveSettings(); broadcast('settings', { settings }); return json(response, 200, settings);
         }
-        if (method === 'POST' && url.pathname === '/api/sessions') { const session = await sessions.create({ ...data, bypass: data.bypass ?? settings.defaultBypass, effort: data.effort ?? settings.defaultEffort }); await integrations.publish('session', { event: 'started', session }); focus(session.id); return json(response, 201, session); }
+        if (method === 'POST' && url.pathname === '/api/sessions') { const session = await sessions.create({ ...data, permissionMode: data.permissionMode ?? settings.dshPermissionMode, bypass: data.bypass ?? settings.defaultBypass, effort: data.effort ?? settings.defaultEffort }); await integrations.publish('session', { event: 'started', session }); focus(session.id); return json(response, 201, session); }
         if (method === 'POST' && url.pathname === '/api/groups/by-project') return json(response, 200, await sessions.toggleProjectGroups());
         if (method === 'POST' && url.pathname === '/api/groups/move') return json(response, 200, await sessions.moveGroup(data.group, data.pinned, data.targetId, data.position));
         if (method === 'POST' && url.pathname === '/api/groups/rename') {
@@ -443,6 +445,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           }
           if (method === 'POST' && action === 'focus') return json(response, 200, focus(id));
           if (method === 'POST' && action === 'stop') return json(response, 200, sessions.stop(id));
+          if (method === 'POST' && action === 'permission') return json(response, 200, await sessions.setPermission(id, String(data.mode || '')));
           if (method === 'POST' && action === 'resume') { const session = await sessions.resume(id, data.nativeId); focus(id); return json(response, 200, session); }
           if (method === 'POST' && action === 'attach') return json(response, 200, await attach(id, data.paths));
           if (method === 'POST' && action === 'clear') return json(response, 200, await sessions.clearScreen(id));

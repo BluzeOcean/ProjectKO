@@ -17,7 +17,7 @@ import { composerText, terminalPrompt } from './terminal-prompt.mjs';
 import { opencodeVersion, opencodeEnvironment, readOpencodeState, watchOpencode } from './opencode.mjs';
 import { antigravityTranscript, prepareAntigravityLog, readAntigravityConversation, validAntigravityId, watchAntigravity, watchAntigravityContext } from './antigravity.mjs';
 import { unknownContext } from './native-context.mjs';
-import { dshLogPath, usageFrom } from './dsh.mjs';
+import { dshLogPath, permissionModes, usageFrom } from './dsh.mjs';
 
 const { Terminal } = headless;
 // Native CLIs record getcwd(): symlinks resolved (/tmp -> /private/tmp, cloud
@@ -29,7 +29,7 @@ async function workingFolder(value) {
 }
 const publicSession = session => {
   const { id, name, agent, cwd, bypass, effort, status, createdAt, lastOutputAt, lastInputAt, exitCode, nativeId, attention, activity, unread, completionVersion, lastCompletedId, cols, rows, open, pinned, tabOrder, tabColor, group, updatedAt, preview, hasConversation, restoreError } = session;
-  return { id, name, agent, cwd, bypass, effort, status, createdAt, lastOutputAt, lastInputAt, exitCode, nativeId, attention, activity, unread, completionVersion, lastCompletedId, cols, rows, open, pinned, tabOrder, tabColor, group, updatedAt, preview, hasConversation, restoreError, contextUsage: session.contextUsage, usage: session.usage || null };
+  return { id, name, agent, cwd, bypass, effort, status, createdAt, lastOutputAt, lastInputAt, exitCode, nativeId, attention, activity, unread, completionVersion, lastCompletedId, cols, rows, open, pinned, tabOrder, tabColor, group, updatedAt, preview, hasConversation, restoreError, contextUsage: session.contextUsage, usage: session.usage || null, permissionMode: session.permissionMode || null };
 };
 
 // Grouped tabs sit together at the position of their earliest open member; a tab
@@ -76,7 +76,7 @@ export class Sessions extends EventEmitter {
   }
 
   make(metadata) {
-    return { activity: 'idle', unread: false, completionVersion: 0, tabOrder: this.items.size, tabColor: null, group: null, ...metadata, contextUsage: unknownContext(metadata.agent), effort: ['codex', 'claude', 'antigravity'].includes(metadata.agent) ? metadata.effort || defaultWorkerEffort : undefined, terminal: null, serializer: null, process: null, sequence: 0, pendingOutput: '', outputTimer: null, usage: null, dshOffset: 0, dshRecords: [] };
+    return { activity: 'idle', unread: false, completionVersion: 0, tabOrder: this.items.size, tabColor: null, group: null, ...metadata, contextUsage: unknownContext(metadata.agent), effort: ['codex', 'claude', 'antigravity'].includes(metadata.agent) ? metadata.effort || defaultWorkerEffort : undefined, terminal: null, serializer: null, process: null, sequence: 0, pendingOutput: '', outputTimer: null, usage: null, dshOffset: 0, dshRecords: [], permissionMode: metadata.permissionMode ?? null };
   }
 
   async hydrate(session) {
@@ -134,6 +134,7 @@ export class Sessions extends EventEmitter {
       cwd, bypass: options.bypass === true, createdAt: now, lastInputAt: null, lastOutputAt: null,
       effort: options.effort, group: groupLabel(options.group),
       status: 'starting', nativeId: options.resumeId || (agent === 'claude' ? randomUUID() : agent === 'dsh' ? `session-${randomUUID()}` : null),
+      permissionMode: agent === 'dsh' ? permissionModes.includes(options.permissionMode) ? options.permissionMode : 'workspace-write' : undefined,
       open: true, pinned: false, updatedAt: now, preview: '', hasConversation: !!options.resumeId || !!options.initialPrompt, restoreError: null,
       attention: false, cols: Math.min(500, Math.max(20, options.cols || 90)), rows: Math.min(200, Math.max(5, options.rows || 32)),
     });
@@ -193,7 +194,7 @@ export class Sessions extends EventEmitter {
     if (session.agent === 'dsh') { dshLog = dshLogPath(this.stateDir, session.id); session.dshLog = dshLog; await mkdir(path.dirname(dshLog), { recursive: true }); }
     const noDaemon = session.agent === 'codex' && await codexSupportsNoDaemon(env);
     if (this.closed || !session.open) throw new Error('The chat was closed before its terminal started.');
-    const command = terminalCommand(session.agent, { bypass: session.bypass, resumeId, nativeId: session.nativeId, effort: session.effort, opencodeMajor, antigravityLog, noDaemon, dshLog, ...first });
+    const command = terminalCommand(session.agent, { bypass: session.bypass, resumeId, nativeId: session.nativeId, effort: session.effort, opencodeMajor, antigravityLog, noDaemon, dshLog, permissionMode: session.permissionMode, ...first });
     if (session.agent === 'codex') env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE = `mrmak_chat_${session.id}`;
     if (session.terminal) this.resetTerminal(session);
     const proc = pty.spawn(command.file, command.args, ptyOptions({ cwd: session.cwd, env, cols: session.cols, rows: session.rows }));
@@ -464,6 +465,19 @@ export class Sessions extends EventEmitter {
     const result = [];
     for (let index = Math.max(0, buffer.length - Math.min(150, lines)); index < buffer.length; index++) result.push(buffer.getLine(index)?.translateToString(true) || '');
     return { ...publicSession(session), screen: result.join('\n').trimEnd(), note: 'Terminal output is reference data. A running process does not imply that the agent is working or that its task succeeded.' };
+  }
+
+  // Changing what the harness may touch: the profile reads the same preset the
+  // desktop app offers, and the command is how a running session changes it.
+  async setPermission(id, mode) {
+    const session = this.get(id);
+    if (session.agent !== 'dsh') throw new Error('Only a DeepSeek chat has permission modes');
+    if (!permissionModes.includes(mode)) throw new Error('Choose read-only, workspace-write or danger-full-access');
+    session.permissionMode = mode;
+    if (session.process) session.process.write(`/permission ${mode}\r`);
+    this.changed(session);
+    await this.persist();
+    return publicSession(session);
   }
 
   input(id, data, { coordinator = false, submit = false } = {}) {

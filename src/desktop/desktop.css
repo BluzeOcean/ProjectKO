@@ -334,3 +334,19 @@
    Tokens, price and the ring survive to the last 40 px. */
 @media(max-width:430px){.ds-status .ds-cache{display:none}}
 @media(max-width:370px){.ds-status .ds-turns{display:none}}
+
+/* What a DeepSeek chat may touch, beside its own composer. The three presets
+   are the harness's own, so the control reads as the same choice the desktop
+   app offers. Full access is the one that changes behaviour silently, so it
+   carries the warning tone. */
+.conversation-permission{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 5px 0 7px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent);border-radius:7px;color:var(--text-dim);flex:0 0 auto}
+.conversation-permission svg{opacity:.85}
+.conversation-permission select{height:24px;border:0;background:transparent;color:var(--text);font:inherit;font-size:10px;outline:none;padding:0 2px;cursor:pointer}
+.conversation-permission select option{background:var(--surface-solid);color:var(--text)}
+.conversation-permission:hover{border-color:color-mix(in srgb,var(--pink) 30%,transparent)}
+.conversation-permission[data-mode=danger-full-access]{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 38%,transparent);background:var(--amber-dim)}
+.conversation-permission[data-mode=danger-full-access] select{color:var(--amber)}
+.conversation-permission[data-mode=read-only]{color:var(--blue)}
+.conversation-permission[data-mode=read-only] select{color:var(--text)}
+.conversation-actions .hex-mic{width:30px;height:30px;color:var(--text-dim)!important}
+.conversation-actions .hex-mic:hover{background:color-mix(in srgb,var(--pink) 8%,transparent);color:var(--pink)!important}

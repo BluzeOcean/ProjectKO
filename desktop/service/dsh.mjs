@@ -12,6 +12,10 @@ import path from 'node:path';
  * a session already reports.
  */
 
+// The three presets the harness ships and the desktop app offers, in the order
+// the app shows them: what the chat may read, write, and do without asking.
+export const permissionModes = ['read-only', 'workspace-write', 'danger-full-access'];
+
 // The launcher that ships with the DeepSeek Harness desktop app. The shim on
 // PATH is not trusted: on this machine it points at a folder that is gone, and
 // a name that resolves is not the same as a launcher that starts.
