@@ -2,23 +2,16 @@
 
 The service keeps one of these alive and speaks one JSON line at a time:
 
-    {"voice": "default", "text": "..."}   ->   {"audio": "<base64 wav>"}
+    {"voice": "chatterbox", "text": "..."}   ->   {"audio": "<base64 wav>"}
 
 Chatterbox runs on the GPU when there is one, and its weights come from the
-folder the installer filled, so nothing here reaches the network.
+folder the installer filled. The environment is set *before* anything heavy is
+imported: huggingface_hub reads its cache and token paths once, at import, and
+an inherited HF_HOME/HF_HUB_CACHE (this machine exports one, quoted) would
+otherwise send it looking for a token on another drive.
 """
-import base64
-import contextlib
-import io
-import json
 import os
 import sys
-import traceback
-import wave
-
-import numpy as np
-import torch
-import torchaudio
 
 root = sys.argv[1] if len(sys.argv) > 1 else None
 LOG = os.path.join(root, 'worker.log') if root else None
@@ -37,13 +30,31 @@ def log(text):
         pass
 
 
-log('--- start ' + ' '.join([sys.executable, str(root)]))
 if root:
-    # The weights live with the engine: an inherited HF_HUB_CACHE would send the
-    # loader looking on another drive.
-    os.environ['HF_HOME'] = os.path.join(root, 'models', 'hf')
-    os.environ['HF_HUB_CACHE'] = os.path.join(root, 'models', 'hf', 'hub')
+    hf = os.path.join(root, 'models', 'hf')
+    os.environ['HF_HOME'] = hf
+    os.environ['HF_HUB_CACHE'] = os.path.join(hf, 'hub')
+    os.environ['HF_TOKEN_PATH'] = os.path.join(hf, 'token')
     os.environ['TORCH_HOME'] = os.path.join(root, 'models', 'torch')
+    os.environ['HF_HUB_DISABLE_TELEMETRY'] = '1'
+    # Once the weights are here, no request needs to leave the machine - and an
+    # offline cache read never asks for a token at all.
+    if os.path.isdir(os.path.join(hf, 'hub')):
+        os.environ['HF_HUB_OFFLINE'] = '1'
+
+import base64
+import contextlib
+import io
+import json
+import traceback
+import wave
+
+import numpy as np
+import torch
+import torchaudio
+
+log('--- start ' + ' '.join([sys.executable, str(root)]))
+log('HF ' + os.path.join(root or '', 'models', 'hf') if root else 'HF default')
 
 try:
     with contextlib.redirect_stdout(sys.stderr):
