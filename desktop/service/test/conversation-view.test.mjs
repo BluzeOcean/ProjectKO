@@ -5,6 +5,7 @@ import { mkdtemp, mkdir, realpath, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createService } from '../server.mjs';
+import { LocalReadAloud } from '../local-read-aloud.mjs';
 import { recentProjects } from '../recent-projects.mjs';
 import { answerPrompt, readPrompt, terminalPrompt } from '../terminal-prompt.mjs';
 
@@ -47,7 +48,9 @@ test('desktop conversation view reads the native transcript, grants its media an
   await mkdir(path.join(repo, 'workspace')); await writeFile(path.join(repo, 'workspace', 'workspace.json'), '{"entities":[]}');
   await writeFile(path.join(repo, 'render.png'), png);
   const home = await claudeHome(t, [repo]);
-  const service = await createService({ repo, uiDir: path.join(repo, 'ui') });
+  // The engine lives in the owner's local app data, so this test points it at an
+  // empty folder: "not set up" has to read the same on every machine.
+  const service = await createService({ repo, uiDir: path.join(repo, 'ui'), mobileOptions: { readAloud: new LocalReadAloud({ LOCALAPPDATA: path.join(repo, 'no-engine') }) } });
   t.after(() => service.close());
   const request = (route, data) => fetch(service.origin + '/api' + route, { method: data === undefined ? 'GET' : 'POST', headers: { Authorization: `Bearer ${service.token}`, 'Content-Type': 'application/json' }, body: data === undefined ? undefined : JSON.stringify(data) });
 
@@ -83,8 +86,8 @@ test('desktop conversation view reads the native transcript, grants its media an
   assert.equal((await (await request('/preview/show', { path: '.', sessionId: session.id })).json()).shown, 'folder');
   assert.equal((await request('/preview/show', { path: 'missing.txt', sessionId: session.id })).status, 400);
 
-  const speak = await request(`/sessions/${session.id}/speak`, { voice: 'am_michael', text: 'Hello' });
-  assert.equal(speak.status, 503); assert.match((await speak.json()).error, /Set up local Read aloud/);
+  const speak = await request(`/sessions/${session.id}/speak`, { voice: 'chatterbox', text: 'Hello' });
+  assert.equal(speak.status, 503); assert.match((await speak.json()).error, /not set up on this computer/);
 
   const game = path.join(cwd, 'Game'); await mkdir(game);
   await writeFile(path.join(home, '.claude.json'), JSON.stringify({ projects: { [cwd]: {}, [game]: {} } }));
