@@ -12,6 +12,8 @@ html[data-theme-switching] *,html[data-theme-switching] *::before,html[data-them
 .browser-settings>summary:focus-visible{outline:2px solid var(--pink);outline-offset:2px}
 .browser-settings-panel{position:absolute;right:0;top:calc(100% + 10px);width:min(280px,calc(100vw - 40px));padding:18px;border:1px solid var(--hairline-strong);border-radius:12px;background:var(--surface-solid);box-shadow:var(--shadow-2);color:var(--text)}
 .browser-settings-panel h2{font:600 13px var(--font-body);margin:0 0 14px}
+/* A second section in the panel (the chat's quota) is divided by a hairline. */
+.browser-settings-panel h2:not(:first-child){margin-top:16px;padding-top:14px;border-top:1px solid var(--hairline)}
 
 
 html[data-workspace-theme] *{scrollbar-color:var(--text-muted) var(--bg-deep)!important}

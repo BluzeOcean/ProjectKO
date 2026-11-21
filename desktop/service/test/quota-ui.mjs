@@ -121,8 +121,20 @@ try {
   await page.reload();
   await page.getByRole('button', { name: 'Toggle settings', exact: true }).click();
   await expect(page.getByLabel('Check the quota every')).toHaveValue('1');
+  // The window's own Appearance popover offers the same choice, and writes the
+  // same setting.
   await page.goto(service.urls.chats);
   await expect(quota).toContainText('0%');
+  await page.getByRole('button', { name: 'Chat appearance' }).click();
+  const inChat = page.getByLabel('Check the quota every');
+  await expect(inChat).toHaveValue('1');
+  await inChat.selectOption('15');
+  await expect(inChat).toHaveValue('15');
+  await page.screenshot({ path: path.join(repo, 'quota-appearance.png') });
+  await page.reload();
+  await page.getByRole('button', { name: 'Chat appearance' }).click();
+  await expect(page.getByLabel('Check the quota every')).toHaveValue('15');
+  await page.keyboard.press('Escape');
 
   // Without the CLI the line is simply absent, not a broken meter.
   failing = true;
@@ -133,7 +145,7 @@ try {
   await expect(quota).toContainText('0%');
 
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ ok: true, fixture: repo, checks: ['order and shares', 'threshold colours', 'countdown title', 'focus waits for the interval', '320/400/500/900/1440px', 'short window keeps the line', 'absent without the CLI', 'interval default, refusal and persistence', 'no page errors'] }));
+  console.log(JSON.stringify({ ok: true, fixture: repo, checks: ['order and shares', 'threshold colours', 'countdown title', 'focus waits for the interval', '320/400/500/900/1440px', 'short window keeps the line', 'absent without the CLI', 'interval default, refusal and persistence', 'appearance popover writes it too', 'no page errors'] }));
 } finally {
   await browser?.close();
   await service?.close();
