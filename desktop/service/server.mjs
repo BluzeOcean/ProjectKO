@@ -64,7 +64,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const environment = parseEnv(await readFile(path.join(repo, '.env'), 'utf8').catch(() => ''));
   const settingsPath = path.join(stateDir, 'settings.json');
   const savedSettings = await readJson(settingsPath, null);
-  let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, dshPermissionMode: 'workspace-write', readAloudSpeed: 1, terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, hexShortcut: true, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', ...savedSettings };
+  let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, dshPermissionMode: 'workspace-write', readAloudSpeed: 1, readAloudVoice: '', terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, hexShortcut: true, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', ...savedSettings };
   if (settings.groupTabsByProject === true) {
     await sessions.groupByProject(settings.projectOrder);
     settings.groupTabsByProject = false;
@@ -326,7 +326,8 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           return json(response, 200, await projectList());
         }
         if (method === 'GET' && url.pathname === '/api/read-aloud') return json(response, 200, await readAloud.status());
-        if (method === 'POST' && url.pathname === '/api/read-aloud/voice') return json(response, 200, await readAloud.setVoice(data.path));
+        if (method === 'POST' && url.pathname === '/api/read-aloud/voice') return json(response, 200, await readAloud.setVoice(data.path, data.name));
+        if (method === 'POST' && url.pathname === '/api/read-aloud/voice/remove') return json(response, 200, await readAloud.removeVoice(data.id));
         if (method === 'DELETE' && url.pathname === '/api/read-aloud/voice') return json(response, 200, await readAloud.clearVoice());
         if (method === 'POST' && url.pathname === '/api/read-aloud/setup') {
           if (await readAloud.installed()) return json(response, 200, { ready: true });
@@ -384,6 +385,9 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           // Playback speed only: the voice is generated once and stretched by the player.
           const speed = Number(data.readAloudSpeed);
           if (Number.isFinite(speed) && speed >= 1 && speed <= 5) settings.readAloudSpeed = Math.round(speed * 100) / 100;
+          // Which recording speaks; an id that no longer exists falls back to the
+          // first one, and the empty string means "whichever is first".
+          if (typeof data.readAloudVoice === 'string' && data.readAloudVoice.length <= 60 && /^[a-z0-9-]*$/.test(data.readAloudVoice)) settings.readAloudVoice = data.readAloudVoice;
           if (typeof data.hexShortcut === 'boolean') settings.hexShortcut = data.hexShortcut;
           if (['full', 'compact', 'hidden'].includes(data.systemEvents)) settings.systemEvents = data.systemEvents;
           if (isThemePreference(data.workspaceTheme)) settings.workspaceTheme = data.workspaceTheme;

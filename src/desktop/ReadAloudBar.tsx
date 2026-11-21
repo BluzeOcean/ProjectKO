@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from './client'
+import { api, useDesktop } from './client'
 import { Icon } from './Icons'
 
 /**
@@ -12,7 +12,8 @@ import { Icon } from './Icons'
  */
 
 interface Progress { phase: string; percent: number; message: string }
-interface Status { engine: string; ready: boolean; installing: boolean; progress: Progress; custom?: string | null; label?: string | null }
+interface Voice { id: string; label: string }
+interface Status { engine: string; ready: boolean; installing: boolean; progress: Progress; voices?: Voice[]; voice?: string; label?: string | null }
 
 const idle: Progress = { phase: 'idle', percent: 0, message: '' }
 
@@ -22,6 +23,10 @@ export default function ReadAloudBar({ activeId, paused, loading, error, onRead,
 }) {
   const [status, setStatus] = useState<Status | null>(null)
   const [starting, setStarting] = useState(false)
+  // The voice is chosen in Settings; the bar only says which one is speaking.
+  const chosen = useDesktop().settings.readAloudVoice || ''
+  const voices = status?.voices || []
+  const speaking = voices.find(voice => voice.id === chosen) || voices.find(voice => voice.id === status?.voice) || null
 
   const load = () => api<Status>('/read-aloud').then(setStatus).catch(() => setStatus(null))
   useEffect(() => { void load() }, [])
@@ -54,7 +59,7 @@ export default function ReadAloudBar({ activeId, paused, loading, error, onRead,
   return <div className="conversation-read-aloud">
     <button type="button" className="ra-play" onClick={onRead} aria-label={activeId ? paused ? 'Resume reading' : 'Pause reading' : 'Read aloud'} title={activeId ? paused ? 'Resume reading' : 'Pause reading' : 'Read this reply aloud'}><Icon name={activeId ? paused ? 'play' : 'pause' : 'speaker'} size={15} /></button>
     {activeId && <button type="button" onClick={onStop} aria-label="Stop reading" title="Stop"><Icon name="stop" size={13} /></button>}
-    <span className="ra-voice" title="The voice is chosen in Settings">{status?.label || (status?.custom ? 'Your clip' : 'Built-in voice')}</span>
+    <span className="ra-voice" title="The voice is chosen in Settings">{speaking?.label || status?.label || 'Built-in voice'}</span>
     {loading && <span role="status">Preparing audio…</span>}
     {error && <span role="alert">{error}</span>}
   </div>

@@ -72,10 +72,12 @@ export default function Conversation({ session, connected, agentLabel, openTermi
   const { info: dictation } = useDictation()
   const running = session.status === 'running', working = running && session.activity === 'working'
   const reload = useRef<() => Promise<void>>(async () => {})
-  // Speaking speed is an app setting: the player stretches each sentence
-  // without raising its pitch.
+  // Speaking speed and voice are app settings: the player stretches each
+  // sentence without raising its pitch, and an empty voice means the first one
+  // installed here.
   const speakingSpeed = useDesktop().settings.readAloudSpeed || 1
-  const speech = useReadAloud(session.id, speakDesktopText, { speed: speakingSpeed }), stopReading = speech.stop
+  const speakingVoice = useDesktop().settings.readAloudVoice || ''
+  const speech = useReadAloud(session.id, speakDesktopText, { speed: speakingSpeed, voice: speakingVoice }), stopReading = speech.stop
     const [answering, setAnswering] = useState(false)
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null), [rewinding, setRewinding] = useState(false), [editError, setEditError] = useState('')
   const [commands, setCommands] = useState<ChatCommand[]>([]), [caret, setCaret] = useState(0), [picked, setPicked] = useState(0), [dismissed, setDismissed] = useState('')
