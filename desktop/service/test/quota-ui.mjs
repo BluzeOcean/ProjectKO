@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect } from '@playwright/test';
 import { createService } from '../server.mjs';
-import { launchBrowser } from './browser.mjs';
+import { launchBrowser, desktopAuth } from './browser.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 await mkdir(path.join(root, '.cache'), { recursive: true });
@@ -33,6 +33,18 @@ try {
     mcpOptions: { home: repo, env: {} },
     quotaOptions: { read: async () => { if (failing) throw new Error('mmx quota did not answer'); return answer }, cacheMs: 0 },
   });
+  // The interval is a setting, so it is checked at the API before anything is
+  // clicked: five minutes by default, and only the intervals the CLI offers.
+  const patch = patch => fetch(service.origin + '/api/settings', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + service.token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(patch),
+  }).then(response => response.json());
+  assert.equal((await patch({})).quotaRefreshMinutes, 5, 'five minutes by default');
+  assert.equal((await patch({ quotaRefreshMinutes: 7 })).quotaRefreshMinutes, 5, 'an interval off the list is refused');
+  assert.equal((await patch({ quotaRefreshMinutes: 15 })).quotaRefreshMinutes, 15);
+  assert.equal((await patch({ quotaRefreshMinutes: 5 })).quotaRefreshMinutes, 5);
+
   browser = await launchBrowser();
   const page = await browser.newPage({ viewport: { width: 900, height: 760 } });
   page.on('pageerror', error => errors.push(error.message));
@@ -52,16 +64,23 @@ try {
   assert.deepEqual(await quota.locator('.qb-track').evaluateAll(nodes => nodes.map(node => node.dataset.tone)), ['low', 'ok']);
   await expect(quota.locator('.qf-reset')).toHaveAttribute('title', /five-hour window resets in 1h 45m/i);
 
-  // A new reading arrives when the window is looked at again, and the colour
-  // follows the script's thresholds without being told.
-  answer = reading(42, 12);
+  // Focus does not spend a read before the interval is up: the window is only
+  // looked at, not asked.
+  answer = reading(77, 77);
   await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await page.waitForTimeout(400);
+  await expect(quota).not.toContainText('77%');
+
+  // Changing the interval asks at once, and the colour follows the script's
+  // thresholds without being told.
+  answer = reading(42, 12);
+  await patch({ quotaRefreshMinutes: 3 });
   await expect(quota).toContainText('42%');
   await expect(quota).toContainText('12%');
   assert.deepEqual(await quota.locator('.qb-track').evaluateAll(nodes => nodes.map(node => node.dataset.tone)), ['warm', 'warm']);
 
   answer = reading(0, 0);
-  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await patch({ quotaRefreshMinutes: 5 });
   await expect(quota).toContainText('0%');
   assert.deepEqual(await quota.locator('.qb-track').evaluateAll(nodes => nodes.map(node => node.dataset.tone)), ['low', 'low']);
   await expect(quota.locator('.qb-fill').first()).toHaveAttribute('style', /width: 0%/);
@@ -89,16 +108,32 @@ try {
   await page.setViewportSize({ width: 900, height: 760 });
   await page.screenshot({ path: path.join(repo, 'quota-900.png') });
 
+  // Settings › Agent quota is where the interval lives, and it survives a reload.
+  await desktopAuth(page.context(), service.urls.workspace);
+  await page.goto(service.urls.workspace);
+  await page.getByRole('button', { name: 'Toggle settings', exact: true }).click();
+  const interval = page.getByLabel('Check the quota every');
+  await expect(interval).toHaveValue('5');
+  await interval.selectOption('1');
+  await expect(interval).toHaveValue('1');
+  await interval.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: path.join(repo, 'quota-settings.png') });
+  await page.reload();
+  await page.getByRole('button', { name: 'Toggle settings', exact: true }).click();
+  await expect(page.getByLabel('Check the quota every')).toHaveValue('1');
+  await page.goto(service.urls.chats);
+  await expect(quota).toContainText('0%');
+
   // Without the CLI the line is simply absent, not a broken meter.
   failing = true;
-  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await patch({ quotaRefreshMinutes: 10 });
   await expect(quota).toHaveCount(0, { timeout: 5000 });
   failing = false;
-  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await patch({ quotaRefreshMinutes: 5 });
   await expect(quota).toContainText('0%');
 
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ ok: true, fixture: repo, checks: ['order and shares', 'threshold colours', 'countdown title', 'refresh on focus', '320/400/500/900/1440px', 'short window keeps the line', 'absent without the CLI', 'no page errors'] }));
+  console.log(JSON.stringify({ ok: true, fixture: repo, checks: ['order and shares', 'threshold colours', 'countdown title', 'focus waits for the interval', '320/400/500/900/1440px', 'short window keeps the line', 'absent without the CLI', 'interval default, refusal and persistence', 'no page errors'] }));
 } finally {
   await browser?.close();
   await service?.close();

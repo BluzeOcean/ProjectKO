@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api } from './client'
+import { api, useDesktop } from './client'
 import { Icon } from './Icons'
 
 type QuotaWindow = { left: number; resetMs: number }
@@ -30,21 +30,29 @@ const fill = (left: number) => Math.min(100, Math.max(0, left))
 // Nothing is drawn until the service has a reading, so a machine without the
 // CLI keeps the window it always had.
 export default function QuotaFooter({ connected }: { connected: boolean }) {
+  const { settings } = useDesktop()
+  const minutes = Math.max(1, settings.quotaRefreshMinutes || 5)
   const [reading, setReading] = useState<Reading | null>(null)
 
   useEffect(() => {
     if (!connected) return
     let live = true
+    let lastRead = 0
     const read = () => {
+      lastRead = Date.now()
       api<Reading>('/quota')
         .then(value => { if (live) setReading(value) })
         .catch(() => { if (live) setReading(null) })
     }
-    // Once a minute is enough for a quota, and coming back to the window is
-    // reason enough to ask again.
-    const tick = () => { if (document.visibilityState === 'visible') read() }
+    // The interval is the owner's, from Settings › Agent quota. Coming back to
+    // the window asks again, but only once the interval has run out.
+    const tick = () => {
+      if (document.visibilityState !== 'visible') return
+      if (Date.now() - lastRead < minutes * 60000 - 1000) return
+      read()
+    }
     read()
-    const timer = window.setInterval(tick, 60000)
+    const timer = window.setInterval(tick, minutes * 60000)
     window.addEventListener('focus', tick)
     document.addEventListener('visibilitychange', tick)
     return () => {
@@ -53,7 +61,7 @@ export default function QuotaFooter({ connected }: { connected: boolean }) {
       window.removeEventListener('focus', tick)
       document.removeEventListener('visibilitychange', tick)
     }
-  }, [connected])
+  }, [connected, minutes])
 
   // Nothing is drawn for a reading that arrived on a connection since lost.
   const current = connected && reading?.ok ? reading : null
