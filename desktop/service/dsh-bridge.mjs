@@ -127,9 +127,14 @@ async function submit(text) {
 const lines = createInterface({ input: process.stdin });
 lines.on('line', line => {
   if (awaitingApproval) {
-    const yes = /^(y|yes|1|allow)$/i.test(line.trim());
+    const typed = line.trim();
+    const yes = /^(y|yes|1|allow)$/i.test(typed);
+    const no = /^(n|no|0|reject)$/i.test(typed);
+    // Anything that is not an answer rejects the request and is delivered as a
+    // message: a prompt that eats what you typed is worse than a refusal.
     send({ jsonrpc: '2.0', id: awaitingApproval.id, result: { outcome: yes ? 'allowed-once' : 'rejected' } });
     awaitingApproval = null;
+    if (!yes && !no) void submit(line);
     return;
   }
   if (busy) { say(dim('… still working on the previous message')); return; }
