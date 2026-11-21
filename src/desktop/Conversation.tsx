@@ -241,7 +241,9 @@ export default function Conversation({ session, connected, agentLabel, openTermi
         {!messages.length && <div className="conversation-empty">
           <AgentLogo agent={session.agent} size={34} />
           <h2>{!transcript ? 'Loading conversation…' : unreadable ? 'This conversation is in the terminal' : 'Ready when you are'}</h2>
-          <p>{unreadable ? 'Its history could not be read here. The terminal shows everything.' : `Messages appear here as ${agentLabel} writes them. If the CLI asks a startup question, such as trusting this folder or signing in, answer it in the terminal.`}</p>
+          <p>{unreadable ? 'Its history could not be read here. The terminal shows everything.'
+      : session.agent === 'dsh' ? 'Messages appear here as the harness answers. Permission requests are answered in the terminal.'
+      : `Messages appear here as ${agentLabel} writes them. If the CLI asks a startup question, such as trusting this folder or signing in, answer it in the terminal.`}</p>
           <button type="button" onClick={openTerminal}><Icon name="terminal" size={15} />Open terminal</button>
         </div>}
         {!!transcript?.activity?.length && <details className="conversation-activity"><summary>Recent tool activity</summary>{transcript.activity.map(item => <div key={item.id}><Icon name={item.status === 'running' ? 'terminal' : item.status === 'failed' ? 'bell' : 'history'} size={13} /><span>{item.name}</span><small>{item.status === 'running' && !running ? 'interrupted' : item.status}{item.at && ` · ${time(item.at)}`}</small></div>)}</details>}

@@ -12,9 +12,10 @@ export function chatView(session: ChatSession): ChatView {
   if (!hasConversationView(session)) return 'terminal'
   const saved = read(key(session.id))
   if (saved === 'conversation' || saved === 'terminal') return saved
-  // A harness that speaks a protocol has no terminal prompts to miss: the
-  // conversation is the chat, and the terminal shows the same words.
-  if (session.agent === 'dsh') return session.hasConversation ? 'conversation' : 'terminal'
+  // A harness that speaks a protocol has no startup prompt to answer, so its
+  // chat is the conversation from the first moment: opening on the terminal
+  // would hide the box you type in until the first message created a record.
+  if (session.agent === 'dsh') return 'conversation'
   // A new CLI can open with folder-trust or sign-in questions that only the
   // terminal shows, so the preferred view applies once a conversation exists.
   return session.hasConversation && read(key('default')) === 'conversation' ? 'conversation' : 'terminal'
