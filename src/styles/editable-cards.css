@@ -47,3 +47,65 @@
 .mobile-report-card{overflow:auto;min-height:0;flex:1;background:var(--bg,#101115);color:var(--text,#d3d0d9)}.mobile-report-card .card-content{padding:24px 16px 40px}
 @media(max-width:768px){.card-content{padding:30px 24px 48px}.card-template-gallery .card-entries{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}.card-document-fields,.card-entry-fields{grid-template-columns:minmax(0,1fr)}.card-editor-form{padding:24px 20px 48px}.card-template-workbench .card-entry:has(.card-entry-image){display:block}.card-template-workbench .card-entry-image{height:220px;min-height:0}.card-template-workbench .card-entry-copy{padding:22px}}
 @media(max-width:480px){.card-content{padding:26px 16px 40px}.card-editor-toolbar{padding:10px 12px;gap:6px}.card-mode-buttons button{padding:6px 10px}.card-save-status{font-size:10px}.card-editor-toolbar>button{padding:8px 9px}.card-editor-form{padding:20px 12px 40px}.card-entry-editor{padding:14px}.card-entry-actions .card-drag-handle span{display:none}.card-conflict{margin:12px;padding:15px}.new-card-dialog{padding:22px}.new-card-heading h2{font-size:20px}.new-card-templates>label{padding:14px}.card-entry-copy{padding:20px}.new-card-button{padding:6px 9px;font-size:11px}.card-readonly{flex-basis:100%}}
+/* ── The Pinboard: the wall of thumbnails ─────────────────────────────
+   The third view. A wall you scan, one picture chosen, and then the
+   picture-first workspace: the picture large enough to mark up, the pen
+   over it, the feedback beside it, the hand-off at the bottom right. */
+.card-pinboard{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,168px),1fr));gap:20px 14px}
+.card-pin{margin:0;min-width:0;border:1px solid transparent;border-radius:3px;padding:5px;transition:border-color var(--t-fast) var(--ease)}
+.card-pin.on{border-color:var(--pink,#efa2b4)}
+.card-pin .card-pin-hit{display:block;width:100%;padding:0;border:0;border-radius:0;background:none;text-align:left;color:inherit;font-size:inherit}
+.card-pin .card-pin-hit:disabled{cursor:default;opacity:1}
+.card-pin-image{display:block;aspect-ratio:16/9;background:var(--bg-deep,#060608);overflow:hidden}
+.card-pin-image img{width:100%;height:100%;object-fit:cover;display:block;transition:opacity var(--t-fast) var(--ease)}
+.card-pin.on .card-pin-image img{opacity:.92}
+.card-pin-caption{display:flex;align-items:baseline;gap:8px;padding:8px 1px 0}
+.card-pin-number{font:9.5px var(--font-mono,monospace);color:var(--text-muted,#77727f);letter-spacing:.1em}
+.card-pin-file{font:9.5px var(--font-mono,monospace);color:var(--text-dim,#a29baa);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-pin.has-note .card-pin-file{color:var(--text-bright,#f1edf4)}
+.card-pin-dot{margin-left:auto;flex:0 0 auto;width:5px;height:5px;border-radius:50%;background:var(--pink,#efa2b4)}
+/* ── The picture, large, with the pen over it ────────────────────────── */
+.card-stage{position:relative;min-width:0;aspect-ratio:16/9;max-height:66vh;background:var(--bg-deep,#060608);border:1px solid var(--hairline,#ffffff12);overflow:hidden;line-height:0}
+.card-stage img{width:100%;height:100%;object-fit:contain;display:block}
+.card-stage-canvas{position:absolute;left:0;top:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
+.card-stage-empty{display:flex;align-items:center;justify-content:center;aspect-ratio:16/9;color:var(--text-muted,#77727f);font-size:12.5px;line-height:1.6;border:1px dashed var(--hairline-strong,#ffffff20)}
+/* ── The workspace: an overlay over the dimmed wall ─────────────────── */
+.card-pinboard-dialog{width:min(1180px,calc(100vw - 48px));max-width:none;max-height:calc(100dvh - 48px);padding:0;border:1px solid var(--hairline-strong,#ffffff20);border-radius:14px;background:var(--surface-solid,#131316);color:var(--text,#d3d0d9);box-shadow:0 40px 120px #0009;overflow:hidden}
+/* Chromium puts a dialog at its top-left corner when the insets are all
+   set, so the modal is placed by hand and centred. */
+.card-pinboard-dialog[open]{display:flex;flex-direction:column;position:fixed;top:50%;bottom:auto;left:50%;right:auto;transform:translate(-50%,-50%)}
+.card-pinboard-dialog::backdrop{background:rgba(8,6,10,.74);backdrop-filter:blur(3px)}
+.card-pinboard-head{display:flex;align-items:baseline;gap:10px;padding:18px 22px 14px;border-bottom:1px solid var(--hairline,#ffffff12)}
+.card-pinboard-number{font:9.5px var(--font-mono,monospace);color:var(--text-muted,#77727f);letter-spacing:.12em}
+.card-pinboard-file{font:11px var(--font-mono,monospace);color:var(--text-bright,#f1edf4)}
+.card-pinboard-title{font-size:12.5px;color:var(--text-dim,#a29baa);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-pinboard-dialog .card-pinboard-close{margin-left:auto;align-self:center;width:26px;height:26px;padding:0;border-radius:50%;border:1px solid var(--hairline,#ffffff12);background:transparent;color:var(--text-dim,#a29baa);font-size:15px;line-height:1}
+.card-pinboard-body{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;padding:22px;overflow-y:auto;min-height:0}
+.card-pinboard-foot{display:flex;align-items:center;gap:14px;padding:14px 22px;border-top:1px solid var(--hairline,#ffffff12)}
+.card-pinboard-status{font:9.5px var(--font-mono,monospace);color:var(--text-muted,#77727f);letter-spacing:.06em}
+/* ── The pen ────────────────────────────────────────────────────────── */
+.card-side{min-width:0;display:flex;flex-direction:column;gap:18px}
+.card-pen{display:flex;align-items:center;gap:6px}
+.card-pinboard-dialog .card-pen-tool{display:inline-flex;align-items:center;height:26px;padding:0 10px;border:1px solid var(--hairline,#ffffff12);border-radius:var(--radius-sm,7px);background:transparent;color:var(--text-dim,#a29baa);font-size:11px}
+.card-pinboard-dialog .card-pen-tool.on{border-color:var(--pink,#efa2b4);background:var(--pink-dim,#efa2b412);color:var(--pink-bright,#ffc2cf)}
+.card-pen-colors{display:flex;align-items:center;gap:8px}
+.card-pinboard-dialog .card-pen-color{width:24px;height:24px;padding:0;border-radius:50%;border:1px solid transparent;background:transparent;display:inline-flex;align-items:center;justify-content:center}
+.card-pen-color span{width:13px;height:13px;border-radius:50%;background:var(--swatch);box-shadow:inset 0 0 0 1px var(--hairline-strong,#ffffff20)}
+.card-pinboard-dialog .card-pen-color.on{border-color:var(--text-bright,#f1edf4)}
+/* ── The feedback, beside the picture ──────────────────────────────── */
+.card-feedback-field{display:block}
+.card-feedback-field>span{display:flex;align-items:baseline;gap:8px;margin-bottom:8px;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted,#77727f)}
+.card-feedback-field>span em{font-style:normal;letter-spacing:.02em;text-transform:none;font-size:11px}
+.card-feedback-text{display:block;width:100%;min-height:132px;resize:vertical;padding:11px 12px;border:1px solid var(--hairline,#ffffff12);border-radius:var(--radius-sm,7px);background:var(--surface-1,rgba(255,255,255,.03));color:var(--text,#d3d0d9);font:12.5px/1.65 var(--font-body,system-ui)}
+.card-feedback-text::placeholder{color:var(--text-muted,#77727f)}
+.card-feedback-text:focus{outline:none;border-color:rgba(240,160,176,.45);background:var(--surface-2,rgba(255,255,255,.055));box-shadow:var(--glow-pink,0 0 28px rgba(240,160,176,.14))}
+/* What the hand-off carries. */
+.card-gets{border-top:1px solid var(--hairline,#ffffff12);padding-top:12px}
+.card-gets summary{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted,#77727f);cursor:pointer}
+.card-gets-list{margin:12px 0 0;padding:0;list-style:none}
+.card-gets-list li{display:flex;flex-direction:column;gap:3px;padding:9px 0;border-bottom:1px solid var(--hairline,#ffffff12)}
+.card-gets-list b{font:10px var(--font-mono,monospace);color:var(--text-dim,#a29baa);font-weight:400}
+.card-gets-list span{font-size:11.5px;color:var(--text-muted,#77727f)}
+/* ── The hand-off, at the bottom right ─────────────────────────────── */
+.card-pinboard-dialog .card-send{margin-left:auto;display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 16px;border:0;border-radius:var(--radius-sm,7px);background:linear-gradient(135deg,var(--pink,#efa2b4),var(--pink-bright,#ffc2cf));color:var(--bg,#101115);font-size:12px;font-weight:600;box-shadow:var(--glow-pink,0 0 28px rgba(240,160,176,.14))}
+@media(max-width:768px){.card-pinboard-dialog{max-width:calc(100vw - 20px);max-height:calc(100dvh - 20px)}.card-pinboard-body{grid-template-columns:minmax(0,1fr);gap:18px;padding:16px}.card-pinboard-head{padding:14px 16px 12px}.card-pinboard-foot{padding:12px 16px}.card-stage{max-height:none}.card-pinboard{grid-template-columns:repeat(auto-fill,minmax(min(100%,140px),1fr));gap:14px 10px}}

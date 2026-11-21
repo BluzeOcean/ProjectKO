@@ -42,4 +42,6 @@ export interface ServiceEvent {
   selectedId?: string; sessionId?: string; state?: string; error?: string; notice?: Notice
   operation?: Operation; settings?: Settings; owner?: VoiceOwner | null; window?: string; route?: string; preview?: Preview; handoff?: Handoff
   coordinatorEngine?: CoordinatorEngine
+  /** The entry the user chose in a Pinboard. The service holds it; the wall only shows it. */
+  selection?: { boardId: string; boardTitle: string; step: number; entryId: string; title: string; fileName: string | null } | null
 }

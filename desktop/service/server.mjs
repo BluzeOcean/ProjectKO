@@ -15,6 +15,8 @@ import { groupLabel, taskTitle } from './titles.mjs';
 import { defaultWorkerEffort, taskEffort, workerEfforts } from './effort.mjs';
 import { Workspace, localDay, metadataPatch } from './workspace.mjs';
 import { CardDocuments } from './card-documents.mjs';
+import { Selection } from './selection.mjs';
+import { BoardAgents } from './board-agents.mjs';
 import { QuickActions } from './quick-actions.mjs';
 import { defaultVoiceStyle, voiceSession } from './voice-profile.mjs';
 import { NativeSettings } from './native-settings.mjs';
@@ -98,6 +100,11 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const registry = async () => readJson(path.join(repo, 'workspace', 'workspace.json'), { entities: [] });
   const workspace = new Workspace(repo, () => broadcast('workspace-changed', {}));
   const cards = new CardDocuments(workspace);
+  // The one choice the user makes in a board. It is stored here, not in the
+  // document, and an agent pulls it when it wants it.
+  const selection = new Selection({ cards, changed: value => broadcast('board-selection', { selection: value }) });
+  // The chat a board remembers, so a hand-off always lands in the same place.
+  const boardAgents = new BoardAgents({ repo, cards, sessions, settings: () => settings, focus });
   const history = query => sessions.list().filter(item => !query || `${item.name} ${item.agent} ${item.cwd} ${item.preview || ''}`.normalize('NFC').toLowerCase().includes(query.normalize('NFC').toLowerCase())).sort((a, b) => Number(b.pinned) - Number(a.pinned) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
   const closeChat = async id => {
     await sessions.remove(id);
@@ -113,7 +120,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   };
   const coordinator = await new Coordinator({
     repo, stateDir, orientation: () => library.orientation(), settings: () => settings,
-    context: () => ({ repo, localDate: localDay(), selectedId, workspaceRoute, chats: sessions.active(), recentNotices: notices.slice(-5), recentRequests: [...coordinator.operations.values(), ...quick.operations.values()].sort((a, b) => a.at.localeCompare(b.at)).slice(-6).map(({ text, result, status }) => ({ text, result, status })) }),
+    context: () => ({ repo, localDate: localDay(), selectedId, workspaceRoute, selection: selection.brief(), chats: sessions.active(), recentNotices: notices.slice(-5), recentRequests: [...coordinator.operations.values(), ...quick.operations.values()].sort((a, b) => a.at.localeCompare(b.at)).slice(-6).map(({ text, result, status }) => ({ text, result, status })) }),
     execute: async (name, args, operationId, requestText) => {
       const latestRequest = requestText || coordinator.operations.get(operationId)?.text || '';
       if (['reopen_chat', 'send_to_chat', 'attach_files'].includes(name)) {
@@ -142,6 +149,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         case 'interrupt_chat': sessions.input(args.id, '\x03'); return { delivered: 'Ctrl+C', sessionId: args.id };
         case 'list_workspace': return workspace.list(args);
         case 'read_workspace': return workspace.read(args.entityId, args.step);
+        case 'current_selection': return selection.resolve();
         case 'workspace_activity': return workspace.activity(args.date);
         case 'update_workspace': return workspace.update(args.entityId, args);
         case 'show_workspace': {
@@ -269,6 +277,10 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           return json(response, 200, { repo, contentBase: `${files.origin}/view/${files.repoGrant}`, agents: inventory(), sessions: sessions.list(), settings, selectedId, notices, coordinator: coordinator.state, coordinatorEngine: { name: coordinator.engineName, label: coordinator.engineLabel, note: coordinator.engineNote }, voice: { configured: !!(keys.OPENAI_API_KEY || keys.OPENAI_KEY || process.env.OPENAI_API_KEY), owner: voiceOwner }, voiceHistory, operations: [...coordinator.operations.values(), ...quick.operations.values()].sort((a, b) => a.at.localeCompare(b.at)).slice(-30) });
         }
         if (method === 'GET' && url.pathname === '/api/workspace') return json(response, 200, await registry());
+        if (method === 'GET' && url.pathname === '/api/workspace/selection') return json(response, 200, { selection: await selection.resolve() });
+        if (method === 'POST' && url.pathname === '/api/workspace/selection') return json(response, 200, { selection: await selection.choose(data.entityId, data.step, data.entryId) });
+        if (method === 'POST' && url.pathname === '/api/workspace/selection/clear') return json(response, 200, { selection: selection.clear() });
+        if (method === 'POST' && url.pathname === '/api/workspace/hand-off') return json(response, 200, await boardAgents.send({ entityId: data.entityId, step: data.step, entryId: data.entryId }));
         if (method === 'POST' && url.pathname === '/api/workspace/cards') return json(response, 201, await cards.create(data));
         const cardDocument = /^\/api\/workspace\/cards\/([^/]+)\/(\d+)$/.exec(url.pathname);
         if (cardDocument && method === 'GET') return json(response, 200, await cards.read(decodeURIComponent(cardDocument[1]), Number(cardDocument[2])));
@@ -527,7 +539,14 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         else if (message.type === 'resize') sessions.resize(message.id, message.cols, message.rows);
         else if (message.type === 'selected') { sessions.get(message.id); selectedId = message.id; settings.selectedId = selectedId; scheduleSettings(); }
         else if (message.type === 'seen' && ws.surface === 'chats' && ws.sessionId === message.id && selectedId === message.id) sessions.seen(message.id, message.completionVersion);
-        else if (message.type === 'workspace-route') { workspaceRoute = String(message.route || '').slice(0, 500); settings.workspaceRoute = workspaceRoute; scheduleSettings(); }
+        else if (message.type === 'workspace-route') {
+          workspaceRoute = String(message.route || '').slice(0, 500); settings.workspaceRoute = workspaceRoute; scheduleSettings();
+          // A choice belongs to the board it was made on. Opening another board
+          // drops it, so an agent never pulls a pointer for something the user
+          // has walked away from.
+          const board = decodeURIComponent((workspaceRoute.match(/^#\/([^/]+)/)?.[1] || ''));
+          if (board && selection.state()?.boardId !== board) selection.clear();
+        }
         else if (message.type === 'ping') send(ws, 'pong', {});
       } catch (error) { send(ws, 'service-error', { error: publicError(error) }); }
     });

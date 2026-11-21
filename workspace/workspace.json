@@ -5,7 +5,7 @@
       "title": "My Dream Game",
       "description": "Mr. Mak 64: a small Sky Islands adventure, with character studies, world layouts and a development board.",
       "type": "group",
-      "category": "dev",
+      "category": "image-gen",
       "created": "2026-09-15",
       "updated": "2026-11-20",
       "folder": "2026-09-15_my-dream-game",
@@ -32,7 +32,7 @@
       "type": "group",
       "category": "research",
       "created": "2026-09-15",
-      "updated": "2026-10-20",
+      "updated": "2026-11-21",
       "folder": "2026-09-15_creative-mcp",
       "steps": [
         {
@@ -87,9 +87,9 @@
       "title": "Arachne Character Lab",
       "description": "From creature concepts to a refined spider queen: nine design rounds and eight motion studies.",
       "type": "group",
-      "category": "image-gen",
+      "category": "research",
       "created": "2026-09-15",
-      "updated": "2026-09-15",
+      "updated": "2026-11-20",
       "folder": "2026-09-15_arachne-character",
       "steps": [
         {
@@ -136,6 +136,44 @@
       "status": "active",
       "pinned": false,
       "sample": true
+    },
+    {
+      "id": "testgallery-f39538af",
+      "title": "TestGallery",
+      "description": "",
+      "type": "standalone",
+      "category": "image-gen",
+      "created": "2026-11-21",
+      "updated": "2026-11-21",
+      "folder": "2026-11-21_testgallery-f39538af",
+      "steps": [
+        {
+          "name": "Gallery",
+          "path": "content.card.json",
+          "viewer": "card"
+        }
+      ],
+      "defaultStep": 0,
+      "status": "active"
+    },
+    {
+      "id": "testresearch-d2415b60",
+      "title": "TestResearch",
+      "description": "",
+      "type": "standalone",
+      "category": "research",
+      "created": "2026-11-21",
+      "updated": "2026-11-21",
+      "folder": "2026-11-21_testresearch-d2415b60",
+      "steps": [
+        {
+          "name": "Workbench",
+          "path": "content.card.json",
+          "viewer": "card"
+        }
+      ],
+      "defaultStep": 0,
+      "status": "active"
     }
   ]
 }

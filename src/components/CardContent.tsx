@@ -2,16 +2,30 @@ import { cardSourceUrl, cardTemplateLabels, type CardDocument } from '../../desk
 import { MarkdownView } from './MarkdownDocument'
 import { ZoomImage } from './ImagePreview'
 import { statusLabels } from '../lib/card-labels'
+import Pinboard from './Pinboard'
 import '../styles/editable-cards.css'
 
-export default function CardContent({ document, baseUrl }: { document: CardDocument; baseUrl: string }) {
+export default function CardContent({ document, baseUrl, board, onFeedback, onSave }: {
+  document: CardDocument
+  baseUrl: string
+  board?: { entityId: string; step: number }
+  onFeedback?: (entryId: string, text: string) => void
+  onSave?: (document: CardDocument) => Promise<boolean>
+}) {
   const base = new URL(baseUrl, window.location.href).href
-  return <article className={`card-content card-template-${document.template}`}>
+  const head = <>
     <header className="card-document-heading">
       <div className="card-kicker"><span>{cardTemplateLabels[document.template]}</span><span>{document.items.length} {document.items.length === 1 ? 'entry' : 'entries'}</span></div>
       <h1>{document.title}</h1>
       {document.summary && <div className="card-prose card-introduction"><MarkdownView text={document.summary} baseUrl={base} /></div>}
     </header>
+  </>
+  if (document.template === 'pinboard') return <article className="card-content card-template-pinboard">
+    {head}
+    <Pinboard card={document} baseUrl={base} board={board} onFeedback={onFeedback} onSave={onSave} />
+  </article>
+  return <article className={`card-content card-template-${document.template}`}>
+    {head}
     <div className="card-entries">
       {document.items.map((item, index) => <section className="card-entry" key={item.id} data-entry-id={item.id}>
         {item.image && <div className="card-entry-image"><ZoomImage src={new URL(item.image, base).href} alt={item.alt || item.title} /></div>}

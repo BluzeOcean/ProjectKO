@@ -1,8 +1,8 @@
 # Editable Workspace cards
 
-Use **+ New board** in the desktop Workspace to make a Gallery or Workbench
-board. Both views use the same content format. You can change the view without
-losing the entries, images or prompts.
+Use **+ New board** in the desktop Workspace to make a Gallery, Workbench or
+Pinboard board. All three views use the same content format. You can change the
+view without losing the entries, images or prompts.
 
 ## Working with a card
 
@@ -31,6 +31,40 @@ load latest**, then reapply the changes you want. There is no silent force-save.
 Before replacing a saved card, the service keeps the previous contents under
 `.mrmak/card-backups/`, with a receipt identifying the original file. These are
 local recovery copies and are excluded from Git. Use Git for longer history.
+
+## The Pinboard
+
+The Pinboard is the third view: a wall of the board's entries as thumbnails,
+one picture chosen, and a workspace where the picture is the point.
+
+![The Pinboard: the picture large with the pen over it, the feedback beside it and the hand-off at the bottom right](assets/editable-cards-pinboard.png)
+
+Choose a thumbnail and the picture opens large, with a pen over it. The pen has
+four colours — pink, amber, blue and ink — because these pictures run from
+near-black silk to a pale grey ground, and a mark has to be visible on both.
+Pen, Eraser, Undo and Clear are above them. The feedback goes in the field
+beside the picture, and the hand-off sits at the bottom right.
+
+**Send to the board's agent** does three things, in order:
+
+1. the picture, with your marks drawn on it, is written into the card's `media/`
+   folder and saved into the card as `annotation`;
+2. your feedback is saved into the entry as `feedback`;
+3. the board's agent receives the picture, the marked picture, the entry's notes
+   and your feedback, word for word.
+
+Sending also saves the card, so what the agent reads is exactly what you see.
+The first hand-off opens a chat named after the board, working in the board's
+own folder, and the board remembers it: later hand-offs go to that same chat
+instead of opening a new one. The binding lives on the board's record in
+`workspace/workspace.json`, so it travels with the board.
+
+Choosing an entry also tells the service which entry you are looking at. That
+is the whole signal — one click, one stored value. Nothing watches you: there
+is no hover tracking and no polling. An agent pulls the choice when it wants
+it, with the `current_selection` tool, and reads the entry's picture, marked
+picture, notes and feedback at that moment. Opening a different board drops
+the choice.
 
 ## Where the content lives
 
@@ -94,8 +128,13 @@ Keep the data inside the entity folder:
 Required page fields: `format`, `version`, `template`, `title`, `items`.
 Required entry fields: `id`, `title`. Other fields shown above are optional.
 
-- Templates: `gallery`, `workbench`.
+- Templates: `gallery`, `workbench`, `pinboard`.
 - Statuses: `idea`, `in-progress`, `review`, `done`; omit for no status.
+- Feedback: `feedback` holds what the user wants the agent to change about the
+  entry, up to 4,000 characters. It is written by the Pinboard and read by
+  agents as part of the entry's text.
+- Annotation: `annotation` is the picture with the user's marks drawn on it,
+  saved inside the card's `media/` folder. It follows the same rules as `image`.
 - IDs: unique per page, 1–80 letters, numbers, hyphens or underscores, starting
   with a letter or number. Preserve them when editing or reordering entries.
 - Images: PNG, JPEG, WebP or GIF. Paths are relative to the content file and

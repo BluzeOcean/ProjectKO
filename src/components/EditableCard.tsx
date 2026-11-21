@@ -87,21 +87,29 @@ export default function EditableCard({ url, entityId, step }: { url: string; ent
     if (id && !state.saving) { event.preventDefault(); move(id, index) }
     dragged.current = null
   }
-  async function save() {
-    if (!state.saved || !state.draft || state.saving || mutation.current % 2 || !dirty || state.latest) return
-    try { validateCard(state.draft) } catch (error) { setState(previous => ({ ...previous, error: errorText(error) })); return }
+  /** Writes a document to the card and keeps the editor's state in step. */
+  async function saveDocument(next: CardDocument): Promise<boolean> {
+    if (!state.saved || !next || state.saving || mutation.current % 2 || state.latest) return false
+    if (JSON.stringify(next) === JSON.stringify(state.saved.document)) return true
+    try { validateCard(next) } catch (error) { setState(previous => ({ ...previous, error: errorText(error) })); return false }
     mutation.current++
     setState(previous => ({ ...previous, saving: true, error: '', message: '' }))
     try {
-      const saved = await api<Snapshot>(route, { document: state.draft, revision: state.saved.revision }, 'PUT')
+      const saved = await api<Snapshot>(route, { document: next, revision: state.saved.revision }, 'PUT')
       // Clear recovery synchronously: a navigation immediately after Save must not resurrect it.
       try { sessionStorage.removeItem(draftKey) } catch { /* Storage is optional. */ }
       setState(previous => ({ ...previous, saved, draft: saved.document, latest: null, saving: false, message: saved.warning || 'Saved', error: '' }))
       setRemoved(null); window.dispatchEvent(new Event('mrmak-workspace-changed'))
+      return true
     } catch (error) {
       setState(previous => ({ ...previous, saving: false, error: errorText(error) }))
       try { const latest = await api<Snapshot>(route); setState(previous => ({ ...previous, latest: latest.revision !== previous.saved?.revision ? latest : null })) } catch { /* The draft remains available while offline. */ }
+      return false
     } finally { mutation.current++ }
+  }
+  async function save() {
+    if (!state.draft || !dirty) return
+    await saveDocument(state.draft)
   }
   async function image(id: string, file: File) {
     if (state.saving || mutation.current % 2) return
@@ -134,10 +142,10 @@ export default function EditableCard({ url, entityId, step }: { url: string; ent
       <div className="card-editor-entries">{card.items.map((item, index) => <fieldset className="card-entry-editor" key={item.id} aria-label={`Entry ${index + 1}`} data-entry-id={item.id} onDragOver={dragOver} onDrop={event => drop(event, index)}>
         <legend>{String(index + 1).padStart(2, '0')} · {item.title || 'Entry'}</legend>
         <div className="card-entry-actions"><button type="button" className="card-drag-handle" draggable onDragStart={event => dragStart(event, item.id)} onDragEnd={() => { dragged.current = null }} aria-label={`Drag ${item.title} to reorder`}>⠿ <span>Drag to reorder</span></button><button type="button" disabled={index === 0} onClick={() => move(item.id, index - 1)} aria-label={`Move ${item.title} up`}>↑</button><button type="button" disabled={index === card.items.length - 1} onClick={() => move(item.id, index + 1)} aria-label={`Move ${item.title} down`}>↓</button><button type="button" className="card-remove" onClick={() => { setRemoved({ item, index }); edit(document => ({ ...document, items: document.items.filter(entry => entry.id !== item.id) })) }}>Remove</button></div>
-        <div className="card-entry-fields"><label>Entry title<input maxLength={200} value={item.title} onChange={event => itemEdit(item.id, { title: event.target.value })} /></label><label>Status<select aria-label="Status" value={item.status || ''} onChange={event => itemEdit(item.id, { status: event.target.value ? event.target.value as CardItem['status'] : undefined })}><option value="">No status</option>{cardStatuses.map(status => <option key={status} value={status}>{statusLabels[status]}</option>)}</select></label><label className="card-wide-field">Notes <small>Markdown supported</small><textarea rows={4} maxLength={40000} value={item.body || ''} onChange={event => itemEdit(item.id, { body: event.target.value })} /></label><label>Source URL<input type="url" placeholder="https://" maxLength={2000} value={item.url || ''} onChange={event => itemEdit(item.id, { url: event.target.value })} /></label><label>Link label<input placeholder="Source" maxLength={120} value={item.linkLabel || ''} onChange={event => itemEdit(item.id, { linkLabel: event.target.value })} /></label></div>
+        <div className="card-entry-fields"><label>Entry title<input maxLength={200} value={item.title} onChange={event => itemEdit(item.id, { title: event.target.value })} /></label><label>Status<select aria-label="Status" value={item.status || ''} onChange={event => itemEdit(item.id, { status: event.target.value ? event.target.value as CardItem['status'] : undefined })}><option value="">No status</option>{cardStatuses.map(status => <option key={status} value={status}>{statusLabels[status]}</option>)}</select></label><label className="card-wide-field">Notes <small>Markdown supported</small><textarea rows={4} maxLength={40000} value={item.body || ''} onChange={event => itemEdit(item.id, { body: event.target.value })} /></label><label className="card-wide-field">Feedback for the agent <small>what should change here</small><textarea rows={2} maxLength={4000} value={item.feedback || ''} onChange={event => itemEdit(item.id, { feedback: event.target.value })} /></label><label>Source URL<input type="url" placeholder="https://" maxLength={2000} value={item.url || ''} onChange={event => itemEdit(item.id, { url: event.target.value })} /></label><label>Link label<input placeholder="Source" maxLength={120} value={item.linkLabel || ''} onChange={event => itemEdit(item.id, { linkLabel: event.target.value })} /></label></div>
         <details className="card-entry-extras" open={!!item.image || card.template === 'gallery'}><summary>Image and prompt</summary>{item.image && <div className="card-edit-image"><img src={new URL(item.image, new URL(url, location.href)).href} alt={item.alt || item.title} /><button onClick={() => itemEdit(item.id, { image: '', alt: '' })}>Remove image</button></div>}<label className="card-upload">{item.image ? 'Replace image' : 'Add image'}<input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={event => { const file = event.target.files?.[0]; if (file) void image(item.id, file); event.target.value = '' }} /></label><label>Image description<input maxLength={500} value={item.alt || ''} onChange={event => itemEdit(item.id, { alt: event.target.value })} /></label><label>Prompt<textarea rows={4} maxLength={40000} value={item.prompt || ''} onChange={event => itemEdit(item.id, { prompt: event.target.value })} /></label></details>
       </fieldset>)}</div>
       {!card.items.length && <div className="card-empty"><p>Add a reference, an idea or a research finding.</p><button className="card-primary" onClick={add}>Add first entry</button></div>}
-    </fieldset> : <><CardContent document={card} baseUrl={url} />{isDesktop && !card.items.length && <div className="card-empty-action"><button className="card-primary" onClick={add}>Add first entry</button></div>}</>}
+    </fieldset> : <><CardContent document={card} baseUrl={url} board={{ entityId, step }} onFeedback={(entryId, text) => itemEdit(entryId, { feedback: text })} onSave={saveDocument} />{isDesktop && !card.items.length && <div className="card-empty-action"><button className="card-primary" onClick={add}>Add first entry</button></div>}</>}
   </section>
 }

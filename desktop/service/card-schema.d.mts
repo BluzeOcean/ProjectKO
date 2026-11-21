@@ -1,9 +1,13 @@
-export type CardTemplate = 'gallery' | 'workbench';
+export type CardTemplate = 'gallery' | 'workbench' | 'pinboard';
 export type CardStatus = 'idea' | 'in-progress' | 'review' | 'done';
 export type BoardCategory = 'project' | 'research' | 'dev' | 'image-gen';
 export interface CardItem {
   id: string; title: string; body?: string; image?: string; alt?: string;
   prompt?: string; url?: string; linkLabel?: string; status?: CardStatus;
+  /** What the user wants the agent to change about this entry. */
+  feedback?: string;
+  /** The picture with the user's marks drawn over it, inside this card folder. */
+  annotation?: string;
 }
 export interface CardDocument {
   format: 'mrmak-card'; version: 1; template: CardTemplate;
