@@ -293,3 +293,24 @@
 .chat-context-usage strong{margin-left:8px;color:var(--text);font-weight:500;font-variant-numeric:tabular-nums}
 .chat-context-usage meter{width:64px;height:8px;accent-color:var(--pink)}
 .option-select-setting{display:flex;flex-direction:column;gap:6px;padding:8px 9px;border-top:1px solid color-mix(in srgb,var(--text) 12%,transparent);font-size:11px;color:var(--text-dim)}.option-select-setting small{color:var(--text-dim);font-size:9.5px;margin-left:4px}.option-select-setting select{padding:5px 7px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent);border-radius:6px;background:var(--surface-solid);color:var(--text);font:inherit;font-size:11px}
+
+/* The MiniMax agent's quota, as one line at the bottom of the Chats window.
+   The week stands first and the five-hour window last, so the countdown ends
+   the line against the meter it belongs to. Values come from /api/quota. */
+.quota-footer{--tone:var(--green);--track-bg:color-mix(in srgb,var(--text) 14%,transparent);flex-shrink:0;display:flex;align-items:center;gap:18px;height:28px;padding:0 13px;border-top:1px solid color-mix(in srgb,var(--text) 12%,transparent);background:var(--bg)}
+.qf-meter{display:flex;align-items:center;gap:6px;flex:1 1 0;min-width:0}
+.qb-track{display:block;flex:1 1 auto;min-width:0;height:5px;border-radius:var(--radius-pill);background:var(--track-bg);overflow:hidden}
+.qb-fill{display:block;height:100%;border-radius:inherit;background:var(--tone);box-shadow:0 0 9px color-mix(in srgb,var(--tone) 45%,transparent);transition:width var(--t-med) var(--ease),background var(--t-fast) var(--ease)}
+.qb-track[data-tone=warm]{--tone:var(--amber);--track-bg:color-mix(in srgb,var(--amber) 15%,transparent)}
+.qb-track[data-tone=low]{--tone:var(--red);--track-bg:color-mix(in srgb,var(--red) 17%,transparent)}
+.qf-pct{flex:0 0 auto;min-width:26px;text-align:right;font:500 9.5px/1 var(--font-mono);font-variant-numeric:tabular-nums;color:var(--text)}
+.qf-reset{display:flex;align-items:center;gap:4px;flex:0 0 auto;font:9px/1 var(--font-mono);color:var(--text-muted)}
+.qf-reset svg{width:10px;height:10px;opacity:.75}
+/* A short window must not push the footer off the bottom edge. The empty state
+   is taller than a small window and a flex item keeps its automatic minimum,
+   so it gives way first: without this the line is clipped in a small window. */
+.chat-body>.chats-empty{min-height:0;overflow:hidden}
+/* The countdown leaves the line before the meters do: a title can still say
+   when the window turns over. */
+@media(max-width:400px){.qf-reset{display:none}}
+@media(max-width:340px){.qf-pct{min-width:22px}}

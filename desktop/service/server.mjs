@@ -37,10 +37,11 @@ import { Handoffs } from './handoff.mjs';
 import { chatCommands } from './chat-commands.mjs';
 import { HexBridge } from './hex-bridge.mjs';
 import { isThemePreference } from './appearance.mjs';
+import { Quota } from './quota.mjs';
 
 const listen = server => new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`)); });
 
-export async function createService({ repo, uiDir, stateDir, token = secret(), native = () => {}, restoreSessions = false, mcpOptions, mobileOptions, hexOptions, dev = false }) {
+export async function createService({ repo, uiDir, stateDir, token = secret(), native = () => {}, restoreSessions = false, mcpOptions, mobileOptions, hexOptions, quotaOptions, dev = false }) {
   repo = await realpath(repo);
   stateDir ||= path.join(repo, '.mrmak');
   const dictation = mobileOptions?.dictation || new MobileDictation(repo);
@@ -58,6 +59,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const conversationMedia = new ConversationMedia();
   const readAloud = mobileOptions?.readAloud || new LocalReadAloud(repo);
   const hexBridge = hexOptions?.bridge || new HexBridge();
+  const quota = new Quota(quotaOptions);
   const environment = parseEnv(await readFile(path.join(repo, '.env'), 'utf8').catch(() => ''));
   const settingsPath = path.join(stateDir, 'settings.json');
   const savedSettings = await readJson(settingsPath, null);
@@ -263,6 +265,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         if (method === 'POST' && url.pathname === '/api/dictation') return json(response, 200, await chooseDictation(data.provider));
         // Hex's listener does not take its shortcut while this app is in front, so
         // the terminal asks Hex to toggle the dictation instead of sending ^T.
+        if (method === 'GET' && url.pathname === '/api/quota') return json(response, 200, await quota.status());
         if (method === 'GET' && url.pathname === '/api/hex') return json(response, 200, { ...(await hexBridge.status()), enabled: settings.hexShortcut !== false });
         if (method === 'POST' && url.pathname === '/api/hex/dictation') return json(response, 200, await hexBridge.toggle());
         if (method === 'GET' && url.pathname === '/api/mobile') return json(response, 200, mobile.status());

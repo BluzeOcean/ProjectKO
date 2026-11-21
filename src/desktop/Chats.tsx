@@ -17,6 +17,7 @@ import FolderDropdown from './FolderDropdown'
 import AgentDropdown from './AgentDropdown'
 import { recentAgents } from './agentMeta'
 import Conversation from './Conversation'
+import QuotaFooter from './QuotaFooter'
 import { modelLabel, useChatModel } from './chatModel'
 import { chatView, hasConversationView, saveChatView, type ChatView } from './chatView'
 import { isMac, isWindows, modKey, modLabel, shortcutLabel } from './platform'
@@ -224,5 +225,6 @@ export default function Chats() {
     </> : <div className="chats-empty"><div className="empty-orbit"><PkoMark size={64} tone="black" /></div><span className="desk-eyebrow">ROOM TO THINK</span><h1>Your agents,<br />close at hand.</h1><p>A chat for each task.<br />Keep this window beside whatever<br />you are working on.</p><button className="desk-primary" onClick={() => setNewChat(true)}><Icon name="plus" size={17} />Open your first chat</button><div className="empty-agent-names"><span>Claude</span><span>Codex</span><span>OpenCode</span><span>Kimi</span></div><small>Your CLI accounts. Your local files.</small></div>}
     </div>
     {newChat && <NewChat close={() => setNewChat(false)} />}
+    <QuotaFooter connected={state.connected} />
   </div>
 }
