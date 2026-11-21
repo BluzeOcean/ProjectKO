@@ -55,14 +55,16 @@ try:
 except BaseException:
     log('startup failed\n' + traceback.format_exc())
     raise
-    # A reference clip the owner supplied turns the default voice into theirs.
-    reference = None
-    if root:
-        for name in ('voice.wav', 'voice.flac', 'voice.mp3'):
-            candidate = os.path.join(root, 'voices', name)
-            if os.path.isfile(candidate):
-                reference = candidate
-                break
+
+# A reference clip the owner supplied turns the default voice into theirs.
+reference = None
+if root:
+    for name in ('voice.wav', 'voice.flac', 'voice.mp3'):
+        candidate = os.path.join(root, 'voices', name)
+        if os.path.isfile(candidate):
+            reference = candidate
+            break
+    log('voice clip ' + str(reference))
 
 for line in sys.stdin:
     try:
