@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { access, copyFile, mkdir, readdir, readFile, rm } from 'node:fs/promises';
+import { access, copyFile, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -63,6 +63,7 @@ export class LocalReadAloud {
       // A clip in voices/ is the owner's voice: the worker prefers it to the
       // one that ships with the model.
       custom: await this.customVoice(),
+      label: await this.customVoice() ? await this.customLabel(null) : null,
     };
   }
 
@@ -82,15 +83,26 @@ export class LocalReadAloud {
     await mkdir(folder, { recursive: true });
     for (const name of await readdir(folder).catch(() => [])) if (/^voice\./.test(name)) await rm(path.join(folder, name), { force: true });
     await copyFile(file, path.join(folder, 'voice' + extension));
+    // The recording's own name is what the owner recognises, not "voice.wav".
+    const name = String(file).split(/[\\/]/).filter(Boolean).pop() || 'voice' + extension;
+    await writeFile(path.join(folder, 'voice.json'), JSON.stringify({ name, addedAt: new Date().toISOString() }), 'utf8');
     this.close(); // the clip is read once, at start
-    return { custom: await this.customVoice() };
+    return { custom: await this.customVoice(), label: await this.customLabel(name) };
   }
 
   async clearVoice() {
     const folder = path.join(this.root, 'voices');
-    for (const name of await readdir(folder).catch(() => [])) if (/^voice\./.test(name)) await rm(path.join(folder, name), { force: true });
+    for (const name of await readdir(folder).catch(() => [])) if (/^voice\.|^voice\.json$/.test(name)) await rm(path.join(folder, name), { force: true });
     this.close();
-    return { custom: null };
+    return { custom: null, label: null };
+  }
+
+  async customLabel(fallback) {
+    try {
+      const info = JSON.parse(await readFile(path.join(this.root, 'voices', 'voice.json'), 'utf8'));
+      if (typeof info.name === 'string' && info.name.trim()) return info.name.trim();
+    } catch { /* No name recorded: the file name is enough. */ }
+    return fallback || null;
   }
 
   // One install at a time; the second caller joins the first.

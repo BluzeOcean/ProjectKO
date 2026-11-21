@@ -350,3 +350,8 @@
 .conversation-permission[data-mode=read-only] select{color:var(--text)}
 .conversation-actions .hex-mic{width:30px;height:30px;color:var(--text-dim)!important}
 .conversation-actions .hex-mic:hover{background:color-mix(in srgb,var(--pink) 8%,transparent);color:var(--pink)!important}
+
+/* The voice the read-aloud uses lives in Settings, not in every reply. */
+.settings-voice-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.workspace-settings .settings-voice-actions .desk-secondary{min-height:30px;padding:6px 11px;font-size:11px}
+.conversation-read-aloud .ra-voice{font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:22ch}

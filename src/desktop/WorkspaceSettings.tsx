@@ -8,15 +8,19 @@ import { useDictation } from './useDictation'
 import ThemePicker from '../components/ThemePicker'
 import { isMac, shellName } from './platform'
 import { quotaIntervalLabel, quotaIntervals } from '../lib/quota'
+import { pickFiles } from './client'
 
 type NativeSettings = { available: boolean; winKey: boolean; label?: string; error?: string }
+type ReadAloud = { ready: boolean; installing: boolean; custom?: string | null; label?: string | null; progress: { percent: number; message: string } }
 export default function WorkspaceSettings({ onClose }: { onClose: () => void }) {
   const dictation = useDictation()
   const { settings, repo } = useDesktop()
   const [native, setNative] = useState<NativeSettings>({ available: false, winKey: false })
+  const [speech, setSpeech] = useState<ReadAloud | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   useEffect(() => {
+    void api<ReadAloud>('/read-aloud').then(setSpeech).catch(() => setSpeech(null))
     const refresh = () => api<NativeSettings>('/native/settings').then(setNative).catch(error => setError(String(error.message || error)))
     void refresh()
     return onServiceEvent(event => { if (event.type === 'native-settings') void refresh() })
@@ -24,6 +28,22 @@ export default function WorkspaceSettings({ onClose }: { onClose: () => void }) 
   const change = async (patch: Partial<Settings>) => {
     setBusy(true); setError('')
     try { await api('/settings', patch) } catch (error) { setError(String(error instanceof Error ? error.message : error)) }
+    finally { setBusy(false) }
+  }
+  // The recording is the voice: picked here, copied beside the engine, read when
+  // the next sentence starts.
+  const chooseVoice = async () => {
+    setBusy(true); setError('')
+    try {
+      const [file] = await pickFiles()
+      if (file) { setSpeech(await api<ReadAloud>('/read-aloud/voice', { path: file }).then(() => api<ReadAloud>('/read-aloud'))) }
+    } catch (failure) { setError(String(failure instanceof Error ? failure.message : failure)) }
+    finally { setBusy(false) }
+  }
+  const clearVoice = async () => {
+    setBusy(true); setError('')
+    try { await api('/read-aloud/voice', {}, 'DELETE'); setSpeech(await api<ReadAloud>('/read-aloud')) }
+    catch (failure) { setError(String(failure instanceof Error ? failure.message : failure)) }
     finally { setBusy(false) }
   }
   const winKey = async (enabled: boolean) => {
@@ -41,7 +61,17 @@ export default function WorkspaceSettings({ onClose }: { onClose: () => void }) 
       {!isMac && <label className="setting-toggle"><span>Hand Ctrl+T to Hex<small>Hex cannot see its dictation shortcut while Project KO is in front, so the terminal asks Hex to start or stop dictating instead of typing ^T. Needs Hex installed.</small></span><input type="checkbox" checked={settings.hexShortcut !== false} disabled={busy} onChange={event => void change({ hexShortcut: event.target.checked })} /></label>}
       {isMac && <label className="setting-toggle"><span>Use Option as Meta key<small>Sends Meta shortcuts to the CLI. When off, Option types your keyboard layout's characters, such as @ or #.</small></span><input type="checkbox" checked={!!settings.terminalOptionMeta} disabled={busy} onChange={event => void change({ terminalOptionMeta: event.target.checked })} /></label>}
       <label className="setting-toggle"><span>Bypass CLI permissions<small>Default for new chats.</small></span><input type="checkbox" checked={settings.defaultBypass} disabled={busy} onChange={event => void change({ defaultBypass: event.target.checked })} /></label>
-    </section><section><h3>Agent quota</h3><label>Check the quota every<select disabled={busy} value={settings.quotaRefreshMinutes || 5} onChange={event => void change({ quotaRefreshMinutes: Number(event.target.value) })}>{quotaIntervals.map(minutes => <option key={minutes} value={minutes}>{quotaIntervalLabel(minutes)}</option>)}</select></label><p>The MiniMax agent's five-hour window and week, as the line at the foot of Chats shows them. Project KO reads the CLI at this interval and keeps the last answer for thirty seconds.</p></section><DictationSettings info={dictation.info} onChange={dictation.choose} /><section><h3>Project KO</h3><label>Voice<select disabled={busy} value={settings.voiceName || 'cedar'} onChange={event => void change({ voiceName: event.target.value })}><option value="cedar">Cedar</option><option value="marin">Marin</option></select></label><label>Coordinator reasoning<select disabled={busy} value={settings.coordinatorEffort || 'medium'} onChange={event => void change({ coordinatorEffort: event.target.value as Settings['coordinatorEffort'] })}><option value="medium">Medium</option><option value="high">High</option></select></label><p>Voice changes apply to your next conversation.</p></section>
+    </section><section><h3>Read aloud</h3>
+        <label>Voice<select aria-label="Read aloud voice" disabled={busy || !speech?.ready} value={speech?.custom ? 'clip' : 'builtin'} onChange={event => { if (event.target.value === 'builtin') void clearVoice() }}>
+          <option value={speech?.custom ? 'clip' : 'builtin'}>{speech?.custom ? (speech.label || 'Your clip') : 'Chatterbox · built-in voice'}</option>
+          {speech?.custom ? <option value="builtin">Chatterbox · built-in voice</option> : null}
+        </select></label>
+        <div className="settings-voice-actions">
+          <button type="button" className="desk-secondary" disabled={busy || !speech?.ready} onClick={() => void chooseVoice()}><Icon name="mic" size={13} />{speech?.custom ? 'Replace the clip' : 'Use a clip'}</button>
+          {speech?.custom ? <button type="button" className="desk-secondary" disabled={busy} onClick={() => void clearVoice()}>Use the built-in voice</button> : null}
+        </div>
+        <p>{speech?.ready ? 'The clip is trimmed to its loudest fifteen seconds: that is what the model reads for a voice.' : speech?.installing ? 'Installing the engine…' : 'The engine is not installed yet.'}</p>
+      </section><section><h3>Agent quota</h3><label>Check the quota every<select disabled={busy} value={settings.quotaRefreshMinutes || 5} onChange={event => void change({ quotaRefreshMinutes: Number(event.target.value) })}>{quotaIntervals.map(minutes => <option key={minutes} value={minutes}>{quotaIntervalLabel(minutes)}</option>)}</select></label><p>The MiniMax agent's five-hour window and week, as the line at the foot of Chats shows them. Project KO reads the CLI at this interval and keeps the last answer for thirty seconds.</p></section><DictationSettings info={dictation.info} onChange={dictation.choose} /><section><h3>Project KO</h3><label>Voice<select disabled={busy} value={settings.voiceName || 'cedar'} onChange={event => void change({ voiceName: event.target.value })}><option value="cedar">Cedar</option><option value="marin">Marin</option></select></label><label>Coordinator reasoning<select disabled={busy} value={settings.coordinatorEffort || 'medium'} onChange={event => void change({ coordinatorEffort: event.target.value as Settings['coordinatorEffort'] })}><option value="medium">Medium</option><option value="high">High</option></select></label><p>Voice changes apply to your next conversation.</p></section>
       <section><h3>Project</h3><p className="settings-repo">{repo}</p><p>Skills, knowledge and processes belong to this repository.</p></section>
       {error && <p className="desk-error-inline" role="alert">{error}</p>}
     </div></div>

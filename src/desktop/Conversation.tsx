@@ -12,7 +12,6 @@ import type { ConversationImage } from '../mobile/ImageViewer'
 import VoiceInput from '../mobile/VoiceInput'
 import { visibleUserMessage } from '../mobile/workspace-context'
 import { spokenText, useReadAloud } from '../mobile/useReadAloud'
-import { readingVoiceChanged, saveReadingVoice, savedReadingVoice } from '../mobile/readingVoices'
 import { commandToken, completeCommand, matchingCommands, terminalCommand, type ChatCommand } from './commandSuggestions'
 import TerminalPrompt, { type PromptChoice, type TerminalPromptData } from '../components/TerminalPrompt'
 import PermissionPicker from './PermissionPicker'
@@ -74,8 +73,7 @@ export default function Conversation({ session, connected, agentLabel, openTermi
   const running = session.status === 'running', working = running && session.activity === 'working'
   const reload = useRef<() => Promise<void>>(async () => {})
   const speech = useReadAloud(session.id, speakDesktopText), stopReading = speech.stop
-  const [voice, setVoice] = useState(savedReadingVoice)
-  const [answering, setAnswering] = useState(false)
+    const [answering, setAnswering] = useState(false)
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null), [rewinding, setRewinding] = useState(false), [editError, setEditError] = useState('')
   const [commands, setCommands] = useState<ChatCommand[]>([]), [caret, setCaret] = useState(0), [picked, setPicked] = useState(0), [dismissed, setDismissed] = useState('')
   useEffect(() => { api<{ commands: ChatCommand[] }>(`/sessions/${session.id}/commands`).then(value => setCommands(value.commands)).catch(() => setCommands([])) }, [session.id])
@@ -252,7 +250,6 @@ export default function Conversation({ session, connected, agentLabel, openTermi
           {index === messages.length - 1 && message.role === 'assistant' && index > readStart && <ReadAloudBar
             activeId={speech.activeId} paused={speech.paused} loading={speech.loading} error={speech.error}
             onRead={() => readAloud(message.id)} onStop={speech.stop}
-            voice={voice} onVoice={value => { setVoice(value); saveReadingVoice(value); window.dispatchEvent(new Event(readingVoiceChanged)) }}
           />}
         </article>)}
         {!messages.length && <div className="conversation-empty">
