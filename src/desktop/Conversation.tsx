@@ -12,10 +12,11 @@ import type { ConversationImage } from '../mobile/ImageViewer'
 import VoiceInput from '../mobile/VoiceInput'
 import { visibleUserMessage } from '../mobile/workspace-context'
 import { spokenText, useReadAloud } from '../mobile/useReadAloud'
-import { readingVoiceChanged, readingVoices, saveReadingVoice, savedReadingVoice } from '../mobile/readingVoices'
+import { readingVoiceChanged, saveReadingVoice, savedReadingVoice } from '../mobile/readingVoices'
 import { commandToken, completeCommand, matchingCommands, terminalCommand, type ChatCommand } from './commandSuggestions'
 import TerminalPrompt, { type PromptChoice, type TerminalPromptData } from '../components/TerminalPrompt'
 import PermissionPicker from './PermissionPicker'
+import ReadAloudBar from './ReadAloudBar'
 import './conversation.css'
 import { keepUrl, linkTarget } from '../components/messageLinks'
 
@@ -248,13 +249,11 @@ export default function Conversation({ session, connected, agentLabel, openTermi
           </form>
           : message.text.trim() && <div className="conversation-copy-text"><MessageMarkdown text={message.text} role={message.role} sessionId={session.id} /></div>}
           <ConversationImages images={message.images} />
-          {index === messages.length - 1 && message.role === 'assistant' && index > readStart && <div className="conversation-read-aloud">
-            <button type="button" onClick={() => readAloud(message.id)} aria-label={speech.activeId ? speech.paused ? 'Resume reading' : 'Pause reading' : 'Read aloud'} title={speech.activeId ? speech.paused ? 'Resume reading' : 'Pause reading' : 'Read this reply aloud'}><Icon name={speech.activeId ? speech.paused ? 'play' : 'pause' : 'speaker'} size={15} />{speech.activeId ? speech.paused ? 'Resume' : 'Pause' : 'Read aloud'}</button>
-            {speech.activeId && <button type="button" onClick={speech.stop} aria-label="Stop reading" title="Stop reading"><Icon name="stop" size={13} /></button>}
-            <select aria-label="Reading voice" value={voice} onChange={event => { setVoice(event.target.value); saveReadingVoice(event.target.value); window.dispatchEvent(new Event(readingVoiceChanged)) }}>{readingVoices.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select>
-            {speech.loading && <span role="status">Preparing audio…</span>}
-            {speech.error && <span role="alert">{speech.error}</span>}
-          </div>}
+          {index === messages.length - 1 && message.role === 'assistant' && index > readStart && <ReadAloudBar
+            activeId={speech.activeId} paused={speech.paused} loading={speech.loading} error={speech.error}
+            onRead={() => readAloud(message.id)} onStop={speech.stop}
+            voice={voice} onVoice={value => { setVoice(value); saveReadingVoice(value); window.dispatchEvent(new Event(readingVoiceChanged)) }}
+          />}
         </article>)}
         {!messages.length && <div className="conversation-empty">
           <AgentLogo agent={session.agent} size={34} />

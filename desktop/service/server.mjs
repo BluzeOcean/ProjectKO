@@ -58,7 +58,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const sessions = await new Sessions(repo, stateDir).init();
   const transcripts = new ConversationTranscripts();
   const conversationMedia = new ConversationMedia();
-  const readAloud = mobileOptions?.readAloud || new LocalReadAloud(repo);
+  const readAloud = mobileOptions?.readAloud || new LocalReadAloud(process.env);
   const hexBridge = hexOptions?.bridge || new HexBridge();
   const quota = new Quota(quotaOptions);
   const environment = parseEnv(await readFile(path.join(repo, '.env'), 'utf8').catch(() => ''));
@@ -326,6 +326,12 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           return json(response, 200, await projectList());
         }
         if (method === 'GET' && url.pathname === '/api/read-aloud') return json(response, 200, await readAloud.status());
+        if (method === 'POST' && url.pathname === '/api/read-aloud/setup') {
+          if (await readAloud.installed()) return json(response, 200, { ready: true });
+          // The install takes minutes: answer at once and let the window poll.
+          readAloud.setup().catch(error => console.error('read aloud setup:', error.message));
+          return json(response, 202, { started: true });
+        }
         if (method === 'POST' && url.pathname === '/api/preview/show') {
           // A link in a chat may be relative to that chat's working folder.
           const base = typeof data.sessionId === 'string' ? sessions.get(data.sessionId).cwd : repo;
