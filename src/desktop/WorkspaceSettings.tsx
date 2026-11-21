@@ -66,6 +66,7 @@ export default function WorkspaceSettings({ onClose }: { onClose: () => void }) 
           <option value={speech?.custom ? 'clip' : 'builtin'}>{speech?.custom ? (speech.label || 'Your clip') : 'Chatterbox · built-in voice'}</option>
           {speech?.custom ? <option value="builtin">Chatterbox · built-in voice</option> : null}
         </select></label>
+        <label>Speaking speed<select aria-label="Speaking speed" disabled={busy} value={String(settings.readAloudSpeed || 1)} onChange={event => void change({ readAloudSpeed: Number(event.target.value) })}>{[1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5].map(rate => <option key={rate} value={String(rate)}>{rate}×</option>)}</select></label>
         <div className="settings-voice-actions">
           <button type="button" className="desk-secondary" disabled={busy || !speech?.ready} onClick={() => void chooseVoice()}><Icon name="mic" size={13} />{speech?.custom ? 'Replace the clip' : 'Use a clip'}</button>
           {speech?.custom ? <button type="button" className="desk-secondary" disabled={busy} onClick={() => void clearVoice()}>Use the built-in voice</button> : null}

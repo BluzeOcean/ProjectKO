@@ -1,7 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { api, pickFiles, reportError, speakDesktopText, transcribeDesktopAudio, uploadImage } from './client'
+import { api, pickFiles, reportError, speakDesktopText, transcribeDesktopAudio, uploadImage, useDesktop } from './client'
 import type { ChatSession, SystemEventsMode } from './types'
 import SystemEvent, { type SystemEventData } from '../mobile/SystemEvent'
 import BackgroundWork, { type BackgroundCommand, type WorkingAgent } from '../mobile/BackgroundWork'
@@ -72,7 +72,10 @@ export default function Conversation({ session, connected, agentLabel, openTermi
   const { info: dictation } = useDictation()
   const running = session.status === 'running', working = running && session.activity === 'working'
   const reload = useRef<() => Promise<void>>(async () => {})
-  const speech = useReadAloud(session.id, speakDesktopText), stopReading = speech.stop
+  // Speaking speed is an app setting: the player stretches each sentence
+  // without raising its pitch.
+  const speakingSpeed = useDesktop().settings.readAloudSpeed || 1
+  const speech = useReadAloud(session.id, speakDesktopText, { speed: speakingSpeed }), stopReading = speech.stop
     const [answering, setAnswering] = useState(false)
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null), [rewinding, setRewinding] = useState(false), [editError, setEditError] = useState('')
   const [commands, setCommands] = useState<ChatCommand[]>([]), [caret, setCaret] = useState(0), [picked, setPicked] = useState(0), [dismissed, setDismissed] = useState('')

@@ -64,7 +64,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const environment = parseEnv(await readFile(path.join(repo, '.env'), 'utf8').catch(() => ''));
   const settingsPath = path.join(stateDir, 'settings.json');
   const savedSettings = await readJson(settingsPath, null);
-  let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, dshPermissionMode: 'workspace-write', terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, hexShortcut: true, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', ...savedSettings };
+  let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, dshPermissionMode: 'workspace-write', readAloudSpeed: 1, terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, hexShortcut: true, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', ...savedSettings };
   if (settings.groupTabsByProject === true) {
     await sessions.groupByProject(settings.projectOrder);
     settings.groupTabsByProject = false;
@@ -381,6 +381,9 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           if (Number.isInteger(data.handoffAfter) && (data.handoffAfter === 0 || (data.handoffAfter >= 10 && data.handoffAfter <= 500))) settings.handoffAfter = data.handoffAfter;
           if ([1, 3, 5, 10, 15, 30].includes(data.quotaRefreshMinutes)) settings.quotaRefreshMinutes = data.quotaRefreshMinutes;
           if (permissionModes.includes(data.dshPermissionMode)) settings.dshPermissionMode = data.dshPermissionMode;
+          // Playback speed only: the voice is generated once and stretched by the player.
+          const speed = Number(data.readAloudSpeed);
+          if (Number.isFinite(speed) && speed >= 1 && speed <= 5) settings.readAloudSpeed = Math.round(speed * 100) / 100;
           if (typeof data.hexShortcut === 'boolean') settings.hexShortcut = data.hexShortcut;
           if (['full', 'compact', 'hidden'].includes(data.systemEvents)) settings.systemEvents = data.systemEvents;
           if (isThemePreference(data.workspaceTheme)) settings.workspaceTheme = data.workspaceTheme;

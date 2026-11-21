@@ -83,8 +83,10 @@ export class LocalReadAloud {
     await mkdir(folder, { recursive: true });
     for (const name of await readdir(folder).catch(() => [])) if (/^voice\./.test(name)) await rm(path.join(folder, name), { force: true });
     await copyFile(file, path.join(folder, 'voice' + extension));
-    // The recording's own name is what the owner recognises, not "voice.wav".
-    const name = String(file).split(/[\\/]/).filter(Boolean).pop() || 'voice' + extension;
+    // The recording's own name is what the owner recognises, not "voice.wav";
+    // "Marilyn Monroe voice.wav" is the voice "Marilyn Monroe".
+    const stem = (String(file).split(/[\\/]/).filter(Boolean).pop() || 'voice' + extension).replace(/\.[^.]+$/, '');
+    const name = stem.replace(/[ _-]*(voice|clip|sample|recording)$/i, '').trim() || stem;
     await writeFile(path.join(folder, 'voice.json'), JSON.stringify({ name, addedAt: new Date().toISOString() }), 'utf8');
     this.close(); // the clip is read once, at start
     return { custom: await this.customVoice(), label: await this.customLabel(name) };
