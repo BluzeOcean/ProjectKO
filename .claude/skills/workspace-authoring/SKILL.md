@@ -43,6 +43,12 @@ Update `workspace/workspace.json` with a stable ID, category, folder, readable
 title, creation date, last updated date and steps. `sample: true` is reserved for
 starter examples; ordinary work uses normal archiving behavior.
 
+A board is deleted through the app, not by hand: the bin beside "Open board"
+takes it out of the registry and sends its folder to the system trash. Delete
+boards that way so the registry and the files stay in step. Keep a board's
+`folder` a plain folder name — a board whose folder is not one is refused with
+a 400 and stays in the registry.
+
 Open every changed tab at wide and narrow sizes. Check media and links, Markdown
 rendering and image close/download controls. Preserve the selected surface during
 loading. Report actual verification and any remaining limitations. Prepare

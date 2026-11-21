@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { WorkspaceEntity } from '../types'
 import { categoryIcon, categoryLabel } from '../lib/categories'
 import { boardHue } from '../lib/boards'
 import { entityHash } from '../lib/route'
 import { updateWorkspaceEntity } from '../lib/workspace'
 import { isDesktop } from '../desktop/client'
+import { Icon } from '../desktop/Icons'
 import { EntityStatusButton } from './EntityControls'
+import DeleteBoardDialog from './DeleteBoardDialog'
 import BrowserSettings from './BrowserSettings'
 import NewCard from './NewCard'
 import '../styles/workspace-deck.css'
@@ -45,6 +47,8 @@ export default function WorkspaceDeck({
   const [focusId, setFocusId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState<WorkspaceEntity | null>(null)
+  const [note, setNote] = useState<ReactNode>('')
 
   const shown = activeGenre === 'all' ? boards : boards.filter(entity => genre(entity) === activeGenre)
   // The board being described. A board the filter put away hands the column
@@ -144,6 +148,8 @@ export default function WorkspaceDeck({
             </p>
           )}
 
+          {note && <p className="deck-note">{note}</p>}
+
           <div className="deck-status">
             <b>{boards.length}</b> board{boards.length === 1 ? '' : 's'} · <b>{steps}</b> step{steps === 1 ? '' : 's'}
             {lastChange && <> · last change <b>{lastChange}</b></>}
@@ -206,7 +212,20 @@ export default function WorkspaceDeck({
                     <span>{focus.folder}</span>
                   </div>
                 </div>
-                <a className="deck-insp-action" href={entityHash(focus.id)}>Open board</a>
+                <div className="deck-insp-actions">
+                  <a className="deck-insp-action" href={entityHash(focus.id)}>Open board</a>
+                  <button
+                    type="button"
+                    className="deck-insp-delete"
+                    aria-label={`Delete ${focus.title}`}
+                    aria-haspopup="dialog"
+                    title={isDesktop ? `Delete ${focus.title}` : 'Open the desktop app to delete a board'}
+                    disabled={!isDesktop}
+                    onClick={() => setDeleting(focus)}
+                  >
+                    <Icon name="trash" size={14} />
+                  </button>
+                </div>
               </footer>
             </>
           ) : (
@@ -214,6 +233,15 @@ export default function WorkspaceDeck({
           )}
         </aside>
       </div>
+
+      <DeleteBoardDialog
+        entity={deleting}
+        onClose={() => setDeleting(null)}
+        onDeleted={entity => {
+          setDeleting(null)
+          setNote(<><b>{entity.title}</b> deleted. Its files went with it.</>)
+        }}
+      />
     </div>
   )
 }

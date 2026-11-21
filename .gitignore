@@ -45,6 +45,9 @@ Thumbs.db
 # codegraph's per-machine index — regenerable, not committed (run `codegraph index`).
 /.codegraph/
 
+# The visual bench: mocks in lab/ are scratch, never part of a build.
+/lab/
+
 # Local previews written by the icon and development helpers.
 /mark-preview.png
 /dev-mode.png

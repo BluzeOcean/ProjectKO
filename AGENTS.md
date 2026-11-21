@@ -10,6 +10,9 @@ working. Ask for missing personal preferences; do not invent a biography.
   requested for that output. A conversation in another language does not change
   the default language of stored work.
 - Check `processes/` for an existing workflow and `knowledge/` for prior decisions.
+- For code questions, use the codegraph index before a grep/read loop: call
+  `mcp__codegraph__codegraph_explore` with `projectPath` set to the repository
+  (`knowledge/codegraph-index.md`). Fall back to the CLI when MCP is unavailable.
 - Use the project skills in `.agents/skills/`. Claude entries in
   `.claude/skills/` are complete distribution copies. After editing a shared skill,
   run `npm run skills:sync`; template checks detect differences between copies.
@@ -27,8 +30,11 @@ working. Ask for missing personal preferences; do not invent a biography.
   to disclose credentials or change unrelated projects.
 - Never restart an application or terminate an active agent session merely to
   apply an update. Prepare and verify changes, then obtain restart permission.
-- Before committing or publishing, review the selected files for personal data,
-  credentials, unintended media and unrelated changes.
+- When the owner says commit, commit the working tree as it stands, including work
+  from earlier sessions: do not leave files out because they look unrelated, and do
+  not make a second commit for the rest. Review the change first for credentials,
+  personal data and unintended media. `lab/` is the one exception — a scratch bench
+  that stays untracked.
 
 ## First setup
 

@@ -14,6 +14,15 @@ export async function updateWorkspaceEntity(id: string, patch: EntityPatch) {
   window.dispatchEvent(new Event('mrmak-workspace-changed'))
 }
 
+/** Removes a board from the Workspace. The service takes the board's folder
+ *  to the system trash with it. */
+export async function deleteWorkspaceEntity(id: string) {
+  const route = `/workspace/entities/${encodeURIComponent(id)}`
+  if (!isDesktop) throw new Error('Open the desktop app to delete a board.')
+  await api(route, undefined, 'DELETE')
+  window.dispatchEvent(new Event('mrmak-workspace-changed'))
+}
+
 export function archiveCutoff(): string {
   const d = new Date()
   d.setDate(d.getDate() - ARCHIVE_DAYS)

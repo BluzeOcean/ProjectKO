@@ -18,6 +18,7 @@ board page instead.
 | Per-board colour | `src/lib/boards.ts` (`boardHue`) |
 | Tag labels and glyphs | `src/lib/categories.ts` (`categoryLabel`, `categoryIcon`) |
 | The tag write | `src/lib/workspace.ts` (`updateWorkspaceEntity`) |
+| The delete | `src/components/DeleteBoardDialog.tsx`, `src/lib/workspace.ts` (`deleteWorkspaceEntity`) |
 
 The grid it replaced is gone: `src/components/HomeGrid.tsx` and
 `src/components/MakCard.tsx` were deleted together with their CSS in `global.css`,
@@ -32,10 +33,56 @@ The grid it replaced is gone: `src/components/HomeGrid.tsx` and
   board name into two lines), and a bottom band.
 - **Inspector** — a 400px column on the right: title, date, description, the current
   tag with its assign pills, the facts (status, updated, created, folder) and an
-  "Open board" action.
+  action row: "Open board" with a bin on its right.
 
 The bottom band carries workspace-level facts only (`4 boards · 18 steps · last
 change 2026-10-20`). The inspector carries facts, not cards.
+
+## Deleting a board
+
+The deck had no way to remove a board: it could be archived, tagged, pinned and
+renamed, and it stayed in the deck forever holding its folder and its steps.
+
+**Where the button lives.** It is a small bin in the inspector's action row,
+immediately to the right of "Open board" — the same row, the same height, the
+only difference being that it is red. The owner chose this over a bin on the
+board's own tile and over a button in the board's topbar (the three candidates
+were mocked in `lab/`, mocks 15–17). The inspector already describes the board,
+so the delete joins that description beside the way in.
+
+**The colour rule.** Pink is the way in; a destructive act is red. The bin is
+red-tinted at rest, because a transparent square on a near-black column could
+not be seen — the owner said so and the mock was redrawn.
+
+**One confirmation, and it names the board.** The dialog gives the board's name,
+its step count (or the names of its steps when it has three or fewer) and its
+folder, then says the files in that folder go with it. Cancel changes nothing.
+There is no undo in the Workspace: the board cannot be brought back.
+
+**What the service does.** `DELETE /api/workspace/entities/:id` takes the entity
+out of `workspace/workspace.json` (`Workspace.remove` in
+`desktop/service/workspace.mjs`) and hands the board's folder to the system
+trash through the native bridge, so the files can still be found if the delete
+was a mistake. The service never deletes the user's files itself: the folder
+travels to the Recycle Bin (Windows) or Trash (macOS) by the same path the files
+rail uses.
+
+**Order matters.** The registry is written first, the folder is trashed after.
+If the trash step fails, the board is gone but the user's files are still where
+they were — the safer direction to fail in. A board whose `folder` is not a
+plain folder name is refused with a 400 and stays in the registry.
+
+**A failed write must not poison the service.** The workspace write chain
+(`this.writes`) is kept non-rejecting: a refused or failed write resolves the
+chain instead of leaving a rejected promise behind, because the service's
+shutdown awaits that chain and would otherwise fail with it.
+
+**The deck refreshes only while the window is visible.** The delete writes the
+registry and the note appears at once, but the board list is re-read by
+`useWorkspace`, which skips the read when the window is hidden (`visibilityState`).
+A delete made while the app is in the background therefore shows up when the
+window comes back to the front, not the instant it was made. The registry and
+the files are already correct at that point — only the list is behind.
 
 ## Decisions worth keeping
 
@@ -71,8 +118,26 @@ change 2026-10-20`). The inspector carries facts, not cards.
 `desktop/service/test/theme-ui.mjs` checks the palette. A live capture of the
 running app reported zero console errors.
 
+The delete has its own pair: `desktop/service/test/board-delete.test.mjs` checks
+the service (authentication, the registry write, the trash hand-off, and a board
+whose folder is a path being refused), and
+`desktop/service/test/board-delete-ui.mjs` drives the real UI — the bin shares
+the row of "Open board", the confirmation carries the board's facts, Cancel
+keeps everything, and Delete board removes the board and leaves the note.
+
+The port was also looked at in the shipping build, served by an isolated service
+against a throwaway Workspace: the bin sits 8px to the right of "Open board" on
+the same row and 37px tall, the dialog carries the board's name, its steps and
+its folder, Cancel keeps all three boards, and after a delete the board is gone
+from the deck, the note reads "TestGallery deleted. Its files went with it." and
+the service hands the folder to the trash. No console errors.
+
 ## Limits
 
 - The board detail page is a mock, not a screen. A tile opens the existing board
   page (topbar and report viewer), which this work did not touch.
 - The tag pills are disabled outside the desktop app.
+- The delete is disabled outside the desktop app too: the trash hand-off needs
+  the native bridge.
+- There is no undo. The board's files are in the system trash, but the board
+  itself has to be made again.

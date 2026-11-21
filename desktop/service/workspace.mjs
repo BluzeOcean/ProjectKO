@@ -102,7 +102,56 @@ export class Workspace {
       }
       throw new Error('Workspace is being updated by another task. Try the change again.');
     });
-    this.writes = operation;
+    // The chain itself never rejects: a refused or failed write must not
+    // poison the next one, nor the service's shutdown.
+    this.writes = operation.catch(() => {});
+    return operation;
+  }
+
+  /** A board's folder, as an absolute path. The name must be a plain folder
+   *  name inside `workspace/`, never a path of its own. */
+  folderPath(entity) {
+    const name = entity.folder;
+    if (typeof name !== 'string' || !name.trim() || name !== path.basename(name) || name === '.' || name === '..') {
+      throw invalid('This board has no folder of its own.');
+    }
+    return path.join(this.repo, 'workspace', name);
+  }
+
+  /** Takes a board out of the registry. Its files are left where they are:
+   *  the caller decides what happens to them, so a failure there cannot take
+   *  the user's work with it. */
+  remove(id) {
+    const operation = this.writes.catch(() => {}).then(async () => {
+      for (let attempt = 0; attempt < 6; attempt++) {
+        const source = await readFile(this.file, 'utf8');
+        const registry = JSON.parse(source);
+        const index = registry.entities.findIndex(item => item.id === id);
+        if (index < 0) throw Object.assign(new Error('Workspace card was not found.'), { status: 404 });
+        const [entity] = registry.entities.splice(index, 1);
+        // The folder is settled before anything is written, so a board with an
+        // odd folder name is never half-removed.
+        const folder = this.folderPath(entity);
+        // Preserve other agents' latest registry changes instead of saving a stale snapshot.
+        if (await readFile(this.file, 'utf8') !== source) continue;
+        try { await saveJson(this.file, registry, { beforeReplace: async () => {
+          if (await readFile(this.file, 'utf8') !== source) throw Object.assign(new Error('Workspace changed while saving.'), { code: 'ESTALE' });
+        } }); }
+        catch (error) {
+          // Windows indexers/readers can briefly lock atomic replacements. Retry
+          // from a fresh registry so another agent's edits are still retained.
+          if (!['EPERM', 'EACCES', 'EBUSY', 'ESTALE'].includes(error.code) || attempt === 5) throw error;
+          await sleep(40 * (attempt + 1));
+          continue;
+        }
+        this.changed();
+        return { entity: brief(entity), folder };
+      }
+      throw new Error('Workspace is being updated by another task. Try the change again.');
+    });
+    // The chain itself never rejects: a refused or failed delete must not
+    // poison the next write, nor the service's shutdown.
+    this.writes = operation.catch(() => {});
     return operation;
   }
 }
