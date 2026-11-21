@@ -52,7 +52,7 @@ export default function ReadAloudBar({ activeId, paused, loading, error, onRead,
   }
 
   return <div className="conversation-read-aloud">
-    <button type="button" onClick={onRead} aria-label={activeId ? paused ? 'Resume reading' : 'Pause reading' : 'Read aloud'} title={activeId ? paused ? 'Resume reading' : 'Pause reading' : 'Read this reply aloud'}><Icon name={activeId ? paused ? 'play' : 'pause' : 'speaker'} size={15} />{activeId ? paused ? 'Resume' : 'Pause' : 'Read aloud'}</button>
+    <button type="button" className="ra-play" onClick={onRead} aria-label={activeId ? paused ? 'Resume reading' : 'Pause reading' : 'Read aloud'} title={activeId ? paused ? 'Resume reading' : 'Pause reading' : 'Read this reply aloud'}><Icon name={activeId ? paused ? 'play' : 'pause' : 'speaker'} size={15} /></button>
     {activeId && <button type="button" onClick={onStop} aria-label="Stop reading" title="Stop"><Icon name="stop" size={13} /></button>}
     <span className="ra-voice" title="The voice is chosen in Settings">{status?.label || (status?.custom ? 'Your clip' : 'Built-in voice')}</span>
     {loading && <span role="status">Preparing audio…</span>}

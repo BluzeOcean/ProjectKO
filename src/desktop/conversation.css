@@ -99,3 +99,8 @@
 /* The voice can come from a recording: one clip, about ten seconds. */
 .conversation-read-aloud .ra-clip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent);border-radius:7px;background:transparent;color:var(--text-dim);font-size:10px}
 .conversation-read-aloud .ra-clip:hover{border-color:color-mix(in srgb,var(--pink) 30%,transparent);color:var(--pink)}
+
+/* The read-aloud button is a speaker, not a sentence: the row already sits under
+   a reply, so the words would only repeat what the icon says. */
+.conversation-read-aloud .ra-play{display:grid;place-items:center;width:28px;height:28px;padding:0}
+.conversation-read-aloud .ra-play svg{flex:0 0 auto}
