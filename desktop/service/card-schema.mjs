@@ -3,8 +3,27 @@ export const CARD_FORMAT = 'mrmak-card';
 export const CARD_VERSION = 1;
 export const CARD_MAX_BYTES = 1024 * 1024;
 export const CARD_MAX_ITEMS = 200;
-export const cardTemplates = ['gallery', 'research'];
+export const cardTemplates = ['gallery', 'workbench'];
+// Cards written before the Workbench rename still say "research". They keep
+// working and are rewritten with the new name the next time they are saved.
+export const legacyCardTemplates = { research: 'workbench' };
+// The name each view is shown under. One map, so the word is never spelled
+// twice: "Gallery" and "Workbench" both mean a layout, never a tag.
+export const cardTemplateLabels = { gallery: 'Gallery', workbench: 'Workbench' };
+// Tabs whose name was written from the view name. A tab carrying one of these
+// follows the view, so renaming a view renames its tab. Tabs named by hand
+// ("Editable references") are not in this list and stay as they are.
+export const cardViewTabLabels = { Gallery: 'gallery', Workbench: 'workbench', Research: 'workbench' };
 export const cardStatuses = ['idea', 'in-progress', 'review', 'done'];
+// The tags a board is born with. The deck filters by these words, so the
+// panel offers them and the service checks them. A tag can still be changed
+// later from the deck's inspector.
+export const boardCategories = ['project', 'research', 'dev', 'image-gen'];
+// A board's folder is named after the day and the title. The panel shows that
+// name before the board exists, so the editor and the service share the rule
+// instead of keeping two copies of it.
+export const localDay = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+export const folderSlug = (title, fallback) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || fallback;
 const fail = message => { throw Object.assign(new Error(message), { status: 400 }); };
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 function keys(value, allowed, label) {
@@ -28,7 +47,8 @@ export function cardSourceUrl(value) {
 function validate(value, draft) {
   keys(value, ['format', 'version', 'template', 'title', 'summary', 'items'], 'This card');
   if (value.format !== CARD_FORMAT || value.version !== CARD_VERSION) fail('This editable card version is not supported. Update Project KO before editing it.');
-  if (!cardTemplates.includes(value.template)) fail('Choose the Gallery or Research template.');
+  if (typeof value.template === 'string' && legacyCardTemplates[value.template]) value.template = legacyCardTemplates[value.template];
+  if (!cardTemplates.includes(value.template)) fail(`Choose the ${cardTemplateLabels.gallery} or ${cardTemplateLabels.workbench} template.`);
   text(value.title, 'Page title', 200, !draft);
   if (typeof value.title !== 'string') fail('Enter a page title.');
   text(value.summary, 'Introduction', 20000);

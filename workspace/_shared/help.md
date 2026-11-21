@@ -48,10 +48,10 @@ actions. Conversation recovery also depends on the selected CLI's native history
 
 ## Edit a card yourself
 
-Choose **+ New card** in Workspace to start a Gallery or Research page. Use
+Choose **+ New board** in Workspace to start a Gallery or Workbench page. Use
 **Edit** to add images, Markdown notes, saved prompts, source links and statuses.
 Drag the order chips, or use the arrow buttons, to reorder entries. Switch
-between Gallery and Research without losing the content.
+between Gallery and Workbench without losing the content.
 
 **Preview** shows your draft; **Save** writes it to the project's `.card.json`
 file. An agent can work with that same file. If it changes while you are editing,

@@ -10,7 +10,7 @@ Keep authored content in English unless the user explicitly requests another
 language. Put related iterations in an existing card rather than creating
 several cards for one task. Do not reorganize unrelated projects.
 
-For a gallery or research page that the owner wants to edit directly, use the
+For a gallery or workbench page that the owner wants to edit directly, use the
 versioned `.card.json` format in [editable cards](../../../docs/editable-cards.md).
 Register its step with `viewer: "card"`. Keep stable entry IDs, relative local
 images and Markdown notes; validate with `desktop/service/card-schema.mjs` before

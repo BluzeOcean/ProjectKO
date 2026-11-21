@@ -29,14 +29,22 @@ try {
   const page = await context.newPage(); page.setDefaultTimeout(12000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto(service.urls.workspace);
-  await page.getByRole('button', { name: '+ New card', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'New Workspace card' });
-  await dialog.getByLabel('Card title').fill('My editable board');
-  await dialog.getByRole('button', { name: 'Create card', exact: true }).click();
+  await page.getByRole('button', { name: '+ New board', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'New board' });
+  await dialog.getByLabel('Board title').fill('My editable board');
+  await dialog.getByLabel('What is this board for?').fill('Everything about the editable board.');
+  await dialog.getByRole('button', { name: 'Dev', exact: true }).click();
+  // The strip says what the board will carry, and it follows the panel.
+  await expect(dialog.locator('.new-card-strip-line')).toContainText('My editable board');
+  await expect(dialog.locator('.new-card-strip-line')).toContainText('Dev');
+  await dialog.getByRole('button', { name: 'Create board', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'My editable board', exact: true })).toBeVisible();
   const id = new URL(page.url()).hash.slice(2).split('/')[0];
   const registry = JSON.parse(await readFile(path.join(repo, 'workspace/workspace.json'), 'utf8'));
   const entity = registry.entities.find(item => item.id === id), cardFile = path.join(repo, 'workspace', entity.folder, 'content.card.json');
+  // The board is filed at birth: the tag is chosen, and the purpose arrives.
+  assert.equal(entity.category, 'dev');
+  assert.equal(entity.description, 'Everything about the editable board.');
   await page.getByRole('button', { name: 'Add first entry' }).click();
   const entry = index => page.locator('.card-entry-editor').nth(index);
   await entry(0).getByLabel('Entry title', { exact: true }).fill('The gentleman');
@@ -106,11 +114,12 @@ try {
   }
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
-  await page.getByLabel('View', { exact: true }).selectOption('research');
+  await page.getByLabel('View', { exact: true }).selectOption('workbench');
   await page.getByRole('button', { name: 'Save', exact: true }).click(); await expect(page.locator('.card-save-status')).toHaveText('Saved');
   await page.getByRole('button', { name: 'Preview', exact: true }).click();
-  await expect(page.locator('.card-template-research')).toBeVisible();
-  await page.screenshot({ path: path.join(repo, 'research-light-1280.png') });
+  await expect(page.locator('.card-template-workbench')).toBeVisible();
+  await expect(page.locator('.card-kicker span').first()).toHaveText('Workbench');
+  await page.screenshot({ path: path.join(repo, 'workbench-light-1280.png') });
   // Simulate an agent edit while a human has an unsaved draft.
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   await entry(0).getByLabel('Notes').fill('My unsaved notes');

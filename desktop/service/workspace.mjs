@@ -3,10 +3,10 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { realFile, saveJson, sleep } from './util.mjs';
-import { validateCard, cardText, CARD_MAX_BYTES } from './card-schema.mjs';
+import { validateCard, cardText, CARD_MAX_BYTES, localDay } from './card-schema.mjs';
 
 const execute = promisify(execFile);
-export const localDay = (date = new Date()) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+export { localDay };
 const brief = ({ id, title, description, status, category, created, updated, pinned, steps }) => ({ id, title, description, status, category, created, updated, pinned: !!pinned, steps: (steps || []).map(({ name }, index) => ({ name, index })) });
 const invalid = message => Object.assign(new Error(message), { status: 400 });
 

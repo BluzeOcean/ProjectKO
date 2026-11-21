@@ -1,8 +1,8 @@
 # Editable Workspace cards
 
-Use **+ New card** in the desktop Workspace to make a Gallery or Research card.
-Both views use the same content format. You can change the view without losing
-the entries, images or prompts.
+Use **+ New board** in the desktop Workspace to make a Gallery or Workbench
+board. Both views use the same content format. You can change the view without
+losing the entries, images or prompts.
 
 ## Working with a card
 
@@ -34,7 +34,7 @@ local recovery copies and are excluded from Git. Use Git for longer history.
 
 ## Where the content lives
 
-![The same content in the Research view with the light Workspace theme](assets/editable-cards-research.png)
+![The same content in the Workbench view with the light Workspace theme](assets/editable-cards-workbench.png)
 
 ```text
 workspace/
@@ -94,7 +94,7 @@ Keep the data inside the entity folder:
 Required page fields: `format`, `version`, `template`, `title`, `items`.
 Required entry fields: `id`, `title`. Other fields shown above are optional.
 
-- Templates: `gallery`, `research`.
+- Templates: `gallery`, `workbench`.
 - Statuses: `idea`, `in-progress`, `review`, `done`; omit for no status.
 - IDs: unique per page, 1–80 letters, numbers, hyphens or underscores, starting
   with a letter or number. Preserve them when editing or reordering entries.

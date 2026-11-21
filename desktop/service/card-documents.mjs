@@ -1,9 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, realpath, writeFile, unlink, rmdir } from 'node:fs/promises';
 import path from 'node:path';
-import { CARD_FORMAT, CARD_VERSION, CARD_MAX_BYTES, cardTemplates, localCardPath, validateCard } from './card-schema.mjs';
+import { CARD_FORMAT, CARD_VERSION, CARD_MAX_BYTES, cardTemplates, cardTemplateLabels, cardViewTabLabels, legacyCardTemplates, boardCategories, folderSlug, localDay, localCardPath, validateCard } from './card-schema.mjs';
 import { realFile, saveJson, within } from './util.mjs';
-import { localDay } from './workspace.mjs';
 
 const hash = source => createHash('sha256').update(source).digest('hex');
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
@@ -82,6 +81,9 @@ export class CardDocuments {
           if (entity.steps.length === 1) {
             entity.title = document.title;
             entity.description = (document.summary || '').replace(/\s+/g, ' ').slice(0, 240);
+            // A tab named after the view follows it. A tab named by hand stays.
+            const tab = entity.steps[0];
+            if (cardViewTabLabels[tab.name]) tab.name = cardTemplateLabels[document.template];
           }
         });
       } catch { warning = 'Your content was saved, but the Workspace listing could not be refreshed. Reopen the card to refresh its listing.'; }
@@ -90,16 +92,25 @@ export class CardDocuments {
     });
   }
   create(options) {
-    if (!options || typeof options !== 'object' || Array.isArray(options) || Object.keys(options).some(key => !['title', 'template'].includes(key))) fail('Enter a title and choose Gallery or Research.');
-    const { title, template } = options;
-    if (typeof title !== 'string' || !title.trim() || title.length > 200 || /[\x00-\x1f]/.test(title) || !cardTemplates.includes(template)) fail('Enter a title and choose Gallery or Research.');
+    if (!options || typeof options !== 'object' || Array.isArray(options) || Object.keys(options).some(key => !['title', 'description', 'category', 'template'].includes(key))) fail('Enter a title, a tag and a starting view.');
+    const { title } = options;
+    const description = options.description === undefined ? '' : options.description;
+    const { category } = options;
+    // A client from before the rename still asks for "research". It means the
+    // same view, so it is accepted and stored under the current name.
+    const template = legacyCardTemplates[options.template] || options.template;
+    if (typeof title !== 'string' || !title.trim() || title.length > 200 || /[\x00-\x1f]/.test(title) || !cardTemplates.includes(template)) fail('Enter a title and choose a starting view.');
+    if (typeof description !== 'string' || description.length > 240 || /[\x00-\x1f]/.test(description)) fail('The description must be up to 240 characters.');
+    // The tag is chosen, never inherited from the view. A board the deck
+    // cannot filter is a board nobody finds.
+    if (!boardCategories.includes(category)) fail('Choose a tag for the board.');
     return this.write(async () => {
-      const document = { format: CARD_FORMAT, version: CARD_VERSION, template, title: title.trim(), summary: '', items: [] };
-      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || template;
+      const document = { format: CARD_FORMAT, version: CARD_VERSION, template, title: title.trim(), summary: description.trim(), items: [] };
+      const slug = folderSlug(title, template);
       const id = `${slug}-${randomUUID().slice(0, 8)}`, folder = `${localDay()}_${id}`;
       const workspaceRoot = await realpath(path.join(this.repo, 'workspace'));
       const directory = path.join(workspaceRoot, folder), file = path.join(directory, 'content.card.json');
-      const entity = { id, title: document.title, description: '', type: 'standalone', category: template === 'gallery' ? 'image-gen' : 'research', created: localDay(), updated: localDay(), folder, steps: [{ name: template === 'gallery' ? 'Gallery' : 'Research', path: 'content.card.json', viewer: 'card' }], defaultStep: 0, status: 'active' };
+      const entity = { id, title: document.title, description: description.replace(/\s+/g, ' ').trim().slice(0, 240), type: 'standalone', category, created: localDay(), updated: localDay(), folder, steps: [{ name: cardTemplateLabels[template], path: 'content.card.json', viewer: 'card' }], defaultStep: 0, status: 'active' };
       await mkdir(directory);
       await writeFile(file, sourceOf(document), { flag: 'wx' });
       try { await this.registryChange(registry => { registry.entities.push(entity); }); }

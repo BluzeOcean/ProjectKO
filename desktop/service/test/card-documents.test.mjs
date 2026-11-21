@@ -82,16 +82,38 @@ test('an agent edit invalidates the editor revision without being overwritten', 
 
 test('new cards keep registry data, use unique local folders and update their listing after a save', async t => {
   const { request, repo } = await fixture(t);
-  const responses = await Promise.all([request('/workspace/cards', { title: 'My research', template: 'research' }), request('/workspace/cards', { title: 'My research', template: 'gallery' })]);
+  const responses = await Promise.all([request('/workspace/cards', { title: 'My research', description: 'Findings and decisions.', category: 'research', template: 'workbench' }), request('/workspace/cards', { title: 'My research', category: 'dev', template: 'gallery' })]);
   assert.ok(responses.every(response => response.status === 201));
   const [one, two] = await Promise.all(responses.map(response => response.json()));
   assert.notEqual(one.entity.id, two.entity.id); assert.equal(one.entity.pinned, undefined); assert.equal(one.entity.sample, undefined);
+  // The tag is chosen at birth, never inherited from the view.
+  assert.equal(one.entity.category, 'research'); assert.equal(two.entity.category, 'dev');
+  // The purpose arrives as the description and as the card's introduction.
+  assert.equal(one.entity.description, 'Findings and decisions.'); assert.equal(one.document.summary, 'Findings and decisions.');
+  // A board the deck cannot filter is a board nobody finds.
+  assert.equal((await request('/workspace/cards', { title: 'No tag', template: 'gallery' })).status, 400);
   const updated = { ...one.document, title: 'Reviewed research', summary: 'What worked.' };
   assert.equal((await request(`/workspace/cards/${one.entity.id}/0`, { document: updated, revision: one.revision }, 'PUT')).status, 200);
   const registry = JSON.parse(await readFile(path.join(repo, 'workspace/workspace.json'), 'utf8'));
   assert.equal(registry.entities.length, 3); assert.equal(registry.customRoot, 'keep');
   assert.equal(registry.entities.find(entity => entity.id === one.entity.id).title, updated.title);
   assert.equal(registry.entities.find(entity => entity.id === one.entity.id).description, updated.summary);
+  // The tab carries the name of the view it shows.
+  assert.equal(registry.entities.find(entity => entity.id === one.entity.id).steps[0].name, 'Workbench');
+});
+
+test('a card written before the Workbench rename still opens and is saved under the new name', async t => {
+  const { request, file, repo } = await fixture(t);
+  const legacy = { ...sample(), template: 'research' };
+  await writeFile(file, JSON.stringify(legacy, null, 2) + '\n');
+  const snapshot = await request('/workspace/cards/sample/0').then(response => response.json());
+  assert.equal(snapshot.document.template, 'workbench');
+  // An older client asking for the old name still gets the same view.
+  const created = await request('/workspace/cards', { title: 'Old client', category: 'dev', template: 'research' });
+  assert.equal(created.status, 201);
+  assert.equal((await created.json()).document.template, 'workbench');
+  assert.equal((await request(`/workspace/cards/sample/0`, { document: { ...snapshot.document, title: 'Renamed on save' }, revision: snapshot.revision }, 'PUT')).status, 200);
+  assert.equal(JSON.parse(await readFile(file, 'utf8')).template, 'workbench');
 });
 
 test('image import stays in the card folder, checks file type and never trusts the upload filename', async t => {

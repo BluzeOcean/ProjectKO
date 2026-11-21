@@ -1,7 +1,7 @@
 {
   "format": "mrmak-card",
   "version": 1,
-  "template": "research",
+  "template": "workbench",
   "title": "Try a tool, keep the evidence",
   "summary": "A starter research page you can edit yourself. Use these entries as a checklist for evaluating a connection. They are examples, not completed test results; the **Tool shortlist** tab keeps the broader reference list.",
   "items": [

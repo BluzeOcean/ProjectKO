@@ -1,4 +1,4 @@
-import { cardSourceUrl, type CardDocument } from '../../desktop/service/card-schema.mjs'
+import { cardSourceUrl, cardTemplateLabels, type CardDocument } from '../../desktop/service/card-schema.mjs'
 import { MarkdownView } from './MarkdownDocument'
 import { ZoomImage } from './ImagePreview'
 import { statusLabels } from '../lib/card-labels'
@@ -8,7 +8,7 @@ export default function CardContent({ document, baseUrl }: { document: CardDocum
   const base = new URL(baseUrl, window.location.href).href
   return <article className={`card-content card-template-${document.template}`}>
     <header className="card-document-heading">
-      <div className="card-kicker"><span>{document.template === 'gallery' ? 'Gallery' : 'Research'}</span><span>{document.items.length} {document.items.length === 1 ? 'entry' : 'entries'}</span></div>
+      <div className="card-kicker"><span>{cardTemplateLabels[document.template]}</span><span>{document.items.length} {document.items.length === 1 ? 'entry' : 'entries'}</span></div>
       <h1>{document.title}</h1>
       {document.summary && <div className="card-prose card-introduction"><MarkdownView text={document.summary} baseUrl={base} /></div>}
     </header>

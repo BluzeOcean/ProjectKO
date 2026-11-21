@@ -14,7 +14,7 @@ Keep the windows side by side, or minimize either one independently. You can
 leave Chats in view while working in Blender, a game engine or your browser.
 
 **New in 0.6: [edit Workspace cards yourself](docs/editable-cards.md).** Add
-images, notes and prompts in Gallery or Research views. Agents use the same
+images, notes and prompts in Gallery or Workbench views. Agents use the same
 content files. You can also [connect your phone](#on-your-phone) to follow chats,
 send ideas and dictate messages while the agents keep working on your computer.
 
@@ -147,11 +147,12 @@ the optional Live voice coordinator still uses OpenAI API billing.
 
 ![An editable Gallery card with Project KO character and location references, saved prompts, entry statuses and Preview/Edit controls](docs/assets/editable-cards-gallery.png)
 
-- **Cards you can edit yourself.** Choose **+ New card** for a Gallery or Research
-  page. Add images, notes, source links and prompts; drag entries into order or
-  use the arrow buttons. Preview and save without asking an agent. Agents work
-  with the same local content files, and the editor checks for conflicting edits.
-  Existing HTML reports keep their own layouts. [How editable cards work](docs/editable-cards.md).
+- **Cards you can edit yourself.** Choose **+ New board** for a Gallery or
+  Workbench page. Add images, notes, source links and prompts; drag entries into
+  order or use the arrow buttons. Preview and save without asking an agent.
+  Agents work with the same local content files, and the editor checks for
+  conflicting edits. Existing HTML reports keep their own layouts.
+  [How editable cards work](docs/editable-cards.md).
 - **Your files, close at hand.** Browse a folder tree with Main folders or All
   files, jump to `inbox`, `projects`, `workspace`, `knowledge` and `processes`,
   and open any folder in Windows Explorer, macOS Finder or your file manager.
