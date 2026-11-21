@@ -116,8 +116,10 @@ export class LocalReadAloud {
 
   start() {
     if (this.child) return;
-    const child = spawn(this.python, ['-u', worker, this.root], { windowsHide: true, stdio: ['pipe', 'pipe', 'ignore'], env: { ...this.env, HF_HOME: path.join(this.root, 'models', 'hf'), TORCH_HOME: path.join(this.root, 'models', 'torch') } });
+    const child = spawn(this.python, ['-u', worker, this.root], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], env: { ...this.env, HF_HOME: path.join(this.root, 'models', 'hf'), TORCH_HOME: path.join(this.root, 'models', 'torch') } });
     this.child = child;
+    this.stderr = '';
+    child.stderr.on('data', chunk => { this.stderr = (this.stderr + chunk.toString()).slice(-4000); });
     let text = '';
     child.stdout.on('data', chunk => {
       text += chunk.toString();
@@ -128,7 +130,14 @@ export class LocalReadAloud {
       try { const result = JSON.parse(line); if (!result.audio || result.error) throw Error(); pending.resolve(Buffer.from(result.audio, 'base64')); }
       catch { pending.reject(fail('Local speech generation failed. Try again.', 502)); }
     });
-    const ended = () => { if (this.child === child) { this.child = null; this.pending?.reject(fail('Local speech stopped. Try again.', 502)); } };
+    const ended = () => {
+      if (this.child !== child) return;
+      this.child = null;
+      // The last lines say why: a driver that refused, weights that are gone,
+      // or a model that ran out of memory.
+      const tail = (this.stderr || '').trim().split('\n').slice(-1)[0] || '';
+      this.pending?.reject(fail('Read aloud stopped' + (tail ? ': ' + tail.slice(0, 160) : '. Try again.'), 502));
+    };
     child.on('error', ended); child.on('exit', ended); child.stdin.on('error', ended);
   }
 
