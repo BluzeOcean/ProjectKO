@@ -12,17 +12,28 @@ import { MobileDictation } from '../mobile-dictation.mjs';
 import { launchBrowser, testBrowser } from './browser.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+
+// One second of silence in the engine's own format: the words are what this
+// check watches, and the five-gigabyte engine is not what it is testing.
+function silence(seconds) {
+  const rate = 24000, frames = rate * seconds, data = Buffer.alloc(44 + frames * 2);
+  data.write('RIFF', 0); data.writeUInt32LE(36 + frames * 2, 4); data.write('WAVE', 8);
+  data.write('fmt ', 12); data.writeUInt32LE(16, 16); data.writeUInt16LE(1, 20); data.writeUInt16LE(1, 22);
+  data.writeUInt32LE(rate, 24); data.writeUInt32LE(rate * 2, 28); data.writeUInt16LE(2, 32); data.writeUInt16LE(16, 34);
+  data.write('data', 36); data.writeUInt32LE(frames * 2, 40);
+  return data;
+}
 await mkdir(path.join(root, '.cache'), { recursive: true });
 const repo = await mkdtemp(path.join(root, '.cache/mobile-ui-'));
 await mkdir(path.join(repo, 'workspace/report'), { recursive: true });
 await mkdir(path.join(repo, 'workspace/_shared'), { recursive: true });
 await cp(path.join(root, 'dist'), path.join(repo, 'ui'), { recursive: true });
-for (const name of ['mak-nose.svg', 'mak-nose-chats.svg', 'mak-mobile-192.png', 'mak-mobile-512.png']) await copyFile(path.join(root, 'public/assets', name), path.join(repo, 'ui/assets', name));
+for (const name of ['mak-mobile-192.png', 'mak-mobile-512.png']) await copyFile(path.join(root, 'public/assets', name), path.join(repo, 'ui/assets', name));
 for (const name of ['report.css', 'report.js']) await copyFile(path.join(root, 'workspace/_shared', name), path.join(repo, 'workspace/_shared', name));
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQ42mP8/x8AAwMCAO+jvWQAAAAASUVORK5CYII='.replace('EQ42', 'EQVR42'), 'base64');
 await writeFile(path.join(repo, 'shared-picture.png'), png);
-// Use a supplied SVG as a visible report image; the PNG is only an upload fixture.
-await copyFile(path.join(root, 'public/assets/mak-nose.svg'), path.join(repo, 'workspace/report/nose.svg'));
+// A drawn SVG as a visible report image; the PNG is only an upload fixture.
+await writeFile(path.join(repo, 'workspace/report/nose.svg'), '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160"><rect width="160" height="160" rx="24" fill="#f2d7e5"/><circle cx="80" cy="72" r="40" fill="#b23a68"/><rect x="60" y="120" width="40" height="10" rx="5" fill="#b23a68"/></svg>');
 await writeFile(path.join(repo, 'workspace/report/index.html'), '<!doctype html><html lang="en" data-mak-report="document"><head><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="../_shared/report.css"><script defer src="../_shared/report.js"></script></head><body><main class="container"><h1>Report ready</h1><p>A readable result on your phone.</p><img src="nose.svg" alt="Report image" width="160"><p><a target="_blank" rel="noreferrer" href="https://example.com/source">Source link</a></p><div id="nested-scroll" style="height:100px;overflow:auto"><div style="height:600px">Nested content</div></div><div id="delayed-content" style="height:0">Long report content</div><script>window.addEventListener("load", () => setTimeout(() => document.getElementById("delayed-content").style.height = "2200px", 300))</script></main></body></html>');
 await writeFile(path.join(repo, 'workspace/report/plan.md'), '# Mobile plan\n\n**Keep the useful parts in view.**\n\n- Read results\n- Send a follow-up\n' + Array.from({ length: 60 }, (_, index) => `\nParagraph ${index + 1}: Read and continue reviewing this report.\n`).join(''));
 await writeFile(path.join(repo, 'workspace/workspace.json'), JSON.stringify({ entities: [{ id: 'mobile-report', title: 'A useful report', folder: 'report', category: 'dev', created: '2026-10-06', steps: [{ name: 'Report', path: 'index.html' }, { name: 'Plan', path: 'plan.md' }] }] }));
@@ -123,20 +134,38 @@ try {
       window.testMicTracks.push(...stream.getTracks()); return stream;
     };
   });
-  await mobileContext.addInitScript(() => {
+  await mobileContext.addInitScript(sound => {
     window.testCaptureAudioContext = window.AudioContext;
     window.testSpeech = { spoken: [], cancelled: 0, paused: false, current: null, closed: true };
     const originalFetch = window.fetch;
-    window.fetch = (url, options) => { if (String(url).endsWith('/read-aloud') && options?.body) { const data = JSON.parse(options.body); window.testSpeech.spoken.push({ text: data.text, voice: data.voice }); } return originalFetch(url, options); };
-    Object.defineProperty(window, 'AudioContext', { configurable: true, value: class {
-      constructor() { window.testSpeech.closed = false; this.destination = {}; }
-      resume() { window.testSpeech.paused = false; return Promise.resolve(); }
-      suspend() { window.testSpeech.paused = true; return Promise.resolve(); }
-      close() { window.testSpeech.closed = true; window.testSpeech.current = null; window.testSpeech.cancelled++; return Promise.resolve(); }
-      decodeAudioData() { return Promise.resolve({}); }
-      createBufferSource() { return { connect() {}, start() { window.testSpeech.current = { onend: () => this.onended?.() }; } }; }
-    } });
-  });
+    // The words are what this check watches, and the five-gigabyte engine is
+    // not what it is testing: the phone is answered with a second of silence.
+    window.fetch = (url, options) => {
+      if (String(url).endsWith('/read-aloud') && options?.body) {
+        const data = JSON.parse(options.body);
+        window.testSpeech.spoken.push({ text: data.text, voice: data.voice });
+        const bytes = Uint8Array.from(atob(sound), character => character.charCodeAt(0));
+        return Promise.resolve(new Response(bytes, { status: 200, headers: { 'Content-Type': 'audio/wav' } }));
+      }
+      return originalFetch(url, options);
+    };
+    // The player is an audio element, not a WebAudio graph: an element keeps
+    // the pitch when the speed is raised. The mock stands in for that element,
+    // and the element's own clock is what the spoken word is matched against.
+    class FakeAudio {
+      constructor(url) { this.source = url; this.preservesPitch = false; this.playbackRate = 1; this.currentTime = 0; this.duration = 1; this.onended = null; this.onerror = null; window.testSpeech.current = this; window.testSpeech.closed = false; }
+      get src() { return this.source; }
+      // Clearing the source is how the player is released, so this is where a
+      // reading that has ended leaves its mark.
+      set src(value) { this.source = value; if (!value) { window.testSpeech.current = null; window.testSpeech.closed = true; window.testSpeech.paused = false; } }
+      play() { window.testSpeech.paused = false; return Promise.resolve(); }
+      pause() { window.testSpeech.paused = true; }
+      // The segment is over: the player waits for this to hear it.
+      onend() { this.onended?.(); }
+      dispatchEvent() { return true; }
+    }
+    Object.defineProperty(window, 'Audio', { configurable: true, value: FakeAudio });
+  }, Buffer.from(silence(1)).toString('base64'));
   await mobileContext.addInitScript(() => {
     const NativeSocket = window.WebSocket;
     window.testConnections = []; window.testDelayedSockets = [];
@@ -347,16 +376,22 @@ try {
   await expect(phone.locator('.mobile-message').last().getByRole('button', { name: 'Read aloud', exact: true })).toBeVisible();
   await readButton.click();
   await phone.waitForFunction(() => window.testSpeech.spoken.length > 0);
-  assert.ok((await phone.evaluate(() => window.testSpeech.spoken[0].text)).startsWith('Can we make'));
+  // The reply is read, not the question before it and not the note the agent
+  // wrote on the way: the bar sits under the reply, and that is what it says.
+  assert.ok((await phone.evaluate(() => window.testSpeech.spoken[0].text)).startsWith('Ready for review'));
   const spokenRange = await phone.evaluate(async () => {
     for (let index = 0; index < 500 && !window.testSpeech.closed; index++) { if (window.testSpeech.current) { const current = window.testSpeech.current; window.testSpeech.current = null; current.onend?.(); } await new Promise(resolve => setTimeout(resolve, 10)); }
     return window.testSpeech.spoken.map(part => part.text).join(' ');
   });
-  assert.ok(spokenRange.includes('Intermediate agent progress is included.'));
   assert.ok(spokenRange.includes('Ready for review'));
+  assert.ok(!spokenRange.includes('Intermediate agent progress is included.'), 'the note before the reply is not read');
+  assert.ok(!spokenRange.includes('Can we make'), 'the question before the reply is not read');
   assert.ok(!spokenRange.includes('Older request'));
   assert.ok(!spokenRange.includes('Older answer'));
   await readButton.click();
+  // The player is only there once the first segment arrives, and pausing
+  // before that would be a pause of nothing.
+  await phone.waitForFunction(() => window.testSpeech.current !== null);
   await phone.getByRole('button', { name: 'Pause reading' }).click();
   assert.equal(await phone.evaluate(() => window.testSpeech.paused), true);
   await phone.getByRole('button', { name: 'Resume reading' }).click();
@@ -364,13 +399,14 @@ try {
   assert.equal(await phone.locator('.mobile-messages select').count(), 0, 'Voice selection stays in settings');
   await phone.getByRole('button', { name: 'Phone settings' }).click();
   const readingVoice = phone.getByRole('combobox', { name: 'English reading voice' });
-  await expect(readingVoice.locator('option')).toHaveCount(2);
-  assert.deepEqual(await readingVoice.locator('option').evaluateAll(options => options.map(option => option.value)), ['am_michael', 'bf_emma']);
-  await readingVoice.selectOption('bf_emma');
-  assert.equal(await phone.evaluate(() => localStorage.getItem('mrmak.mobile.read-aloud.voice')), 'bf_emma');
+  // The engine on this computer is the voice, so there is one to choose from.
+  await expect(readingVoice.locator('option')).toHaveCount(1);
+  assert.deepEqual(await readingVoice.locator('option').evaluateAll(options => options.map(option => option.value)), ['chatterbox']);
+  await readingVoice.selectOption('chatterbox');
+  assert.equal(await phone.evaluate(() => localStorage.getItem('mrmak.mobile.read-aloud.voice')), 'chatterbox');
   await phone.getByRole('button', { name: 'Phone settings' }).click();
   await readButton.click();
-  await phone.waitForFunction(() => window.testSpeech.spoken.at(-1)?.voice === 'bf_emma');
+  await phone.waitForFunction(() => window.testSpeech.spoken.at(-1)?.voice === 'chatterbox');
   await phone.getByRole('button', { name: 'Stop reading' }).click();
   assert.equal(await phone.evaluate(() => window.testSpeech.current), null);
   await readButton.click();

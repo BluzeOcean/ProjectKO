@@ -146,7 +146,7 @@ try {
   assert.equal(await roster.evaluate(node => getComputedStyle(node).position), 'fixed', 'the roster floats over the panel');
   const menu = await roster.boundingBox();
   assert.ok(menu.y + menu.height <= (page.viewportSize()?.height ?? 600) + 1, 'the roster is not clipped by the window');
-  assert.equal(await roster.locator('.agent-option').count(), 6, 'every agent is offered, installed or not');
+  assert.equal(await roster.locator('.agent-option').count(), 7, 'every agent is offered, installed or not');
   assert.equal(await roster.locator('.agent-option:disabled').count(), 0, 'an agent that is not installed is still selectable');
   assert.equal(await roster.locator('.agent-option.missing .opt-tag').count(), await roster.locator('.agent-option.missing').count(), 'an agent that is not installed says so');
   const pick = roster.locator('.agent-option:not(.missing)').first();

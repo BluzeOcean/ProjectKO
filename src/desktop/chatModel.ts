@@ -21,3 +21,12 @@ export function useChatModel(session: ChatSession | undefined) {
 
 // "claude-opus-5-5-20261001" reads as "opus-5-5"; other names are kept.
 export const modelLabel = (model: string) => model.replace(/^claude-/, '').replace(/-\d{8}(?=$|\[)/, '')
+
+// What the one line at the bottom has room for: the name a model goes by at a
+// glance. "MiniMax-M3.1-Flash" reads as "minimax" and "claude-opus-5-5" as
+// "opus" — the version is in the title, and on Claude the tier is the part
+// that tells two of them apart.
+export const modelShort = (model: string) => {
+  const words = modelLabel(model).split(/[^A-Za-z0-9.]+/).filter(Boolean)
+  return (words[0]?.toLowerCase() === 'claude' ? words[1] || words[0] : words[0] || '').toLowerCase()
+}

@@ -1,15 +1,16 @@
-import QuotaFooter from './QuotaFooter'
+import QuotaMeters from './QuotaMeters'
+import { Icon } from './Icons'
+import { modelShort } from './chatModel'
 import type { ChatSession } from './types'
 
 /**
  * The one line at the bottom of the Chats window.
  *
- * It answers about the chat in front of you, so what it says depends on who
- * is answering. A DeepSeek Harness chat reports its own numbers — turns,
- * tokens, how much of them came from cache, what the chat has cost and how
- * full the context is — and the line shows those. Every other harness is a CLI
- * whose account is the thing worth watching, so the line stays the MiniMax
- * quota it has always been.
+ * It says what the chat in front of you is doing and how much is left: the
+ * connection, the model it answers with and the account's meters — one row, so
+ * a window keeps its last line for what changes. A DeepSeek Harness chat
+ * reports its own numbers instead of the account's: turns, tokens, the cache
+ * share, the price, and the context window as a ring.
  *
  * Only these two exist: DeepSeek and everything else.
  */
@@ -34,8 +35,8 @@ function Ring({ percent }: { percent: number }) {
   </svg>
 }
 
-export default function ChatStatusFooter({ session, connected }: { session?: ChatSession | null; connected: boolean }) {
-  if (session?.agent !== 'dsh') return <QuotaFooter connected={connected} />
+// What this chat has spent rather than what the account has left.
+function DsFacts({ session }: { session: ChatSession }) {
   const usage = session.usage
   const turns = usage?.turns || 0
   const tokens = usage?.tokens || 0
@@ -44,7 +45,7 @@ export default function ChatStatusFooter({ session, connected }: { session?: Cha
   const percent = usage?.contextPercent ?? null
   const tone = percent === null ? 'none' : percent >= 85 ? 'low' : percent >= 70 ? 'warm' : 'ok'
   const limit = usage?.limit || 0
-  return <footer className="quota-footer ds-status" role="status" aria-label="Chat status">
+  return <>
     <span className="ds-fact ds-turns" title={`${turns} turns · ${usage?.steps || 0} model steps`}>
       <b>{turns}</b> {turns === 1 ? 'turn' : 'turns'}
     </span>
@@ -61,5 +62,29 @@ export default function ChatStatusFooter({ session, connected }: { session?: Cha
       <Ring percent={percent} />
       <b>{percent}%</b>
     </span>}
+  </>
+}
+
+export default function ChatStatusFooter({ session, connected, running, model, attachment }: {
+  session?: ChatSession | null
+  connected: boolean
+  running?: boolean
+  model?: string | null
+  attachment?: { id: string; text: string }
+}) {
+  const notice = session && attachment?.text && attachment.id === session.id ? attachment.text : null
+  // The model, and behind it the two facts the line no longer spells out.
+  const title = [model && 'Model: ' + model, session?.effort && 'Reasoning effort', session?.bypass ? 'Bypass permissions' : 'CLI permissions'].filter(Boolean).join(' · ')
+  return <footer className="chat-status" role="status" aria-label="Chat status">
+    {session && <span className="status-connection">
+      <i className={connected ? 'connected-dot' : 'disconnected-dot'} />
+      {connected && running ? 'Connected' : 'Reconnecting…'}
+    </span>}
+    {notice
+      ? <span className="attachment-status"><Icon name="attach" size={12} /><span>{notice}</span></span>
+      : session && (model || session.effort)
+        ? <span className="status-model" title={title}>{model && <b>{modelShort(model)}</b>}{model && session.effort ? ' · ' : ''}{session.effort}</span>
+        : null}
+    {session?.agent === 'dsh' ? <DsFacts session={session} /> : <QuotaMeters connected={connected} />}
   </footer>
 }

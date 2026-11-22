@@ -9,6 +9,17 @@ import { createService } from '../server.mjs';
 import { launchBrowser } from './browser.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+
+// Six seconds of silence in the engine's own format: the words are what this
+// check watches, and the five-gigabyte engine is not what it is testing.
+function silence(seconds) {
+  const rate = 24000, frames = rate * seconds, data = Buffer.alloc(44 + frames * 2);
+  data.write('RIFF', 0); data.writeUInt32LE(36 + frames * 2, 4); data.write('WAVE', 8);
+  data.write('fmt ', 12); data.writeUInt32LE(16, 16); data.writeUInt16LE(1, 20); data.writeUInt16LE(1, 22);
+  data.writeUInt32LE(rate, 24); data.writeUInt32LE(rate * 2, 28); data.writeUInt16LE(2, 32); data.writeUInt16LE(16, 34);
+  data.write('data', 36); data.writeUInt32LE(frames * 2, 40);
+  return data;
+}
 await mkdir(path.join(root, '.cache'), { recursive: true });
 const repo = await mkdtemp(path.join(root, '.cache/conversation-ui-'));
 await mkdir(path.join(repo, 'workspace')); await mkdir(path.join(repo, '.mrmak'));
@@ -53,16 +64,44 @@ try {
   }
   service.mobile.transcripts.read = async session => ({ supported: true, messages: [
     { id: 'user-1', role: 'user', text: `Review ${session.id}`, at: '2026-10-18T08:00:00Z' },
+    // The note Claude Code writes before it runs a tool: it is not the reply, and
+    // must not be read out as one.
+    { id: 'note-1', role: 'assistant', text: 'Let me review the diff before committing.', at: '2026-10-18T08:00:05Z' },
     { id: 'reply-1', role: 'assistant', text: '## Review ready\n\n**Verified** the character.\n\n[OpenAI](https://openai.com/)\n\n- Preserve the source\n- Review the result', at: '2026-10-18T08:00:10Z' },
+    // A notice the CLI appended after the reply: it is not a reply, and the bar
+    // must stay under the reply above it.
+    { id: 'notice-1', role: 'system', text: 'Background task finished', at: '2026-10-18T08:00:20Z', event: { kind: 'agent', title: 'Background task finished' } },
   ], activity: [] });
   const originalRead = service.sessions.read.bind(service.sessions);
   service.sessions.read = async (id, lines) => showPrompt && own ? { screen: ownScreen() } : showPrompt && multiple ? { screen: multipleScreen() } : showPrompt ? { screen: ['Allow command?', `$ ${command}`, '', ...['Yes, proceed', 'Yes, always', 'No'].map((label, i) => `${i === option ? '>' : ' '} ${i + 1}. ${label}`), 'Press enter to confirm'].join('\n') } : originalRead(id, lines);
   browser = await launchBrowser();
   const page = await browser.newPage({ viewport: { width: 900, height: 760 } });
   page.setDefaultTimeout(12000); page.on('pageerror', error => errors.push(error.message));
+  // The engine is a five-gigabyte install this check must not depend on.
+  await page.route('**/api/read-aloud', route => route.fulfill({ json: { engine: 'chatterbox', ready: true, installing: false, progress: { phase: 'idle', percent: 0, message: '' }, voices: [{ id: 'builtin', label: 'Built-in voice' }], voice: 'builtin', label: 'Built-in voice', clips: [] } }));
+  await page.route('**/api/sessions/*/speak', route => route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/wav' }, body: silence(6) }));
   await page.goto(service.urls.chats);
   await page.getByRole('button', { name: 'Conversation', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Review ready' })).toBeVisible();
+  // Under the reply, not under the notice that followed it.
+  const reply = page.locator('article.conversation-message.assistant').filter({ has: page.getByRole('heading', { name: 'Review ready' }) });
+  await expect(reply.getByRole('button', { name: 'Read aloud', exact: true })).toBeVisible();
+  await page.screenshot({ path: path.join(repo, 'read-aloud-bar.png') });
+  // Speaking paints the word it is on. The highlight is a Range in the browser's
+  // own registry, so the reply's elements are never touched.
+  const spokenWord = () => page.evaluate(() => {
+    const ranges = CSS.highlights.get('read-aloud');
+    return ranges ? Array.from(ranges).map(range => range.toString()).join(' ') : '';
+  });
+  const heard = new Set();
+  let first = '';
+  await page.getByRole('button', { name: 'Read aloud', exact: true }).click();
+  await expect.poll(async () => { const word = await spokenWord(); if (word) { heard.add(word); first = first || word; } return heard.size; }, { timeout: 9000 }).toBeGreaterThan(2);
+  assert.equal(first, 'Review', 'the reading starts with the answer, not the note before it: ' + first);
+  assert.ok(heard.has('Review'), 'the reading starts at the first word: ' + [...heard].join(', '));
+  await page.screenshot({ path: path.join(repo, 'read-aloud-highlight.png') });
+  await page.getByRole('button', { name: 'Stop reading', exact: true }).click();
+  await expect.poll(spokenWord).toBe('');
   await expect(page.locator('.conversation-copy-text strong')).toHaveText('Verified');
   await expect(page.getByRole('link', { name: 'OpenAI', exact: true })).toHaveAttribute('target', '_blank');
   const input = page.getByRole('combobox', { name: 'Message Codex' });
@@ -86,6 +125,10 @@ try {
   await page.unroute(historyRoute);
   await expect(page.locator('.conversation-copy-text strong')).toHaveText('Verified');
   await page.getByRole('button', { name: 'Terminal', exact: true }).click();
+  // A terminal has no elements to hang a bar on, so the chat's own row speaks
+  // the reply from the transcript.
+  await expect(page.getByRole('button', { name: 'Read the last reply aloud', exact: true })).toBeVisible();
+  await page.screenshot({ path: path.join(repo, 'terminal-speech.png') });
   await page.getByRole('button', { name: 'Conversation', exact: true }).click();
   await expect(input).toHaveValue('Keep my draft');
   await page.locator(`[data-chat-tab="${ids[1]}"] [role=tab]`).click();
@@ -196,7 +239,7 @@ try {
   }
   assert.deepEqual(errors, []);
   await page.screenshot({ path: path.join(repo, 'conversation.png') });
-  console.log(JSON.stringify({ ok: true, fixture: repo, checks: ['stable Markdown while typing and polling', 'changed Markdown refreshes without losing the draft', 'Markdown and links', 'independent drafts', 'Terminal toggle', 'soft line breaks and sending', 'stale prompt rejected without input', 'permission navigation and confirmation', 'multiple choice boxes and submit','command autocomplete and terminal handoff', '500/900px layout'] }));
+  console.log(JSON.stringify({ ok: true, fixture: repo, checks: ['read aloud under the reply, and from the terminal header', 'stable Markdown while typing and polling', 'changed Markdown refreshes without losing the draft', 'Markdown and links', 'independent drafts', 'Terminal toggle', 'soft line breaks and sending', 'stale prompt rejected without input', 'permission navigation and confirmation', 'multiple choice boxes and submit','command autocomplete and terminal handoff', '500/900px layout'] }));
 } catch (error) {
   const page = browser?.contexts()[0]?.pages()[0];
   if (page) {

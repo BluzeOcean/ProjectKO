@@ -104,3 +104,8 @@
    a reply, so the words would only repeat what the icon says. */
 .conversation-read-aloud .ra-play{display:grid;place-items:center;width:28px;height:28px;padding:0}
 .conversation-read-aloud .ra-play svg{flex:0 0 auto}
+
+/* The word being spoken. Painted by the CSS Custom Highlight API, so no element is
+   added to the reply and the reader's own selection is untouched. A soft wash
+   only: the text keeps its colour and its weight. */
+::highlight(read-aloud){background-color:color-mix(in srgb,var(--pink) 26%,transparent);border-radius:3px}

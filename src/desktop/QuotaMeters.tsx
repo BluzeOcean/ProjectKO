@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { api, useDesktop } from './client'
-import { Icon } from './Icons'
 
 type QuotaWindow = { left: number; resetMs: number }
 type Reading = { ok: boolean; session?: QuotaWindow; week?: QuotaWindow; error?: string }
@@ -24,12 +23,12 @@ function turnover(ms: number) {
 const share = (value: number) => Math.round(value) + '%'
 const fill = (left: number) => Math.min(100, Math.max(0, left))
 
-// The MiniMax agent's two windows as one line at the bottom of the window: the
-// week, then the five-hour window, then when the five-hour window turns over —
-// the countdown ends the line, so it stands against the meter it belongs to.
+// The MiniMax account's two windows, for the line at the bottom of the window:
+// the week, then the five-hour window, then when that window turns over — the
+// countdown ends the line, so it stands against the meter it belongs to.
 // Nothing is drawn until the service has a reading, so a machine without the
-// CLI keeps the window it always had.
-export default function QuotaFooter({ connected }: { connected: boolean }) {
+// CLI keeps the line it always had and loses only the meters.
+export default function QuotaMeters({ connected }: { connected: boolean }) {
   const { settings } = useDesktop()
   const minutes = Math.max(1, settings.quotaRefreshMinutes || 5)
   const [reading, setReading] = useState<Reading | null>(null)
@@ -74,11 +73,9 @@ export default function QuotaFooter({ connected }: { connected: boolean }) {
     <span className="qf-pct">{share(left)}</span>
   </span>
 
-  return <footer className="quota-footer" role="status" aria-label="Agent quota">
+  return <>
     {meter(week.left, 'Week: ' + share(week.left) + ' left')}
     {meter(session.left, 'Five-hour window: ' + share(session.left) + ' left')}
-    <span className="qf-reset" title={'The five-hour window resets in ' + turnover(session.resetMs)}>
-      <Icon name="refresh" size={10} />{turnover(session.resetMs)}
-    </span>
-  </footer>
+    <span className="qf-reset" title={'The five-hour window resets in ' + turnover(session.resetMs)}>{turnover(session.resetMs)}</span>
+  </>
 }

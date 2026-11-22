@@ -12,6 +12,8 @@ import type { ConversationImage } from '../mobile/ImageViewer'
 import VoiceInput from '../mobile/VoiceInput'
 import { visibleUserMessage } from '../mobile/workspace-context'
 import { spokenText, useReadAloud } from '../mobile/useReadAloud'
+import { lastReplyIndex } from '../mobile/replySpeech'
+import { clearWord, showWord, wordRanges } from './readingHighlight'
 import { commandToken, completeCommand, matchingCommands, terminalCommand, type ChatCommand } from './commandSuggestions'
 import TerminalPrompt, { type PromptChoice, type TerminalPromptData } from '../components/TerminalPrompt'
 import PermissionPicker from './PermissionPicker'
@@ -77,7 +79,9 @@ export default function Conversation({ session, connected, agentLabel, openTermi
   // installed here.
   const speakingSpeed = useDesktop().settings.readAloudSpeed || 1
   const speakingVoice = useDesktop().settings.readAloudVoice || ''
-  const speech = useReadAloud(session.id, speakDesktopText, { speed: speakingSpeed, voice: speakingVoice }), stopReading = speech.stop
+  // The ranges the speaking word is painted on, rebuilt each time a reading starts.
+  const readingRanges = useRef<Range[]>([])
+  const speech = useReadAloud(session.id, speakDesktopText, { speed: speakingSpeed, voice: speakingVoice, onWord: index => index === null ? clearWord() : showWord(readingRanges.current, index) }), stopReading = speech.stop
     const [answering, setAnswering] = useState(false)
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null), [rewinding, setRewinding] = useState(false), [editError, setEditError] = useState('')
   const [commands, setCommands] = useState<ChatCommand[]>([]), [caret, setCaret] = useState(0), [picked, setPicked] = useState(0), [dismissed, setDismissed] = useState('')
@@ -119,13 +123,22 @@ export default function Conversation({ session, connected, agentLabel, openTermi
   let readStart = 0
   for (let index = 0; index < messages.length; index++) if (messages[index].role === 'user') readStart = index
   const latestUserId = messages[readStart]?.role === 'user' ? messages[readStart].id : null
+  // The bar goes under the reply, not under the last thing on the page: a notice
+  // the CLI appended (a finished background task, a slash command's output) is
+  // not a reply and must not take the button away.
+  const barAt = lastReplyIndex(messages, readStart)
   useEffect(() => () => stopReading(), [latestUserId, session.id, stopReading])
   // A message rewound from the terminal no longer has an open editor.
   const openEdit = editing && (rewinding || messages.some(message => message.id === editing.id)) ? editing : null
   function readAloud(id: string) {
     if (speech.activeId) { speech.togglePause(); return }
-    const parts = Array.from(scroller.current?.querySelectorAll<HTMLElement>('.conversation-message.assistant') || []).filter(node => Number(node.dataset.index) > readStart)
-    speech.read(id, parts.map(node => spokenText(node.querySelector<HTMLElement>('.conversation-copy-text'))).filter(Boolean).join('\n\n'))
+    // Only the reply the bar sits under. The notes the agent wrote before its
+    // tool calls are earlier messages, and reading them repeats the work.
+    const copy = scroller.current?.querySelector<HTMLElement>(`.conversation-message[data-index="${barAt}"] .conversation-copy-text`)
+    // The words the voice will say, in the order the reply shows them: the
+    // highlight walks this list against the audio's clock.
+    readingRanges.current = wordRanges(copy)
+    speech.read(id, spokenText(copy ?? null))
   }
   async function answer(prompt: TerminalPromptData, choice: PromptChoice) {
     if (answering) return
@@ -252,7 +265,7 @@ export default function Conversation({ session, connected, agentLabel, openTermi
           </form>
           : message.text.trim() && <div className="conversation-copy-text"><MessageMarkdown text={message.text} role={message.role} sessionId={session.id} /></div>}
           <ConversationImages images={message.images} />
-          {index === messages.length - 1 && message.role === 'assistant' && index > readStart && <ReadAloudBar
+          {index === barAt && <ReadAloudBar
             activeId={speech.activeId} paused={speech.paused} loading={speech.loading} error={speech.error}
             onRead={() => readAloud(message.id)} onStop={speech.stop}
           />}

@@ -51,14 +51,16 @@ try {
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(service.urls.chats);
 
-  const quota = page.getByRole('status', { name: 'Agent quota' });
+  const quota = page.getByRole('status', { name: 'Chat status' });
   await expect(quota).toContainText('100%');
   await expect(quota).toContainText('5%');
   await expect(quota).toContainText('1h 45m');
 
-  // The line is the window's own, outside the conversation.
-  assert.equal(await page.locator('.chats-surface > .quota-footer').count(), 1, 'footer is a child of the window');
-  assert.equal(await page.locator('.chat-body > .quota-footer').count(), 0, 'footer is not in the conversation');
+  // One line, the window's own, outside the conversation: the meters sit on
+  // it beside the connection rather than on a second row of their own.
+  assert.equal(await page.locator('.chats-surface > .chat-status').count(), 1, 'footer is a child of the window');
+  assert.equal(await page.locator('.chat-body > .chat-status').count(), 0, 'footer is not in the conversation');
+  assert.equal(await page.locator('.quota-footer').count(), 0, 'there is no second row');
 
   // The week stands first and the five-hour window last, against its countdown.
   assert.deepEqual(await quota.locator('.qf-pct').allTextContents(), ['5%', '100%']);
@@ -104,7 +106,7 @@ try {
   await expect(quota).toBeVisible();
   assert.equal(await quota.evaluate(node => {
     const box = node.getBoundingClientRect();
-    return box.bottom <= window.innerHeight + 1 && box.height === 28;
+    return box.bottom <= window.innerHeight + 1 && box.height === 26;
   }), true, 'footer stays on the window at 430px tall');
   await page.setViewportSize({ width: 900, height: 760 });
   await page.screenshot({ path: path.join(repo, 'quota-900.png') });
@@ -166,10 +168,12 @@ try {
     console.log('skipped: DeepSeek Harness is not installed on this machine');
   }
 
-  // Without the CLI the line is simply absent, not a broken meter.
+  // Without the CLI the meters are simply absent, not a broken meter: the line
+  // stays, because the chat and its connection are still worth saying.
   failing = true;
   await patch({ quotaRefreshMinutes: 10 });
-  await expect(quota).toHaveCount(0, { timeout: 5000 });
+  await expect(page.locator('.qf-meter')).toHaveCount(0, { timeout: 5000 });
+  await expect(quota).toBeVisible();
   failing = false;
   await patch({ quotaRefreshMinutes: 5 });
   await expect(quota).toContainText('0%');
