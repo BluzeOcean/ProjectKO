@@ -13,8 +13,9 @@ phone still records in the page and uploads the audio for the `transcribe` tool.
 
 - **Hex bridge** — `desktop/service/hex-bridge.mjs`, `GET /api/hex`,
   `POST /api/hex/dictation`, the `hexShortcut` setting, and the Hex microphone in
-  Conversation and the terminal. The terminal's Ctrl+T now toggles Project KO's
-  own recorder. Toxic's machine-wide double-tap Ctrl is left to Toxic.
+  Conversation and the terminal. The terminal still swallows Ctrl+T so the CLI
+  never receives `^T`, but it opens no take: the chord is Toxic's. Toxic's
+  machine-wide double-tap Ctrl is left to Toxic.
 - **Chatterbox** — `local-read-aloud.mjs`, `chatterbox-tts.py`,
   `chatterbox-setup.py`, the Kokoro `local-read-aloud.py` that was no longer
   wired, and the install/voice-clip UI. The read aloud pane now reports Toxic as
@@ -84,7 +85,7 @@ MCP tool on Toxic:
 | `start` | Toxic opens its microphone, plays its start cue and shows the `Listening` HUD |
 | `stop` | Toxic stops, transcribes with Hex and returns the transcript as text |
 | `cancel` | Toxic throws the take away (`Esc` in Project KO does the same) |
-| `status` | `{ listening, last }` — `last` is Toxic's newest transcript |
+| `status` | `{ listening, owner, last }` — `last` is Toxic's newest transcript |
 
 Three rules make a partner take behave differently from Toxic's own hotkey take,
 in `src-tauri/src/dictation.rs` and `hotkeys.rs` (see the handoff for the code that
@@ -100,40 +101,63 @@ implements them):
 - **The HUD says so.** It reads `Click the microphone again to finish · Esc to
   cancel` instead of `Any key to finish`.
 
-The button polls `status` while listening. When Toxic ended the take itself
-(Escape, or the maximum length) the newest `last` transcript is inserted, so a
-take is never lost silently.
+The button polls `status` while listening and reports `owner: "project-ko"` for a
+take it opened, so a reload — or a surface that lost the component — can take the
+switch back to `listening` instead of leaving an open microphone with no control.
+When Toxic ended the take itself (Escape, or the maximum length) the newest `last`
+transcript is inserted, so a take is never lost silently.
 
-## The shortcut inside a chat
+## The shortcut is Toxic's, not ours
 
-Toxic has a global low-level keyboard hook for the speech-to-text chord
-(`Ctrl+T` here) and it sees the key in whichever app has focus, Project KO
-included. The chat therefore binds the same chord, but it does not insist on
-owning the take:
+Toxic installs a low-level keyboard hook for the speech-to-text chord (`Ctrl+T`
+here) and swallows the key before any window sees it. A window that binds the same
+chord therefore only ever wins when Toxic is closed — which is exactly the state
+that made the old binding look broken: Project KO opened a *partner* take, and a
+partner take ignores keys, so the HUD sat there with the switch stuck. Project KO
+no longer binds it:
 
-- `GET /api/dictation` reports Toxic's own setting (`hotkeys.sttChord` from
-  `%APPDATA%\app.toxic.desktop\config.json`, when chord mode is on), and the
-  connection's bootstrap carries it too.
-- `DictationButton` matches that chord at the window, swallows it, and calls the
-  same service route as the button.
-- When Toxic's hook got there first, Toxic answers `Toxic is already listening`.
-  The service reports that as `{ listening: true, owner: "toxic" }` and the
-  control drops back to idle instead of holding a second state: Toxic ends the
-  take on the next key and types the words into the focused field itself. A stop
-  it did not start would insert the same sentence twice.
-- Only takes Project KO started (`owner: "project-ko"`) hand a transcript back.
-- The terminal view keeps its own binding: xterm swallows the key and dispatches
-  `mrmak-toggle-dictation`, so the conversation view's handler is skipped there
-  and the chord never fires twice.
+- `GET /api/dictation` still reports Toxic's own chord (`hotkeys.sttChord` from
+  `%APPDATA%\app.toxic.desktop\config.json`, when chord mode is on) and the
+  microphone's tooltip shows it. Nothing listens for it.
+- The terminal swallows the chord when it does arrive, so the CLI never receives
+  `^T`, and dispatches nothing.
+- A take the chord opens belongs to Toxic end to end: its HUD reads
+  `Any key to finish`, any key ends it, and Toxic types the transcript into the
+  focused control.
 
-A Toxic whose chord is off, or that is set to double-tap Ctrl, reports no chord
-and the chat binds nothing; the button still works.
+That last step is the gap. Keys injected by another process do not reach this
+window: measured 2026-11-24, `SendInput` with virtual keys and with
+`KEYEVENTF_UNICODE` left both the conversation composer and the xterm empty, while
+mouse input to the same controls worked. So Toxic's typing lands in ordinary
+apps, and here the words are collected from Toxic's history instead: while the page
+has focus, `src/desktop/useToxicTranscripts.ts` polls `dictation status` every
+900 ms and hands a transcript newer than the surface's own mount to that surface.
+It stays quiet when the field already holds the words, when Project KO inserted
+them itself, and while Project KO owns a take — that one is returned directly.
+
+A Toxic whose chord is off, or that is set to double-tap Ctrl, reports no chord and
+the chat shows none; the button still works.
 
 A Toxic older than `fbbd015` has no `dictation` tool and answers
 `unknown tool: dictation`. The control turns that into one sentence — update
 Toxic — instead of showing the protocol error. Measured 2026-11-24: the release
 binary built at 00:34 advertises only `transcribe` and `speak`, while the source
 at `23b65df` has the tool.
+
+## A mounted guard has to survive StrictMode
+
+`src/main.tsx` renders inside `<StrictMode>`, and in development React runs every
+effect, its cleanup, and the effect again. A guard written as
+`useEffect(() => () => { alive.current = false }, [])` therefore leaves
+`alive.current === false` for the life of the component: the switch called
+`start`, Toxic's HUD appeared, and the control stayed `starting` — disabled, deaf
+to Escape, and unable to stop the take. Set the flag in the effect body as well
+(`useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])`).
+
+Diagnosed 2026-11-24 by attaching Playwright to the running window over CDP: the
+service answered `start` in 14 ms with `{ listening: true, owner: "project-ko" }`
+while the button still read `Toxic is starting`. See
+[restarting the app](restarting-the-app.md) for that technique.
 
 ## Waking Toxic
 
@@ -166,6 +190,9 @@ Live, against the running app:
 | SAPI speech → WebM/Opus → `toWav16k` → MCP `transcribe` | "Please review the animation and confirm the timing." |
 | Service `GET /api/read-aloud` | engine `toxic`, ready, one voice |
 | Service `GET /api/dictation` | provider `toxic`, available; five choices |
+| Microphone switch, live (2026-11-24) | `start` → HUD `Click the microphone again to finish`, `stop` → transcript inserted into the composer |
+| `Esc` while listening, live | take cancelled, switch back to idle, no words inserted |
+| `Ctrl+T` in the window, live | no take opened, nothing inserted; the chord belongs to Toxic |
 
 The unit suite (`npm run desktop:test`) passes 279 tests, and `npm run build`
 completes.

@@ -172,11 +172,11 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
       if (ready && !deviceReply) sendEvent({ type: 'input', id, data })
     })
     terminal.attachCustomKeyEventHandler(event => {
-      // Both edges are swallowed so the CLI never receives the chord. The
-      // terminal view's own microphone listens for this event.
+      // The dictation chord belongs to Toxic, whose system-wide hook sees it
+      // before this window does. Only when that hook is absent does it arrive
+      // here, and it is swallowed then: the CLI must never receive ^T.
       if (event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey && typeof event.key === 'string' && (event.code === 'KeyT' || event.key.toLowerCase() === 't')) {
         event.preventDefault(); event.stopPropagation()
-        if (event.type === 'keydown' && !event.repeat) window.dispatchEvent(new CustomEvent('mrmak-toggle-dictation'))
         return false
       }
       // Windows/Linux: agent chats use Ctrl+C exclusively for copy. Even an empty

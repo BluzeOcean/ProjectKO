@@ -42,13 +42,16 @@ test('starting wakes Toxic, and stopping returns the transcript', { timeout: 300
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { listening: true, owner: 'project-ko' });
   assert.equal(wakes.length, 1, 'start asks for Toxic to be running first');
+  // The switch polls while it listens: the answer says whose take it is.
+  response = await post('status');
+  assert.deepEqual(await response.json(), { listening: true, owner: 'project-ko', last: { text: 'Earlier.', at: 12 } });
   response = await post('stop');
   assert.deepEqual(await response.json(), { listening: false, text: 'Hello from Toxic.', owner: 'project-ko' });
   response = await post('status');
-  assert.deepEqual(await response.json(), { listening: true, last: { text: 'Earlier.', at: 12 } });
+  assert.deepEqual(await response.json(), { listening: true, owner: null, last: { text: 'Earlier.', at: 12 } });
   response = await post('cancel');
   assert.deepEqual(await response.json(), { listening: false });
-  assert.deepEqual(calls, ['start', 'stop', 'status', 'cancel']);
+  assert.deepEqual(calls, ['start', 'status', 'stop', 'status', 'cancel']);
 });
 
 test('a take Toxic opened first is left alone', { timeout: 30000 }, async t => {

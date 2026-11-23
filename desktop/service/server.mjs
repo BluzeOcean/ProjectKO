@@ -105,7 +105,9 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
       const answer = await client.dictation('status', 8_000).catch(() => '');
       let state = {};
       try { state = JSON.parse(answer) } catch { state = {} }
-      return { listening: state.listening === true, last: state.last && typeof state.last === 'object' ? state.last : null };
+      // Toxic reports the microphone, not who opened it. The switch needs to
+      // know whether the take is this app's, so it can end it and keep the words.
+      return { listening: state.listening === true, owner: pkoTake ? 'project-ko' : null, last: state.last && typeof state.last === 'object' ? state.last : null };
     }
     if (action === 'start') {
       await (mobileOptions?.ensureToxic || ensureToxic)(client);
