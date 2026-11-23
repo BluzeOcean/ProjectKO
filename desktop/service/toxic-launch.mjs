@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { spawn as spawnProcess } from 'node:child_process';
 import path from 'node:path';
+import { toxicConfigDir } from './toxic.mjs';
 
 /**
  * Waking Toxic.
@@ -65,6 +66,20 @@ export function fromShortcuts({ env = process.env, exists = existsSync, readFile
 export function toxicExecutable({ env = process.env, exists = existsSync, readFile = readFileSync, readdir = readdirSync } = {}) {
   for (const candidate of installed(env)) if (candidate && exists(candidate)) return candidate;
   return fromShortcuts({ env, exists, readFile, readdir });
+}
+
+// The dictation shortcut is Toxic's, not ours: read it from Toxic's config so a
+// chat can honour the same chord while it has focus.
+export function toxicShortcut({ env = process.env, readFile = readFileSync } = {}) {
+  try {
+    const config = JSON.parse(readFile(path.join(toxicConfigDir(env), 'config.json'), 'utf8'));
+    const hotkeys = config?.hotkeys || {};
+    if (hotkeys.enabled === false || hotkeys.sttMode !== 'chord') return null;
+    const chord = typeof hotkeys.sttChord === 'string' ? hotkeys.sttChord.trim() : '';
+    return chord || null;
+  } catch {
+    return null;
+  }
 }
 
 export function startToxic(executable, { spawn = spawnProcess } = {}) {

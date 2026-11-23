@@ -104,6 +104,27 @@ The button polls `status` while listening. When Toxic ended the take itself
 (Escape, or the maximum length) the newest `last` transcript is inserted, so a
 take is never lost silently.
 
+## The shortcut inside a chat
+
+Toxic's dictation chord does not reach Toxic while a Project KO window is in
+front: it is delivered to the system (a stand-alone hook and a registered hotkey
+both see it) but Toxic drops it there, exactly as Hex did before it. Measured
+2026-11-24 over both windows; [the Hex note](hex-dictation-shortcut.md) records the
+same measurement and the probe that ruled out an input bug on this side.
+
+So a chat sweeps the chord up itself:
+
+- `GET /api/dictation` reports Toxic's own setting (`hotkeys.sttChord` from
+  `%APPDATA%\app.toxic.desktop\config.json`, when chord mode is on).
+- `DictationButton` matches that chord at the window, swallows it, and calls the
+  same service route as the button. Press it again to stop and insert the words.
+- The terminal view keeps its own binding: xterm swallows the key and dispatches
+  `mrmak-toggle-dictation`, so the conversation view's handler is skipped there
+  and the chord never fires twice.
+
+A Toxic whose chord is off, or that is set to double-tap Ctrl, reports no chord
+and the chat binds nothing; the button still works.
+
 ## Waking Toxic
 
 The same button works while Toxic is closed. `desktop/service/toxic-launch.mjs`

@@ -4,6 +4,24 @@ import { Icon } from './Icons'
 
 type Phase = 'idle' | 'starting' | 'listening' | 'stopping'
 interface ListenState { listening: boolean; text?: string; last?: { text?: string; at?: number } | null }
+interface Chord { ctrl: boolean; alt: boolean; shift: boolean; meta: boolean; key: string }
+
+// Toxic's shortcut arrives as "Ctrl+T". Parse it rather than assume one chord:
+// the owner can rebind it in Toxic, and the chat follows that setting.
+function parseChord(value: string): Chord | null {
+  const parts = value.split('+').map(part => part.trim()).filter(Boolean)
+  if (parts.length < 2) return null
+  const chord: Chord = { ctrl: false, alt: false, shift: false, meta: false, key: parts[parts.length - 1].toLowerCase() }
+  for (const part of parts.slice(0, -1)) {
+    const name = part.toLowerCase()
+    if (name === 'ctrl' || name === 'control') chord.ctrl = true
+    else if (name === 'alt') chord.alt = true
+    else if (name === 'shift') chord.shift = true
+    else if (name === 'win' || name === 'meta' || name === 'cmd' || name === 'super') chord.meta = true
+    else return null
+  }
+  return chord
+}
 
 /**
  * The microphone, as a switch for Toxic.
@@ -13,6 +31,10 @@ interface ListenState { listening: boolean; text?: string; last?: { text?: strin
  * panel; this button starts and stops Toxic and puts the words in the draft.
  * Starting it wakes Toxic when the app is closed, and asks for an install when
  * it is not on the computer at all.
+ *
+ * The keyboard shortcut is Toxic's own setting, read from the service, so the
+ * chat honours the same chord while it has focus even when Toxic's global hook
+ * is idle or busy.
  */
 export default function DictationButton({ connected, disabled, onText, onNote, toggleEvent }: {
   connected: boolean
@@ -22,6 +44,7 @@ export default function DictationButton({ connected, disabled, onText, onNote, t
   toggleEvent?: string
 }) {
   const [phase, setPhase] = useState<Phase>('idle')
+  const [shortcut, setShortcut] = useState('')
   const started = useRef(0), alive = useRef(true), phaseRef = useRef<Phase>('idle')
   const note = useRef(onNote), deliver = useRef(onText)
   useEffect(() => { note.current = onNote; deliver.current = onText })
@@ -32,7 +55,7 @@ export default function DictationButton({ connected, disabled, onText, onNote, t
   const listen = useCallback(async () => {
     const phase = phaseRef.current
     if (phase === 'starting' || phase === 'stopping') return
-    if (phaseRef.current === 'listening') {
+    if (phase === 'listening') {
       setPhase('stopping')
       try {
         const answer = await api<ListenState>('/dictation/listen', { action: 'stop' })
@@ -72,6 +95,35 @@ export default function DictationButton({ connected, disabled, onText, onNote, t
     return () => { active = false; window.clearInterval(timer) }
   }, [phase])
 
+  // The dictation chord is Toxic's setting, so ask the service what it is. The
+  // terminal view keeps its own binding: xterm swallows the key there and
+  // dispatches the toggle event, which must not fire twice.
+  useEffect(() => {
+    if (toggleEvent) return
+    let live = true
+    void api<{ shortcut?: string | null }>('/dictation')
+      .then(info => { if (live) setShortcut(typeof info.shortcut === 'string' ? info.shortcut : '') })
+      .catch(() => { /* No Toxic, no chord; the button still works. */ })
+    return () => { live = false }
+  }, [toggleEvent])
+
+  // Toxic's global hook normally owns this chord. Honouring it here means the
+  // shortcut still starts listening when the hook is idle, busy or missing, and
+  // it is swallowed so the chat never receives the raw key.
+  useEffect(() => {
+    const chord = parseChord(shortcut)
+    if (!chord) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.repeat || event.isComposing || event.keyCode === 229) return
+      if (event.ctrlKey !== chord.ctrl || event.altKey !== chord.alt || event.shiftKey !== chord.shift || event.metaKey !== chord.meta) return
+      if ((event.key || '').toLowerCase() !== chord.key) return
+      event.preventDefault(); event.stopPropagation()
+      void listen()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [shortcut, listen])
+
   // The terminal's Ctrl+T asks this microphone to toggle.
   useEffect(() => {
     if (!toggleEvent) return
@@ -83,7 +135,7 @@ export default function DictationButton({ connected, disabled, onText, onNote, t
   const listening = phase === 'listening', busy = phase === 'starting' || phase === 'stopping'
   return <button type="button" className={'dictation-button ' + phase}
     aria-label={listening ? 'Stop dictating' : busy ? 'Toxic is starting' : 'Dictate a message'}
-    title={listening ? 'Stop dictating and add the words' : 'Dictate with Toxic'}
+    title={listening ? 'Stop dictating and add the words' : shortcut ? 'Dictate with Toxic · ' + shortcut : 'Dictate with Toxic'}
     disabled={busy || (!listening && (disabled || !connected))}
     onClick={() => void listen()}><Icon name={listening ? 'stop' : 'mic'} size={16} /></button>
 }

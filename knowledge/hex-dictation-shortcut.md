@@ -4,6 +4,11 @@
 > and the `hexShortcut` setting were removed when dictation moved to Toxic; see
 > [Toxic as the voice layer](toxic-voice.md). The measurements below remain as the
 > reason the bridge existed and as a record of Hex 3.4.0's behaviour.
+>
+> **The same finding applies to Toxic** (measured 2026-11-24): its chord starts a
+> take over Notepad but not while a Project KO window is in front. Project KO
+> therefore sweeps the chord up in its own windows and calls Toxic itself, which
+> is the conclusion this note reached for Hex and the reason the bridge existed.
 
 [Hex](https://anoma.ly) is a local dictation app for Windows with a Ctrl+T
 dictation shortcut. In a Project KO terminal that chord produced a `^T` control
