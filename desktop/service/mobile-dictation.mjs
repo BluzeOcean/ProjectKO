@@ -1,5 +1,7 @@
 import path from 'node:path';
 import { localAvailable, localConfig, localTranscribe } from './local-dictation.mjs';
+import { toWav16k } from './audio-format.mjs';
+import { ToxicClient } from './toxic.mjs';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { parse } from 'dotenv';
@@ -11,35 +13,46 @@ const fail = (message, status = 400) => { throw Object.assign(new Error(message)
 const formats = { 'audio/webm': 'webm', 'audio/mp4': 'm4a', 'audio/ogg': 'ogg', 'audio/wav': 'wav' };
 
 export class MobileDictation {
-  constructor(repo, { fetcher = fetch, env = process.env, localRunner = localTranscribe, localStatus = localAvailable, providerChoice = () => null } = {}) {
+  constructor(repo, { fetcher = fetch, env = process.env, localRunner = localTranscribe, localStatus = localAvailable, providerChoice = () => null, toxic = null, convert = toWav16k } = {}) {
     this.providerChoice = providerChoice; this.localRunner = localRunner; this.localStatus = localStatus;
     this.repo = repo; this.fetcher = fetcher; this.env = env;
+    this.toxic = toxic; this.convert = convert;
     this.jobs = new Map(); this.controllers = new Map(); this.rates = new Map(); this.closed = false;
+  }
+  // Toxic is the local speech layer. Tests and callers can hand in a stand-in;
+  // otherwise the client reads Toxic's discovery file on first use.
+  toxicClient() { this.toxic ||= new ToxicClient({ env: this.env }); return this.toxic; }
+  async toxicStatus() {
+    try { return !!(await this.toxicClient().health()); } catch { return false; }
   }
   async config() {
     const keys = { ...this.env, ...parse(await readFile(path.join(this.repo, '.env'), 'utf8').catch(() => '')) };
     const router = keys.OPENROUTER_API_KEY || keys.OPENROUTER_KEY;
     const openai = keys.OPENAI_API_KEY || keys.OPENAI_KEY;
-    const provider = this.providerChoice() || keys.MRMAK_TRANSCRIBE_PROVIDER?.trim().toLowerCase() || 'local';
+    const provider = this.providerChoice() || keys.MRMAK_TRANSCRIBE_PROVIDER?.trim().toLowerCase() || 'toxic';
     const key = provider === 'openrouter' ? router : provider === 'openai' ? openai : null;
     const configuredProvider = keys.MRMAK_TRANSCRIBE_PROVIDER?.trim().toLowerCase() || (router ? 'openrouter' : 'openai');
     const modelOverride = configuredProvider === provider ? keys.MRMAK_TRANSCRIBE_MODEL?.trim() : null;
     return { provider, key, local: localConfig(this.repo, keys), model: modelOverride || (provider === 'openrouter' ? 'openai/gpt-4o-transcribe' : 'gpt-4o-transcribe') };
   }
   async initializeProvider(settings, existing) {
-    if (['local', 'openai', 'openrouter', 'off'].includes(settings.transcribeProvider)) return false;
+    if (['toxic', 'local', 'openai', 'openrouter', 'off'].includes(settings.transcribeProvider)) return false;
     const keys = { ...this.env, ...parse(await readFile(path.join(this.repo, '.env'), 'utf8').catch(() => '')) };
     const explicit = keys.MRMAK_TRANSCRIBE_PROVIDER?.trim().toLowerCase();
     // Preserve the effective pre-0.5.1 provider. New installations never choose
     // a billed service merely because an API key exists for another feature.
     const previous = keys.OPENROUTER_API_KEY || keys.OPENROUTER_KEY ? 'openrouter' : keys.OPENAI_API_KEY || keys.OPENAI_KEY ? 'openai' : 'off';
-    settings.transcribeProvider = explicit ? (['local', 'openai', 'openrouter', 'off'].includes(explicit) ? explicit : 'off') : existing ? previous : 'local';
+    settings.transcribeProvider = explicit ? (['toxic', 'local', 'openai', 'openrouter', 'off'].includes(explicit) ? explicit : 'off') : existing ? previous : 'toxic';
     return true;
   }
   async status() {
     const config = await this.config();
     const keys = { ...this.env, ...parse(await readFile(path.join(this.repo, '.env'), 'utf8').catch(() => '')) };
+    // Only the selected provider needs to be probed; listing the others must
+    // not start a process or wait on a server the owner is not using.
+    const toxicAvailable = config.provider === 'toxic' ? await this.toxicStatus() : true;
     const providers = [
+      { id: 'toxic', label: 'Toxic · local', available: toxicAvailable, detail: 'Speech to text through Toxic on your computer. Hex runs inside Toxic.' },
       { id: 'local', label: 'Local Whisper · Free', available: await this.localStatus(config.local), detail: 'Runs on your computer. No API charges.' },
       { id: 'openai', label: 'OpenAI · Paid', available: !!(keys.OPENAI_API_KEY || keys.OPENAI_KEY), detail: 'Uses your OpenAI API credit.' },
       { id: 'openrouter', label: 'OpenRouter · Paid', available: !!(keys.OPENROUTER_API_KEY || keys.OPENROUTER_KEY), detail: 'Uses your OpenRouter API credit.' },
@@ -82,8 +95,9 @@ export class MobileDictation {
     const rate = this.rates.get(deviceId) || { at: now, count: 0 };
     if (rate.count >= 6) fail('Please wait a minute before transcribing another recording.', 429);
     const config = await this.config();
+    if (config.provider === 'toxic' && !await this.toxicStatus()) fail('Toxic is not running. Open Toxic on your computer and try again.', 503);
     if (config.provider === 'local' && !await this.localStatus(config.local)) fail('Local Whisper is not installed. Run the local dictation setup on your computer.', 503);
-    if (config.provider !== 'local' && !config.key) fail('Voice input needs OPENROUTER_API_KEY or OPENAI_API_KEY in the computer workspace .env. Your keyboard microphone still works.', 503);
+    if (!['toxic', 'local'].includes(config.provider) && !config.key) fail('Voice input needs OPENROUTER_API_KEY or OPENAI_API_KEY in the computer workspace .env. Your keyboard microphone still works.', 503);
     // Recheck after the asynchronous config read, before reserving a paid request.
     if (!authorized() || this.closed) fail('This phone is disconnected.', 401);
     const completed = this.jobs.get(key);
@@ -117,6 +131,13 @@ export class MobileDictation {
     return job.promise;
   }
   async call({ provider, key, model, local }, audio, mime, signal) {
+    if (provider === 'toxic') {
+      const wav = await this.convert(audio, formats[mime], signal);
+      const text = (await this.toxicClient().transcribeWav(wav)).trim();
+      if (!text) fail('No speech was recognized. Try recording again.', 422);
+      if (text.length > 60000) fail('The transcript is too long for one message.', 413);
+      return { text };
+    }
     if (provider === 'local') {
       const result = await this.localRunner(local, audio, formats[mime], signal);
       const text = typeof result?.text === 'string' ? result.text.trim() : '';

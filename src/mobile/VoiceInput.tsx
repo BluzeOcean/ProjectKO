@@ -5,8 +5,8 @@ import { onDoubleCtrl } from './double-ctrl'
 import { deleteVoiceDraft, readVoiceDraft, saveVoiceDraft, type VoiceDraft } from './voice-drafts'
 
 type Phase = 'idle' | 'permission' | 'recording' | 'transcribing' | 'saved'
-export default function VoiceInput({ id, connected, disabled, config, hotkey = false, onText, onBusy, transcriber = transcribeMobileAudio }: {
-  id: string; connected: boolean; disabled: boolean; config?: DictationInfo; hotkey?: boolean
+export default function VoiceInput({ id, connected, disabled, config, hotkey = false, toggleEvent, onText, onBusy, transcriber = transcribeMobileAudio }: {
+  id: string; connected: boolean; disabled: boolean; config?: DictationInfo; hotkey?: boolean; toggleEvent?: string
   transcriber?: typeof transcribeMobileAudio
   onText: (text: string, recordingId: string) => void | Promise<void>; onBusy: (busy: boolean) => void
 }) {
@@ -53,6 +53,14 @@ export default function VoiceInput({ id, connected, disabled, config, hotkey = f
     }
   })
   useEffect(() => hotkey ? onDoubleCtrl(() => toggle.current()) : undefined, [hotkey])
+  // A window-level shortcut (the terminal's Ctrl+T) asks the visible recorder
+  // to toggle. Only the terminal view passes this event, and it mounts one.
+  useEffect(() => {
+    if (!toggleEvent) return
+    const listener = () => { toggle.current() }
+    window.addEventListener(toggleEvent, listener)
+    return () => window.removeEventListener(toggleEvent, listener)
+  }, [toggleEvent])
   async function transcribe(saved: VoiceDraft) {
     const request = ++serial.current
     setPhase('transcribing'); setError(''); busyHandler.current(true)

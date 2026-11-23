@@ -105,8 +105,9 @@ Max requires an explicit request. The app reports tool results before calling
 an action complete.
 
 CLI account billing and OpenAI voice API billing are separate. No API generation
-is needed to browse the samples or use a signed-in CLI. Optional dictation into
-terminals is described in [voice dictation](../knowledge/voice-dictation.md).
+is needed to browse the samples or use a signed-in CLI. Dictation and read aloud
+go through the local **Toxic** app; providers and the optional Whisper fallback
+are described in [voice dictation](../knowledge/voice-dictation.md).
 
 ## macOS
 
@@ -153,8 +154,9 @@ Differences from Windows:
 - The first voice recording asks for microphone access.
 - In terminals, Option types your keyboard layout's characters (such as @ or
   #); Settings > Chats > **Use Option as Meta key** turns Option into a Meta key.
-- Optional local dictation and Read aloud need Python 3.12 called as
-  `python3.12`; see [local voice setup](mobile-access.md#local-voice-setup-on-the-computer).
+- Dictation and read aloud use the **Toxic** app; open it before speaking or
+  listening. Optional local Whisper needs Python 3.12 called as `python3.12`; see
+  [local voice setup](mobile-access.md#optional-local-whisper-fallback).
 - `./scripts/check-macos-native.sh` checks the native parts (menus, shortcuts,
   Dock reopen, ⌃⌥⌘Space) through Accessibility; it needs the screen for ~30 s.
 

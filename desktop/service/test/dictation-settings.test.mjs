@@ -6,14 +6,15 @@ import path from 'node:path';
 import { createService } from '../server.mjs';
 import { MobileDictation } from '../mobile-dictation.mjs';
 
-test('upgrade preserves effective dictation provider and model, fresh setups stay local across restarts', async () => {
+test('upgrade preserves effective dictation provider and model, fresh setups stay on Toxic across restarts', async () => {
+  const toxic = { health: async () => null, transcribeWav: async () => 'Toxic draft.' };
   const cases = [
     { saved: {}, env: { OPENAI_API_KEY: 'test-key', MRMAK_TRANSCRIBE_MODEL: 'chosen-model' }, provider: 'openai', model: 'chosen-model' },
     { saved: {}, env: { OPENAI_API_KEY: 'test-key', OPENROUTER_API_KEY: 'test-router' }, provider: 'openrouter' },
     { saved: {}, env: { OPENAI_API_KEY: 'test-key', MRMAK_TRANSCRIBE_PROVIDER: 'off' }, provider: 'off' },
     { saved: { transcribeProvider: 'local' }, env: { OPENAI_API_KEY: 'test-key', MRMAK_TRANSCRIBE_PROVIDER: 'openai' }, provider: 'local' },
     { saved: {}, env: {}, provider: 'off' },
-    { env: { OPENAI_API_KEY: 'test-key', OPENROUTER_API_KEY: 'test-router' }, provider: 'local' },
+    { env: { OPENAI_API_KEY: 'test-key', OPENROUTER_API_KEY: 'test-router' }, provider: 'toxic' },
     { env: { MRMAK_TRANSCRIBE_PROVIDER: 'openai', OPENAI_API_KEY: 'test-key' }, provider: 'openai' },
   ];
   for (const fixture of cases) {
@@ -23,13 +24,13 @@ test('upgrade preserves effective dictation provider and model, fresh setups sta
     if (fixture.saved) await writeFile(path.join(repo, '.mrmak/settings.json'), JSON.stringify({ terminalAppearance: 'focus', ...fixture.saved }));
     let calls = 0;
     for (let restart = 0; restart < 2; restart++) {
-      const dictation = new MobileDictation(repo, { env: fixture.env, localStatus: async () => false, fetcher: () => { calls++; throw Error('No automatic cloud fallback'); } });
+      const dictation = new MobileDictation(repo, { env: fixture.env, toxic, localStatus: async () => false, fetcher: () => { calls++; throw Error('No automatic cloud fallback'); } });
       const service = await createService({ repo, uiDir: path.join(repo, 'ui'), mcpOptions: { home: repo, env: {} }, mobileOptions: { dictation } });
       try {
         const info = await dictation.config();
         assert.equal(info.provider, fixture.provider);
         if (fixture.model) assert.equal(info.model, fixture.model);
-        if (fixture.provider === 'local') assert.equal((await dictation.status()).available, false);
+        if (fixture.provider === 'local' || fixture.provider === 'toxic') assert.equal((await dictation.status()).available, false);
         const saved = JSON.parse(await readFile(path.join(repo, '.mrmak/settings.json')));
         assert.equal(saved.transcribeProvider, fixture.provider);
         if (fixture.saved) assert.equal(saved.terminalAppearance, 'focus');
@@ -44,17 +45,17 @@ test('paired phone and desktop share persisted dictation choice, reject untruste
   await mkdir(path.join(repo, 'workspace')); await mkdir(path.join(repo, 'ui'));
   await writeFile(path.join(repo, 'workspace/workspace.json'), '{"entities":[]}');
   const options = () => ({ repo, uiDir: path.join(repo, 'ui'), mcpOptions: { home: repo, env: {} }, mobileOptions: {
-    dictation: new MobileDictation(repo, { env: { OPENAI_API_KEY: 'private-test-key', OPENROUTER_API_KEY: 'private-router-key' }, localStatus: async () => true }),
+    dictation: new MobileDictation(repo, { env: { OPENAI_API_KEY: 'private-test-key', OPENROUTER_API_KEY: 'private-router-key' }, toxic: { health: async () => ({ running: true, version: '1.2.0' }) }, localStatus: async () => true }),
     transport: { probe: async () => ({ ready: true }), enable: async origin => ({ origin }), disable: async () => {} },
   } });
   let service = await createService(options());
   const desktop = (provider) => fetch(service.origin + '/api/dictation', { method: provider ? 'POST' : 'GET', headers: { Authorization: `Bearer ${service.token}`, 'Content-Type': 'application/json' }, body: provider ? JSON.stringify({ provider }) : undefined });
   try {
-    assert.equal((await (await desktop()).json()).provider, 'local');
+    assert.equal((await (await desktop()).json()).provider, 'toxic');
     assert.equal((await desktop('invalid')).status, 400);
     await desktop('openai');
     const info = await (await desktop()).json();
-    assert.equal(info.provider, 'openai'); assert.equal(info.providers.length, 4);
+    assert.equal(info.provider, 'openai'); assert.equal(info.providers.length, 5);
     assert.ok(!JSON.stringify(info).includes('private-test-key'));
     await service.mobile.enable();
     const qr = await service.mobile.newPairing();

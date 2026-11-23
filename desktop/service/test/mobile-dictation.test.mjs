@@ -12,7 +12,12 @@ const request = (id = randomUUID(), bytes = audio, extra = {}) => Object.assign(
 async function fixture(t, options = {}) {
   const repo = await mkdtemp(path.join(os.tmpdir(), 'mrmak-dictation-'));
   const calls = [];
-  const dictation = new MobileDictation(repo, { env: { OPENROUTER_API_KEY: 'test-key', MRMAK_TRANSCRIBE_PROVIDER: 'openrouter' }, fetcher: async (url, options) => { calls.push({ url, options }); return Response.json({ text: ' A spoken thought. ' }); }, ...options });
+  const dictation = new MobileDictation(repo, {
+    env: { OPENROUTER_API_KEY: 'test-key', MRMAK_TRANSCRIBE_PROVIDER: 'openrouter' },
+    fetcher: async (url, options) => { calls.push({ url, options }); return Response.json({ text: ' A spoken thought. ' }); },
+    toxic: { health: async () => ({ running: true, version: '1.2.0' }), transcribeWav: async () => 'Toxic transcript.' },
+    ...options,
+  });
   t.after(() => dictation.close()); return { dictation, calls, repo };
 }
 
@@ -84,7 +89,7 @@ test('revoking a device aborts its paid request and clears cached text', async t
 
 test('local default ignores cloud keys and retries failures without any cloud call', async t => {
   let attempts = 0;
-  const { dictation, calls } = await fixture(t, { env: { OPENAI_API_KEY: 'unused-key' }, localStatus: async () => true,
+  const { dictation, calls } = await fixture(t, { env: { OPENAI_API_KEY: 'unused-key', MRMAK_TRANSCRIBE_PROVIDER: 'local' }, localStatus: async () => true,
     localRunner: async () => { attempts++; if (attempts === 1) throw new Error('Local failure'); return { text: ' Local draft. ' }; } });
   assert.equal((await dictation.status()).provider, 'local');
   const id = randomUUID();
@@ -95,10 +100,33 @@ test('local default ignores cloud keys and retries failures without any cloud ca
 });
 
 test('uninstalled local engine and silence never fall back to cloud', async t => {
-  const { dictation, calls } = await fixture(t, { env: { OPENAI_API_KEY: 'unused-key' }, localStatus: async () => false });
+  const { dictation, calls } = await fixture(t, { env: { OPENAI_API_KEY: 'unused-key', MRMAK_TRANSCRIBE_PROVIDER: 'local' }, localStatus: async () => false });
   await assert.rejects(dictation.transcribe(request(), 'phone'), error => error.status === 503);
   assert.equal(calls.length, 0);
   dictation.localStatus = async () => true; dictation.localRunner = async () => ({ text: '' });
   await assert.rejects(dictation.transcribe(request(), 'phone'), error => error.status === 422);
   assert.equal(calls.length, 0);
+});
+
+test('the Toxic provider normalizes the recording, keeps the transcript and reports a stopped app', async t => {
+  const seen = [];
+  const { dictation } = await fixture(t, {
+    env: { MRMAK_TRANSCRIBE_PROVIDER: 'toxic' },
+    toxic: {
+      health: async () => ({ running: true, version: '1.2.0' }),
+      transcribeWav: async wav => { seen.push(wav.toString('ascii', 0, 4)); return '  Toxic words.  '; },
+    },
+    convert: async (bytes, extension) => { seen.push(extension); return Buffer.from('RIFF....WAVE'); },
+  });
+  assert.equal((await dictation.status()).provider, 'toxic');
+  assert.equal((await dictation.status()).available, true);
+  assert.deepEqual(await dictation.transcribe(request(), 'phone'), { text: 'Toxic words.' });
+  assert.deepEqual(seen, ['webm', 'RIFF']);
+
+  const stopped = await fixture(t, {
+    env: { MRMAK_TRANSCRIBE_PROVIDER: 'toxic' },
+    toxic: { health: async () => null, transcribeWav: async () => { throw Error('must not be called'); } },
+  });
+  assert.equal((await stopped.dictation.status()).available, false);
+  await assert.rejects(stopped.dictation.transcribe(request(), 'phone'), /Toxic is not running/);
 });

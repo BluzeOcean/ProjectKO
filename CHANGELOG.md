@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Speech to text and read aloud now go through the **Toxic** app over its loopback MCP server. Dictation defaults to **Toxic · local** (Hex inside Toxic); recordings are converted to 16 kHz mono WAV before transcription. Optional Local Whisper and the paid providers remain selectable.
+- Read aloud uses Toxic's Pocket TTS. The Chatterbox installer, its GPU worker, the unused Kokoro worker and the voice-clip management UI were removed; the voice and language are chosen in Toxic.
+- Removed the direct Hex bridge and its Ctrl+T hand-off. The terminal's Ctrl+T now starts Project KO's own recorder, and Toxic keeps the machine-wide double-tap Ctrl shortcut.
+
 ## 0.6.4 - 2026-11-12
 
 - Keep New chat compact. Agent selection, chat name and the permission checkbox stay visible; project, working folder, group, reasoning effort and native resume are under Advanced, closed by default. Existing defaults and entered values are preserved.

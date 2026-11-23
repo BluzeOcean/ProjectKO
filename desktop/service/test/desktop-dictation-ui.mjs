@@ -53,16 +53,14 @@ try {
   await page.getByRole('button', { name: 'Cancel recording' }).click();
   await expect(page.getByRole('button', { name: 'Dictate a message', exact: true })).toBeEnabled();
   assert.equal(transcriptions, 1);
-  await page.keyboard.press('Control'); await page.keyboard.press('Control');
+  // Ctrl+T in the terminal opens Project KO's recorder; Toxic transcribes it.
+  await page.locator('.xterm-helper-textarea').focus();
+  await page.keyboard.press('Control+t');
   await expect(page.getByRole('button', { name: 'Stop recording and transcribe' })).toBeVisible();
   await page.waitForTimeout(700);
-  await page.keyboard.press('Control'); await page.keyboard.press('Control');
+  await page.keyboard.press('Control+t');
   await expect(page.getByRole('button', { name: 'Dictate a message', exact: true })).toBeEnabled();
   assert.equal(transcriptions, 2);
-  await page.keyboard.press('Control'); await page.keyboard.press('Shift'); await page.keyboard.press('Control');
-  for (let tap = 0; tap < 2; tap++) { await page.keyboard.down('Control'); await page.keyboard.down('Shift'); await page.keyboard.up('Shift'); await page.keyboard.up('Control'); }
-  await page.waitForTimeout(300);
-  await expect(page.getByRole('button', { name: 'Dictate a message', exact: true })).toBeEnabled();
   await page.route('**/api/sessions/dictation-test/input', route => route.fulfill({ status: 503, json: { error: 'Test paste unavailable' } }));
   await page.getByRole('button', { name: 'Dictate a message', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Stop recording and transcribe' })).toBeVisible();

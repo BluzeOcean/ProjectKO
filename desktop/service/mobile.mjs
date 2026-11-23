@@ -11,7 +11,7 @@ import { MAX_IMAGE_BYTES, attachmentText } from './attachments.mjs';
 import { inventory } from './agents.mjs';
 import { TailscaleTransport } from './mobile-tailscale.mjs';
 import { ConversationMedia } from './conversation-media.mjs';
-import { LocalReadAloud } from './local-read-aloud.mjs';
+import { ToxicReadAloud } from './toxic-read-aloud.mjs';
 import { ConversationTranscripts } from './mobile-transcript.mjs';
 import { projectKey, recentProjects } from './recent-projects.mjs';
 import { MobileReports } from './mobile-reports.mjs';
@@ -28,7 +28,7 @@ const DEVICE_IDLE_TTL = 30 * 24 * 60 * 60 * 1000;
 const send = (ws, value) => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(value)); };
 
 export class MobileGateway {
-  constructor({ repo, uiDir, stateDir, sessions, attachments, settings, changed, closeChat, transport = new TailscaleTransport(), dictation = new MobileDictation(repo), chooseDictation, readAloud = new LocalReadAloud(repo), transcripts = new ConversationTranscripts() }) {
+  constructor({ repo, uiDir, stateDir, sessions, attachments, settings, changed, closeChat, transport = new TailscaleTransport(), dictation = new MobileDictation(repo), chooseDictation, readAloud = new ToxicReadAloud(), transcripts = new ConversationTranscripts() }) {
     Object.assign(this, { repo, uiDir, sessions, attachments, settings, changed, closeChat, transport });
     this.file = path.join(stateDir, 'mobile-access.json');
     this.saves = Promise.resolve(); this.pending = new Map(); this.clients = new Set(); this.inflight = new Map(); this.uploads = new Map(); this.queues = new Map();

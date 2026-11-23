@@ -197,14 +197,11 @@ Windows x64, Linux and macOS are supported native targets. The macOS app is
 ad-hoc signed (not notarised) and Apple Silicon only; build steps and limits are in
 [docs/macos.md](../docs/macos.md).
 
-Read aloud uses fixed, free local voices: Michael (US man) and Emma (UK woman).
-Run `powershell -ExecutionPolicy Bypass -File scripts/setup-local-read-aloud.ps1`
-on Windows once. On macOS, run `brew install python@3.12`, then
-`python3.12 scripts/setup-local-voice.py read-aloud`; on Linux, use any
-Python 3.10-3.12. See
-[local voice setup](../docs/mobile-access.md#local-voice-setup-on-the-computer).
-Models and the CPU Python environment stay under the ignored
-`.cache/read-aloud` folder; no cloud speech key or paid account is needed.
-Phone settings stores the voice choice. The mobile service lazily starts its
-own voice worker and releases it after idle time; updating service files requires
+Speech to text and read aloud both go through the **Toxic** app on this
+computer. Toxic runs Hex for transcription and Pocket TTS for speech, and
+publishes a loopback MCP endpoint that the service discovers from
+`%APPDATA%\app.toxic.desktop\mcp.json`. Open Toxic before dictating or reading
+aloud; no speech model, Python environment or cloud key belongs to Project KO.
+The voice and language are chosen in Toxic. Phone settings still lists one read
+aloud voice, **Toxic · Pocket TTS**. Updating service files requires
 a user-approved application restart.

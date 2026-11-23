@@ -55,34 +55,6 @@
       "defaultStep": 0
     },
     {
-      "id": "make-workspace-yours",
-      "title": "Make Workspace Yours",
-      "description": "Install the app, understand the daily workflow and choose what to customize.",
-      "type": "group",
-      "category": "dev",
-      "created": "2026-09-15",
-      "updated": "2026-10-01",
-      "folder": "2026-09-15_make-workspace-yours",
-      "steps": [
-        {
-          "name": "Get started",
-          "path": "get-started.md"
-        },
-        {
-          "name": "Everyday use",
-          "path": "everyday-use.md"
-        },
-        {
-          "name": "Customize",
-          "path": "customize.md"
-        }
-      ],
-      "status": "active",
-      "pinned": false,
-      "sample": true,
-      "defaultStep": 0
-    },
-    {
       "id": "arachne-character",
       "title": "Arachne Character Lab",
       "description": "From creature concepts to a refined spider queen: nine design rounds and eight motion studies.",

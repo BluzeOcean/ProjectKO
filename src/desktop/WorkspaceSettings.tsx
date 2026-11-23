@@ -1,18 +1,62 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { api, onServiceEvent, useDesktop } from './client'
-import type { Effort, Settings } from './types'
+import type { AgentId, Effort, Settings } from './types'
 import { defaultEffort, efforts } from './effort'
 import { Icon } from './Icons'
-import DictationSettings from '../components/DictationSettings'
+import { DictationRows } from '../components/DictationSettings'
 import { useDictation } from './useDictation'
-import ThemePicker from '../components/ThemePicker'
-import { isMac, shellName } from './platform'
-import { quotaIntervalLabel, quotaIntervals } from '../lib/quota'
-import { pickFiles } from './client'
+import { ThemeRow } from '../components/ThemePicker'
+import { fileManager, isMac, shellName } from './platform'
+import { quotaIntervalLabel, quotaIntervalNote, quotaIntervals } from '../lib/quota'
+import { themes } from '../../desktop/service/appearance.mjs'
 
 type NativeSettings = { available: boolean; winKey: boolean; label?: string; error?: string }
-type Voice = { id: string; label: string }
-type ReadAloud = { ready: boolean; installing: boolean; voices?: Voice[]; voice?: string; label?: string | null; progress: { percent: number; message: string } }
+type ReadAloud = { ready: boolean; label?: string | null }
+
+/* One line of the panel: a name and the thing that changes it. The
+   sentence that explains it is a sibling, so the section can choose to show
+   it on hover instead of always — which is the whole difference this panel
+   makes against the one it replaces. */
+type SettingsRow = { key: string; name: string; search?: string; node: ReactNode }
+
+const agents: [AgentId, string][] = [['codex', 'Codex'], ['claude', 'Claude'], ['antigravity', 'Antigravity'], ['opencode', 'OpenCode'], ['kimi', 'Kimi'], ['shell', shellName]]
+const themeName = (preference?: string) => preference === 'system' ? 'System' : themes.find(theme => theme.id === preference)?.name || 'Dark'
+/* The last segments of a path, joined the way the path was: a fold's summary
+   cannot carry the whole of V:\06_App\ProjectKO\workspace and a path cut at
+   its end says nothing. */
+const pathTail = (path: string, segments: number) => {
+  const separator = path.includes('\\') ? '\\' : '/'
+  return path.split(/[\\/]/).filter(Boolean).slice(-segments).join(separator)
+}
+const effortName = (effort?: string) => efforts.find(([value]) => value === effort)?.[1] || 'Extra high'
+const agentName = (agent: string) => agents.find(([value]) => value === agent)?.[1] || 'Claude'
+
+/* A fold: the header states what the section holds, and opening it puts the
+   controls where the header was, in the panel's one row grammar. Searching
+   the panel opens every section that still has a matching row. */
+function Section({ id, label, summary, rows, foot, open, query, onToggle }: {
+  id: string; label: string; summary: string; rows: SettingsRow[]; foot?: ReactNode
+  open: boolean; query: string; onToggle: (id: string) => void
+}) {
+  const needle = query.trim().toLowerCase()
+  const shown = needle ? rows.filter(row => (row.name + ' ' + (row.search || '')).toLowerCase().includes(needle)) : rows
+  if (needle && !shown.length) return null
+  const expanded = needle.length > 0 || open
+  return <section className={'settings-fold' + (expanded ? ' open' : '')} data-settings-section={id}>
+    <button type="button" className="settings-fold-head" aria-expanded={expanded} onClick={() => onToggle(id)}>
+      <span className="settings-fold-label">{label}</span>
+      <span className="settings-fold-end">
+        <span className="settings-fold-summary">{summary}</span>
+        <span className="settings-fold-chev"><Icon name="down" size={15} /></span>
+      </span>
+    </button>
+    <div className="settings-fold-body">
+      {shown.map(row => <div className="settings-item" key={row.key}>{row.node}</div>)}
+      {foot && !needle ? foot : null}
+    </div>
+  </section>
+}
+
 export default function WorkspaceSettings({ onClose }: { onClose: () => void }) {
   const dictation = useDictation()
   const { settings, repo } = useDesktop()
@@ -20,10 +64,14 @@ export default function WorkspaceSettings({ onClose }: { onClose: () => void }) 
   const [speech, setSpeech] = useState<ReadAloud | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [voiceName, setVoiceName] = useState('')
+  const [query, setQuery] = useState('')
+  /* Appearance is open because it is the one section whose labels do not say
+     what it holds. Everything else states its value in the header. */
+  const [open, setOpen] = useState<string[]>(['workspace-directory', 'appearance'])
+  const toggle = (id: string) => setOpen(current => current.includes(id) ? current.filter(name => name !== id) : [...current, id])
   useEffect(() => {
     void api<ReadAloud>('/read-aloud').then(setSpeech).catch(() => setSpeech(null))
-    const refresh = () => api<NativeSettings>('/native/settings').then(setNative).catch(error => setError(String(error.message || error)))
+    const refresh = () => api<NativeSettings>('/native/settings').then(setNative).catch(failure => setError(String(failure.message || failure)))
     void refresh()
     return onServiceEvent(event => { if (event.type === 'native-settings') void refresh() })
   }, [])
@@ -32,64 +80,121 @@ export default function WorkspaceSettings({ onClose }: { onClose: () => void }) 
     try { await api('/settings', patch) } catch (error) { setError(String(error instanceof Error ? error.message : error)) }
     finally { setBusy(false) }
   }
-  // A recording is added, not swapped in: the voices already here stay, and the
-  // one just added becomes the one speaking.
-  const addVoice = async () => {
-    setBusy(true); setError('')
-    try {
-      const [file] = await pickFiles()
-      if (!file) return
-      const added = await api<Voice>('/read-aloud/voice', { path: file, name: voiceName.trim() || undefined })
-      setVoiceName('')
-      await api('/settings', { readAloudVoice: added.id })
-      setSpeech(await api<ReadAloud>('/read-aloud'))
-    } catch (failure) { setError(String(failure instanceof Error ? failure.message : failure)) }
-    finally { setBusy(false) }
+  // The boards are the app's workspaces: one folder each, created here.
+  const separator = repo.includes('\\') ? '\\' : '/'
+  const workspaceDir = repo.replace(/[\\/]+$/, '') + separator + 'workspace'
+  const showWorkspaceDir = async () => {
+    setError('')
+    try { await api('/reveal', { path: workspaceDir }) }
+    catch (failure) { setError(String(failure instanceof Error ? failure.message : failure)) }
   }
-  const removeVoice = async () => {
-    const id = selectedVoice
-    if (!id || id === 'builtin') return
-    setBusy(true); setError('')
-    try {
-      await api('/read-aloud/voice/remove', { id })
-      if ((settings.readAloudVoice || '') === id) await api('/settings', { readAloudVoice: '' })
-      setSpeech(await api<ReadAloud>('/read-aloud'))
-    } catch (failure) { setError(String(failure instanceof Error ? failure.message : failure)) }
-    finally { setBusy(false) }
-  }
-  const voices = speech?.voices || []
-  // An unset choice means the first recording here, which is what the service
-  // falls back to when it speaks.
-  const selectedVoice = voices.find(voice => voice.id === (settings.readAloudVoice || ''))?.id || speech?.voice || voices[0]?.id || ''
-  const selectedLabel = voices.find(voice => voice.id === selectedVoice)?.label || ''
   const winKey = async (enabled: boolean) => {
     setBusy(true); setError('')
     try { setNative(await api<NativeSettings>('/native/settings', { winKey: enabled })) }
-    catch (error) { setError(String(error instanceof Error ? error.message : error)) }
+    catch (failure) { setError(String(failure instanceof Error ? failure.message : failure)) }
     finally { setBusy(false) }
   }
+
+  const row = (name: string, control: ReactNode, help?: ReactNode, search?: string): SettingsRow => ({
+    key: name, name, search,
+    node: <>
+      <label className="settings-row"><span className="settings-row-name">{name}</span><span className="settings-row-value">{control}</span></label>
+      {help ? <p className="settings-row-help">{help}</p> : null}
+    </>,
+  })
+  const pick = (aria: string, value: string, options: [string, string][], onPick: (value: string) => void, disabled = busy) =>
+    <select className="settings-select" aria-label={aria} value={value} disabled={disabled} onChange={event => onPick(event.target.value)}>{options.map(([option, label]) => <option key={option} value={option}>{label}</option>)}</select>
+  const toggleSwitch = (checked: boolean, onPick: (value: boolean) => void, disabled = busy) =>
+    <><input type="checkbox" checked={checked} disabled={disabled} onChange={event => onPick(event.target.checked)} /><span className="settings-switch" /></>
+
+  const sections: { id: string; label: string; summary: string; rows: SettingsRow[]; foot?: ReactNode }[] = [
+    {
+      id: 'workspace-directory', label: 'Workspace Directory', summary: pathTail(workspaceDir, 2),
+      rows: [{
+        key: 'workspace-directory', name: 'Workspace directory', search: 'folder path boards home',
+        node: <>
+          <div className="settings-row">
+            <span className="settings-path settings-path-lead" title={workspaceDir}>{workspaceDir}</span>
+            <button type="button" className="settings-row-action" title={'Open in ' + fileManager} aria-label={'Open the workspaces folder in ' + fileManager} onClick={() => void showWorkspaceDir()}><Icon name="external" size={12} /></button>
+          </div>
+          <p className="settings-row-help">Every board is a folder here, and a new board is created here. Open it to copy files in or out.</p>
+        </>,
+      }],
+    },
+    {
+      id: 'appearance', label: 'Appearance', summary: themeName(settings.workspaceTheme) + ' · ' + themeName(settings.chatTheme),
+      rows: [
+        { key: 'workspace-theme', name: 'Workspace theme', search: 'palette colour color', node: <ThemeRow target="workspace" /> },
+        { key: 'chat-theme', name: 'Chat theme', search: 'palette colour color', node: <ThemeRow target="chat" /> },
+      ],
+    },
+    {
+      id: 'window', label: isMac ? 'Shortcut' : 'Windows', summary: native.winKey ? 'On' : 'Off',
+      rows: [row(native.label || (isMac ? '⌃⌥⌘Space' : 'Win key') + ' shows Project KO',
+        toggleSwitch(native.winKey, enabled => void winKey(enabled), busy || !native.available),
+        <>{isMac ? 'Bring back open windows from any app.' : 'Bring back open windows. Win shortcuts keep working; Ctrl+Esc opens Start.'}{!native.available && <><br />{native.error || 'Available in the Windows and macOS desktop app.'}</>}</>,
+        'shortcut hotkey')],
+    },
+    {
+      id: 'chats', label: 'Chats', summary: agentName(settings.defaultAgent) + ' · ' + effortName(settings.defaultEffort || defaultEffort),
+      rows: [
+        row('Default agent', pick('Default agent', settings.defaultAgent, agents, value => void change({ defaultAgent: value as Settings['defaultAgent'] }))),
+        row('Reasoning effort', pick('Reasoning effort', settings.defaultEffort || defaultEffort, efforts.map(([value, label]) => [value, label]), value => void change({ defaultEffort: value as Effort })),
+          'Applies to new Codex, Claude and Antigravity chats. Project KO still chooses effort for the chats it opens.'),
+        row('Terminal text size', pick('Terminal text size', String(settings.terminalFontSize || 13), Array.from({ length: 15 }, (_, i) => [String(i + 10), i + 10 + ' px'] as [string, string]), value => void change({ terminalFontSize: Number(value) }))),
+        row('Terminal appearance', pick('Terminal appearance', settings.terminalAppearance || 'original', [['original', 'Original CLI colors'], ['focus', 'Project KO Focus']], value => void change({ terminalAppearance: value as Settings['terminalAppearance'] })),
+          'Original preserves CLI colors, including added and removed lines. Focus uses muted colors. Your choice is saved for all chats and applies immediately without restarting them.'),
+        ...(isMac
+          ? [row('Use Option as Meta key', toggleSwitch(!!settings.terminalOptionMeta, enabled => void change({ terminalOptionMeta: enabled })),
+              'Sends Meta shortcuts to the CLI. When off, Option types your keyboard layout\'s characters, such as @ or #.')]
+          : []),
+        row('Bypass CLI permissions', toggleSwitch(settings.defaultBypass, enabled => void change({ defaultBypass: enabled })), 'Default for new chats.'),
+      ],
+    },
+    {
+      id: 'read-aloud', label: 'Read aloud', summary: (speech?.ready ? 'Toxic · Pocket TTS' : 'Toxic is not running') + ' · ' + (settings.readAloudSpeed || 1) + '×',
+      rows: [
+        row('Engine', <span className="settings-path">{speech?.ready ? 'Toxic · Pocket TTS' : 'Toxic is not running'}</span>,
+          'Read aloud uses the voice and language configured in Toxic. Start Toxic to enable it.', 'speech tts toxic'),
+        row('Speaking speed', pick('Speaking speed', String(settings.readAloudSpeed || 1), [1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5].map(rate => [String(rate), rate + '×'] as [string, string]), value => void change({ readAloudSpeed: Number(value) }))),
+      ],
+      foot: !speech?.ready ? <p className="settings-status">Open Toxic, then reopen this panel.</p> : undefined,
+    },
+    {
+      id: 'quota', label: 'Agent quota', summary: quotaIntervalLabel(settings.quotaRefreshMinutes || 5),
+      rows: [row('Check the quota every', pick('Check the quota every', String(settings.quotaRefreshMinutes || 5), quotaIntervals.map(minutes => [String(minutes), quotaIntervalLabel(minutes)] as [string, string]), value => void change({ quotaRefreshMinutes: Number(value) })), quotaIntervalNote, 'minimax limit')],
+    },
+    {
+      id: 'speech', label: 'Speech-to-text', summary: dictation.info?.providers?.find(provider => provider.id === dictation.info?.provider)?.label || 'Dictation',
+      rows: [{ key: 'dictation', name: 'Dictation provider', search: 'speech to text toxic whisper openai openrouter', node: <DictationRows info={dictation.info} onChange={dictation.choose} /> }],
+    },
+    {
+      id: 'project-ko', label: 'Project KO', summary: (settings.voiceName === 'marin' ? 'Marin' : 'Cedar') + ' · ' + (settings.coordinatorEffort === 'high' ? 'High' : 'Medium'),
+      rows: [
+        row('Voice', pick('Voice', settings.voiceName || 'cedar', [['cedar', 'Cedar'], ['marin', 'Marin']], value => void change({ voiceName: value }))),
+        row('Coordinator reasoning', pick('Coordinator reasoning', settings.coordinatorEffort || 'medium', [['medium', 'Medium'], ['high', 'High']], value => void change({ coordinatorEffort: value as Settings['coordinatorEffort'] })), 'Voice changes apply to your next conversation.'),
+      ],
+    },
+    {
+      id: 'project', label: 'Project', summary: repo.split(/[\\/]/).pop() || repo,
+      rows: [{
+        key: 'repo', name: 'Repository', search: 'folder path git',
+        node: <>
+          <div className="settings-row"><span className="settings-row-name">Repository</span><span className="settings-row-value"><span className="settings-path" title={repo}>{repo}</span></span></div>
+          <p className="settings-row-help">Skills, knowledge and processes belong to this repository.</p>
+        </>,
+      }],
+    },
+  ]
+
   return <div className="files-panel workspace-settings"><header><h2>Settings</h2><button className="desk-icon" onClick={onClose} aria-label="Close settings"><Icon name="close" size={17} /></button></header>
-    <div className="settings-scroll"><section><h3>Appearance</h3><ThemePicker /><ThemePicker target="chat" /></section><section><h3>{isMac ? 'Shortcut' : 'Windows'}</h3><label className="setting-toggle"><span>{native.label || (isMac ? '⌃⌥⌘Space' : 'Win key')} shows Project KO<small>{isMac ? 'Bring back open windows from any app.' : 'Bring back open windows. Win shortcuts keep working; Ctrl+Esc opens Start.'}</small></span><input type="checkbox" checked={native.winKey} disabled={busy || !native.available} onChange={event => void winKey(event.target.checked)} /></label>{!native.available && <p>{native.error || 'Available in the Windows and macOS desktop app.'}</p>}</section>
-    <section><h3>Chats</h3><label>Default agent<select disabled={busy} value={settings.defaultAgent} onChange={event => void change({ defaultAgent: event.target.value as Settings['defaultAgent'] })}><option value="codex">Codex</option><option value="claude">Claude</option><option value="antigravity">Antigravity</option><option value="opencode">OpenCode</option><option value="kimi">Kimi</option><option value="shell">{shellName}</option></select></label>
-      <label>Default reasoning effort<select disabled={busy} value={settings.defaultEffort || defaultEffort} onChange={event => void change({ defaultEffort: event.target.value as Effort })}>{efforts.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><p>Applies to new Codex, Claude and Antigravity chats. Project KO still chooses effort for the chats it opens.</p>
-      <label>Terminal text size<select disabled={busy} value={settings.terminalFontSize || 13} onChange={event => void change({ terminalFontSize: Number(event.target.value) })}>{Array.from({ length: 15 }, (_, i) => i + 10).map(size => <option key={size} value={size}>{size} px</option>)}</select></label>
-      <label>Terminal appearance<select disabled={busy} value={settings.terminalAppearance || 'original'} onChange={event => void change({ terminalAppearance: event.target.value as Settings['terminalAppearance'] })}><option value="original">Original CLI colors</option><option value="focus">Project KO Focus · muted colors</option></select></label><p>Original preserves CLI colors, including added and removed lines. Focus uses muted colors. Your choice is saved for all chats and applies immediately without restarting them.</p>
-      {!isMac && <label className="setting-toggle"><span>Hand Ctrl+T to Hex<small>Hex cannot see its dictation shortcut while Project KO is in front, so the terminal asks Hex to start or stop dictating instead of typing ^T. Needs Hex installed.</small></span><input type="checkbox" checked={settings.hexShortcut !== false} disabled={busy} onChange={event => void change({ hexShortcut: event.target.checked })} /></label>}
-      {isMac && <label className="setting-toggle"><span>Use Option as Meta key<small>Sends Meta shortcuts to the CLI. When off, Option types your keyboard layout's characters, such as @ or #.</small></span><input type="checkbox" checked={!!settings.terminalOptionMeta} disabled={busy} onChange={event => void change({ terminalOptionMeta: event.target.checked })} /></label>}
-      <label className="setting-toggle"><span>Bypass CLI permissions<small>Default for new chats.</small></span><input type="checkbox" checked={settings.defaultBypass} disabled={busy} onChange={event => void change({ defaultBypass: event.target.checked })} /></label>
-    </section><section><h3>Read aloud</h3>
-        <label>Voice<select aria-label="Read aloud voice" disabled={busy || !speech?.ready || !voices.length} value={selectedVoice} onChange={event => void change({ readAloudVoice: event.target.value })}>
-          {voices.map(voice => <option key={voice.id} value={voice.id}>{voice.label}</option>)}
-        </select></label>
-        <label>Speaking speed<select aria-label="Speaking speed" disabled={busy} value={String(settings.readAloudSpeed || 1)} onChange={event => void change({ readAloudSpeed: Number(event.target.value) })}>{[1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5].map(rate => <option key={rate} value={String(rate)}>{rate}×</option>)}</select></label>
-        <label>Name for a new voice<input aria-label="New voice name" placeholder="For example, Aiko" value={voiceName} disabled={busy || !speech?.ready} onChange={event => setVoiceName(event.target.value)} /></label>
-        <div className="settings-voice-actions">
-          <button type="button" className="desk-secondary" disabled={busy || !speech?.ready} onClick={() => void addVoice()}><Icon name="mic" size={13} />Add a voice…</button>
-          {selectedVoice && selectedVoice !== 'builtin' ? <button type="button" className="desk-secondary" title={`Remove ${selectedLabel}`} disabled={busy} onClick={() => void removeVoice()}>Remove voice</button> : null}
-        </div>
-        <p>{speech?.ready ? 'Each recording is trimmed to its loudest fifteen seconds: that is what the model reads for a voice. Add a clip, say what to call it, and it appears in the list.' : speech?.installing ? 'Installing the engine…' : 'The engine is not installed yet.'}</p>
-      </section><section><h3>Agent quota</h3><label>Check the quota every<select disabled={busy} value={settings.quotaRefreshMinutes || 5} onChange={event => void change({ quotaRefreshMinutes: Number(event.target.value) })}>{quotaIntervals.map(minutes => <option key={minutes} value={minutes}>{quotaIntervalLabel(minutes)}</option>)}</select></label><p>The MiniMax agent's five-hour window and week, as the line at the foot of Chats shows them. Project KO reads the CLI at this interval and keeps the last answer for thirty seconds.</p></section><DictationSettings info={dictation.info} onChange={dictation.choose} /><section><h3>Project KO</h3><label>Voice<select disabled={busy} value={settings.voiceName || 'cedar'} onChange={event => void change({ voiceName: event.target.value })}><option value="cedar">Cedar</option><option value="marin">Marin</option></select></label><label>Coordinator reasoning<select disabled={busy} value={settings.coordinatorEffort || 'medium'} onChange={event => void change({ coordinatorEffort: event.target.value as Settings['coordinatorEffort'] })}><option value="medium">Medium</option><option value="high">High</option></select></label><p>Voice changes apply to your next conversation.</p></section>
-      <section><h3>Project</h3><p className="settings-repo">{repo}</p><p>Skills, knowledge and processes belong to this repository.</p></section>
-      {error && <p className="desk-error-inline" role="alert">{error}</p>}
-    </div></div>
+    <div className="settings-search"><Icon name="search" size={13} /><input type="search" value={query} placeholder="Search settings" aria-label="Search settings" onChange={event => setQuery(event.target.value)} /></div>
+    <div className="settings-scroll">
+      {sections.map(section => <Section key={section.id} {...section} open={open.includes(section.id)} query={query} onToggle={toggle} />)}
+      {query.trim() && !sections.some(section => section.rows.some(item => (item.name + ' ' + (item.search || '')).toLowerCase().includes(query.trim().toLowerCase())))
+        ? <p className="settings-empty">No setting matches that.</p>
+        : null}
+      {error && <p className="settings-status" role="alert">{error}</p>}
+    </div>
+  </div>
 }

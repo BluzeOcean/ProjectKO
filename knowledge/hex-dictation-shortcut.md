@@ -1,5 +1,10 @@
 # Hex dictation in Project KO terminals
 
+> **Superseded 2026-11-23.** Project KO no longer calls Hex directly. The bridge
+> and the `hexShortcut` setting were removed when dictation moved to Toxic; see
+> [Toxic as the voice layer](toxic-voice.md). The measurements below remain as the
+> reason the bridge existed and as a record of Hex 3.4.0's behaviour.
+
 [Hex](https://anoma.ly) is a local dictation app for Windows with a Ctrl+T
 dictation shortcut. In a Project KO terminal that chord produced a `^T` control
 character and Hex never started listening, while the same key starts a dictation

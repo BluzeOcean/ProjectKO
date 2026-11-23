@@ -112,9 +112,11 @@ try {
   await page.screenshot({ path: path.join(repo, 'quota-900.png') });
 
   // Settings › Agent quota is where the interval lives, and it survives a reload.
+  // Settings folds: Agent quota starts closed, so the header is opened first.
   await desktopAuth(page.context(), service.urls.workspace);
   await page.goto(service.urls.workspace);
   await page.getByRole('button', { name: 'Toggle settings', exact: true }).click();
+  await page.getByRole('button', { name: /^Agent quota/ }).click();
   const interval = page.getByLabel('Check the quota every');
   await expect(interval).toHaveValue('5');
   await interval.selectOption('1');
@@ -123,6 +125,7 @@ try {
   await page.screenshot({ path: path.join(repo, 'quota-settings.png') });
   await page.reload();
   await page.getByRole('button', { name: 'Toggle settings', exact: true }).click();
+  await page.getByRole('button', { name: /^Agent quota/ }).click();
   await expect(page.getByLabel('Check the quota every')).toHaveValue('1');
   // The window's own Appearance popover offers the same choice, and writes the
   // same setting.

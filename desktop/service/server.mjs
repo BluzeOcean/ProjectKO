@@ -32,17 +32,16 @@ import { ConversationMedia } from './conversation-media.mjs';
 import { projectKey, recentProjects } from './recent-projects.mjs';
 import { answerPrompt, readPrompt } from './terminal-prompt.mjs';
 import { rewindToMessage } from './message-edit.mjs';
-import { LocalReadAloud } from './local-read-aloud.mjs';
+import { ToxicReadAloud } from './toxic-read-aloud.mjs';
 import { Handoffs } from './handoff.mjs';
 import { chatCommands } from './chat-commands.mjs';
-import { HexBridge } from './hex-bridge.mjs';
 import { isThemePreference } from './appearance.mjs';
 import { Quota } from './quota.mjs';
 import { permissionModes } from './dsh.mjs';
 
 const listen = server => new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`)); });
 
-export async function createService({ repo, uiDir, stateDir, token = secret(), native = () => {}, restoreSessions = false, mcpOptions, mobileOptions, hexOptions, quotaOptions, dev = false }) {
+export async function createService({ repo, uiDir, stateDir, token = secret(), native = () => {}, restoreSessions = false, mcpOptions, mobileOptions, quotaOptions, dev = false }) {
   repo = await realpath(repo);
   stateDir ||= path.join(repo, '.mrmak');
   const dictation = mobileOptions?.dictation || new MobileDictation(repo);
@@ -58,13 +57,12 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const sessions = await new Sessions(repo, stateDir).init();
   const transcripts = new ConversationTranscripts();
   const conversationMedia = new ConversationMedia();
-  const readAloud = mobileOptions?.readAloud || new LocalReadAloud(process.env);
-  const hexBridge = hexOptions?.bridge || new HexBridge();
+  const readAloud = mobileOptions?.readAloud || new ToxicReadAloud();
   const quota = new Quota(quotaOptions);
   const environment = parseEnv(await readFile(path.join(repo, '.env'), 'utf8').catch(() => ''));
   const settingsPath = path.join(stateDir, 'settings.json');
   const savedSettings = await readJson(settingsPath, null);
-  let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, dshPermissionMode: 'workspace-write', readAloudSpeed: 1, readAloudVoice: '', terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, hexShortcut: true, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', ...savedSettings };
+  let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, dshPermissionMode: 'workspace-write', readAloudSpeed: 1, readAloudVoice: '', terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', ...savedSettings };
   if (settings.groupTabsByProject === true) {
     await sessions.groupByProject(settings.projectOrder);
     settings.groupTabsByProject = false;
@@ -73,7 +71,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   if (await dictation.initializeProvider?.(settings, savedSettings !== null)) await saveJson(settingsPath, settings);
   dictation.providerChoice = () => settings.transcribeProvider || null;
   const chooseDictation = async provider => {
-    if (!['local', 'openai', 'openrouter', 'off'].includes(provider)) throw Object.assign(new Error('Choose a supported speech-to-text provider.'), { status: 400 });
+    if (!['toxic', 'local', 'openai', 'openrouter', 'off'].includes(provider)) throw Object.assign(new Error('Choose a supported speech-to-text provider.'), { status: 400 });
     settings.transcribeProvider = provider; await saveSettings();
     const info = await dictation.status();
     broadcast('settings', { settings }); broadcast('dictation', { dictation: info });
@@ -264,11 +262,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         if (method === 'POST' && url.pathname === '/api/transcribe') return json(response, 200, await dictation.transcribe(request, 'desktop', () => !closing));
         const data = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) ? await body(request, url.pathname === '/api/files/markdown' ? 12 * 1024 * 1024 : url.pathname.startsWith('/api/workspace/cards') ? 2 * 1024 * 1024 : 256 * 1024) : {};
         if (method === 'POST' && url.pathname === '/api/dictation') return json(response, 200, await chooseDictation(data.provider));
-        // Hex's listener does not take its shortcut while this app is in front, so
-        // the terminal asks Hex to toggle the dictation instead of sending ^T.
         if (method === 'GET' && url.pathname === '/api/quota') return json(response, 200, await quota.status());
-        if (method === 'GET' && url.pathname === '/api/hex') return json(response, 200, { ...(await hexBridge.status()), enabled: settings.hexShortcut !== false });
-        if (method === 'POST' && url.pathname === '/api/hex/dictation') return json(response, 200, await hexBridge.toggle());
         if (method === 'GET' && url.pathname === '/api/mobile') return json(response, 200, mobile.status());
         if (method === 'GET' && url.pathname === '/api/mobile/check') return json(response, 200, await mobile.transport.probe());
         if (method === 'POST' && url.pathname === '/api/mobile/enable') return json(response, 200, await mobile.enable());
@@ -326,15 +320,6 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           return json(response, 200, await projectList());
         }
         if (method === 'GET' && url.pathname === '/api/read-aloud') return json(response, 200, await readAloud.status());
-        if (method === 'POST' && url.pathname === '/api/read-aloud/voice') return json(response, 200, await readAloud.setVoice(data.path, data.name));
-        if (method === 'POST' && url.pathname === '/api/read-aloud/voice/remove') return json(response, 200, await readAloud.removeVoice(data.id));
-        if (method === 'DELETE' && url.pathname === '/api/read-aloud/voice') return json(response, 200, await readAloud.clearVoice());
-        if (method === 'POST' && url.pathname === '/api/read-aloud/setup') {
-          if (await readAloud.installed()) return json(response, 200, { ready: true });
-          // The install takes minutes: answer at once and let the window poll.
-          readAloud.setup().catch(error => console.error('read aloud setup:', error.message));
-          return json(response, 202, { started: true });
-        }
         if (method === 'POST' && url.pathname === '/api/preview/show') {
           // A link in a chat may be relative to that chat's working folder.
           const base = typeof data.sessionId === 'string' ? sessions.get(data.sessionId).cwd : repo;
@@ -385,10 +370,6 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           // Playback speed only: the voice is generated once and stretched by the player.
           const speed = Number(data.readAloudSpeed);
           if (Number.isFinite(speed) && speed >= 1 && speed <= 5) settings.readAloudSpeed = Math.round(speed * 100) / 100;
-          // Which recording speaks; an id that no longer exists falls back to the
-          // first one, and the empty string means "whichever is first".
-          if (typeof data.readAloudVoice === 'string' && data.readAloudVoice.length <= 60 && /^[a-z0-9-]*$/.test(data.readAloudVoice)) settings.readAloudVoice = data.readAloudVoice;
-          if (typeof data.hexShortcut === 'boolean') settings.hexShortcut = data.hexShortcut;
           if (['full', 'compact', 'hidden'].includes(data.systemEvents)) settings.systemEvents = data.systemEvents;
           if (isThemePreference(data.workspaceTheme)) settings.workspaceTheme = data.workspaceTheme;
           if (isThemePreference(data.chatTheme)) settings.chatTheme = data.chatTheme;

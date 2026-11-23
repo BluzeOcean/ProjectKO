@@ -19,19 +19,9 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
   const fitRef = useRef<FitAddon | null>(null)
   const [dragging, setDragging] = useState(false)
   const statusTimer = useRef(0)
-  // Hex takes its dictation shortcut through its own Windows listener, and that
-  // listener ignores the chord while a Project KO window is focused. The
-  // terminal therefore asks Hex to toggle the dictation itself and keeps the ^T
-  // control character out of the CLI. See knowledge/hex-dictation-shortcut.md.
-  const hexShortcut = useRef(false)
-  const hexBusy = useRef(false)
-  useEffect(() => {
-    let live = true
-    api<{ available: boolean; enabled: boolean }>('/hex')
-      .then(result => { if (live) hexShortcut.current = !!result.available && !!result.enabled })
-      .catch(() => { /* Optional: without the bridge Ctrl+T stays a plain key. */ })
-    return () => { live = false }
-  }, [])
+  // Ctrl+T stays the dictation chord in a terminal. Project KO records the
+  // words and asks Toxic to transcribe them, so the CLI never receives ^T and
+  // Toxic keeps the machine-wide double-tap Ctrl shortcut for other apps.
   const uploading = useRef(false)
   const choosing = useRef(false)
   async function pasteImages(files: File[]) {
@@ -182,21 +172,11 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
       if (ready && !deviceReply) sendEvent({ type: 'input', id, data })
     })
     terminal.attachCustomKeyEventHandler(event => {
-      // Both edges are swallowed so the CLI never receives the chord.
-      if (hexShortcut.current && event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey && typeof event.key === 'string' && (event.code === 'KeyT' || event.key.toLowerCase() === 't')) {
+      // Both edges are swallowed so the CLI never receives the chord. The
+      // terminal view's own microphone listens for this event.
+      if (event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey && typeof event.key === 'string' && (event.code === 'KeyT' || event.key.toLowerCase() === 't')) {
         event.preventDefault(); event.stopPropagation()
-        if (event.type === 'keydown' && !event.repeat && !hexBusy.current) {
-          hexBusy.current = true
-          const show = (text: string) => {
-            clearTimeout(statusTimer.current)
-            onAttachmentStatus(id, text)
-            statusTimer.current = window.setTimeout(() => onAttachmentStatus(id, ''), 2500)
-          }
-          api<{ ok: boolean; message?: string }>('/hex/dictation', {}, 'POST')
-            .then(reply => show(reply.ok ? 'Hex dictation' : reply.message || 'Hex did not start'))
-            .catch(error => { reportError(error); show('Hex did not start') })
-            .finally(() => { hexBusy.current = false })
-        }
+        if (event.type === 'keydown' && !event.repeat) window.dispatchEvent(new CustomEvent('mrmak-toggle-dictation'))
         return false
       }
       // Windows/Linux: agent chats use Ctrl+C exclusively for copy. Even an empty

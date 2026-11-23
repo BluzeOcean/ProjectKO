@@ -1,46 +1,58 @@
-# Local dictation
+# Dictation
 
-Dictation puts recognized text into the focused terminal or text field.
-Mr. KO's voice assistant instead carries on a conversation and can call tools.
-You can use either, both or neither.
+Dictation puts recognized text into the focused terminal or text field. Mr. KO's
+voice assistant instead carries on a conversation and can call tools. You can use
+either, both or neither.
 
-Mr. KO now has built-in microphone dictation for desktop chats, the composer,
-and mobile. See [setup and behavior](../docs/mobile-access.md#voice-input).
-Install free local faster-whisper and its multilingual small model once with
-Python 3.10-3.12: `python scripts/setup-local-voice.py dictation` on Windows
-(`scripts/setup-local-dictation.ps1` wraps the same command). On macOS, run
-`brew install python@3.12`, then `python3.12 scripts/setup-local-voice.py dictation`;
-the system and default Homebrew `python3` are usually outside the supported
-range. On Linux, any 3.10-3.12 `python3` works. The PowerShell wrappers are
-Windows-only. See [local voice setup](../docs/mobile-access.md#local-voice-setup-on-the-computer). Record, stop, review, then explicitly insert
-or send. Choose Free/Paid/Off in Phone settings or desktop Settings → Speech-to-text.
-The saved provider is shared across desktop and paired phones and overrides
-the `.env` provider default. Paid keys stay in the computer’s ignored `.env`.
+Project KO's speech to text now goes through the **Toxic** app on this computer.
+Toxic wraps Hex and publishes two loopback interfaces: an HTTP API and an MCP
+server. The Project KO service reads Toxic's discovery file
+(`%APPDATA%\app.toxic.desktop\mcp.json`) on first use and calls the
+`transcribe` tool over JSON-RPC. It converts the browser recording to 16 kHz mono
+WAV with ffmpeg first, because Hex accepts only WAV. The audio never leaves the
+machine. See [Toxic as the voice layer](toxic-voice.md) for the implementation
+and the checks behind it.
 
-For optional dictation into other applications, [Wispr Local](https://github.com/nsoth/wispr-local) is one Windows option built
-around whisper.cpp. Review its language and GPU build defaults before installing.
-Follow its README to select English and settings appropriate for the recipient's
-machine. The project also documents optional
-cloud text formatting. This template includes setup instructions, not a bundled
-copy of Wispr Local or another user's customized build. On macOS, the built-in
-Dictation (System Settings > Keyboard > Dictation) types into other apps without
-a separate install.
+## Choosing a provider
 
-On Windows, [Hex](https://anoma.ly) dictates into other applications with its
-own keyboard listener. Its shortcut does not reach it while a Project KO window
-is focused, so the terminal hands Ctrl+T to Hex itself; see
-[Hex dictation in Project KO terminals](hex-dictation-shortcut.md).
+Desktop **Settings → Speech-to-text**, desktop **Phone settings**, and the phone's
+own settings share one choice:
 
-Use a separate folder for the dictation app. Start with the language you actually
-speak and a model that fits your memory budget. Verify recognition in a text
-editor before testing it in an agent terminal. A successful microphone recording
-does not prove that text injection reached the intended window.
+- **Toxic · local** — the default. Requires Toxic to be open; no key, no model
+  download in Project KO.
+- **Local Whisper · Free** — optional fallback, installed with
+  `python scripts/setup-local-voice.py dictation` on Python 3.10-3.12. See the
+  [local voice setup](../docs/mobile-access.md#optional-local-whisper-fallback).
+- **OpenAI · Paid** / **OpenRouter · Paid** — explicit paid choices using a key
+  from the computer's ignored `.env`.
+- **Off** — microphone dictation is disabled.
 
-Choose a non-conflicting push-to-talk shortcut. Test silence, a short phrase,
-technical names and several recordings in succession. Do not auto-submit text
-while diagnosing dictation. Keep cloud formatting off for a fully local
-transcription workflow; enabling it sends recognized text to that provider.
+Changes apply to the next transcription; text stays a draft. There is no
+automatic fallback from one provider to another.
 
-Record the chosen model, build settings and recovery steps in a local setup
-note. Leave microphone recordings, transcripts and credentials out of a public
-handoff. Always check upstream instructions again on the recipient's machine.
+## Where the microphone is
+
+- **Desktop chat** — the microphone in the composer records in the page and asks
+  the service to transcribe. It does not open Hex's global dictation.
+- **Desktop terminal** — the microphone in the chat toolbar, or **Ctrl+T**, starts
+  and stops the same recorder and pastes the text into the terminal without
+  pressing Enter.
+- **Phone** — the microphone beside the attachment button records, uploads over
+  the paired connection, and leaves the text as a draft for you to send.
+- **Workspace Mak composer** — its microphone uses the same provider.
+
+Toxic's own machine-wide shortcut is **double-tap Ctrl**. Project KO no longer
+listens for that gesture on desktop, so the two apps cannot start recording at
+the same time. On the phone, double-tap Ctrl belongs to the page.
+
+## Testing it
+
+Choose the language you actually speak, then test silence, a short phrase,
+technical names and several recordings in succession. Verify recognition in a
+plain text editor before relying on it in an agent terminal. A successful
+microphone recording does not prove that text injection reached the intended
+window. Do not auto-submit text while diagnosing dictation. Keep recordings,
+transcripts and credentials out of a shared handoff.
+
+If Toxic is closed, the provider reports "Toxic is not running" rather than
+silently switching to another engine.

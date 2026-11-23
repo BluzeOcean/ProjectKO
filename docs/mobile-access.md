@@ -62,28 +62,29 @@ Reading a completed turn marks it seen across devices.
 
 ## Voice input
 
-1. On the computer, complete the optional [local voice setup](#local-voice-setup-on-the-computer), or select your existing paid provider in Phone settings.
+1. Start **Toxic** on the computer. It runs Hex for speech to text and publishes a
+   loopback MCP endpoint.
 2. Open a chat on the phone and tap the microphone beside the attachment button.
    Allow microphone access. Use the private HTTPS page in Chrome or Safari.
 3. Speak, then tap **Stop**. Each recording is limited to two minutes.
 4. Review or edit the text, then press **Send** yourself.
 
-Fresh installations default to free local Whisper on your computer, using CPU int8.
-Updates retain your previous provider and model. The phone
-uploads audio over the paired private connection; transcription runs offline on
-the computer after setup. No transcription API key or credit is needed. The PC
-must remain running and reachable. Temporary server audio is removed after each
-attempt. Recordings that have not yet become text remain recoverable on the
-recording device until transcribed or discarded.
+Fresh installations default to **Toxic · local**. The phone uploads the recording
+over the paired private connection; Project KO converts it to 16 kHz mono WAV and
+asks Toxic to transcribe it. Hex runs inside Toxic, so no transcription API key or
+extra model install is needed. Updates retain your previous provider and model.
+The PC must remain running with Toxic open. Temporary server audio is removed
+after each attempt. Recordings that have not yet become text remain recoverable
+on the recording device until transcribed or discarded.
 
-### Local voice setup on the computer
+### Optional local Whisper fallback
 
-Install Python 3.10-3.12 (3.12 recommended). From the repository folder on
-Windows, use these commands:
+Toxic is the default and needs no setup beyond opening the app. Local Whisper
+remains available as a free fallback when Toxic is not running. Install Python
+3.10-3.12 (3.12 recommended). From the repository folder on Windows, use:
 
 ```sh
 python scripts/setup-local-voice.py dictation
-python scripts/setup-local-voice.py read-aloud
 ```
 
 On macOS, call Python 3.12 by its versioned name. The system `/usr/bin/python3`
@@ -96,27 +97,28 @@ python.org installer's missing certificates. With [Homebrew](https://brew.sh)
 ```sh
 brew install python@3.12
 python3.12 scripts/setup-local-voice.py dictation
-python3.12 scripts/setup-local-voice.py read-aloud
 ```
 
 On Linux, use any Python 3.10-3.12, for example `python3` or `python3.12`.
 
-On a Mac with Apple Silicon, local dictation needs macOS 14 or later and Read
-aloud needs macOS 13 or later; the script stops with this message on older versions.
+On a Mac with Apple Silicon, local dictation needs macOS 14 or later; the script
+stops with this message on older versions.
 
-Each command is optional. It creates a separate environment under `.cache`,
+The command is optional. It creates a separate environment under `.cache`,
 installs pinned Python packages and verifies the model files against SHA-256
-checksums. Whisper's model download is about 486 MB; the reading model and
-voices total about 142 MB, plus Python dependencies. Setup checks that the
-model can load on your computer. It does not restart Project KO. Refresh Phone
-settings afterward and select your provider. Windows PowerShell wrappers
-`setup-local-dictation.ps1` and `setup-local-read-aloud.ps1` call the same setup.
+checksums. Whisper's model download is about 486 MB, plus Python dependencies.
+Setup checks that the model can load on your computer. It does not restart
+Project KO. Refresh Phone settings afterward and select **Local Whisper**.
+The Windows PowerShell wrapper `setup-local-dictation.ps1` calls the same setup.
 Nothing is downloaded automatically by opening the app.
 
 Desktop chats offer a microphone in the chat toolbar. Transcription pastes
 directly into the terminal input without pressing Enter. The Workspace's Mak composer
-also supports dictation; its Send button remains a separate action. Double-tap Ctrl to start or stop the visible microphone; Ctrl with any other key is
-ignored and no existing shortcut is rebound. This feature is separate from conversational Talk to Mak.
+also supports dictation; its Send button remains a separate action. In a
+terminal, Ctrl+T starts or stops the same recorder. Toxic's own machine-wide
+double-tap Ctrl remains available for other apps; Project KO does not add a
+second listener for it on desktop. This feature is separate from conversational
+Talk to Mak.
 
 Local transcription preserves the detected language; it does not translate.
 Test names and mixed-language phrases on your own microphone before relying on
@@ -127,7 +129,7 @@ To switch between Free and Paid, open the **phone icon at the top right**.
 On desktop this opens **Phone settings**, combining pairing, devices and
 speech-to-text. On mobile it opens the same provider choice alongside install
 and disconnect controls. Desktop **Settings → Speech-to-text** also has it.
-Choose **Local Whisper · Free**, **OpenAI · Paid**, **OpenRouter · Paid**, or **Off**.
+Choose **Toxic · local**, **Local Whisper · Free**, **OpenAI · Paid**, **OpenRouter · Paid**, or **Off**.
 The saved choice is shared by desktop and all paired phones, updates immediately,
 and applies to the next transcription. An in-progress request finishes using
 its existing provider. Missing setup or API keys are shown beside the choice;
@@ -230,21 +232,20 @@ media. Tap it to read; during playback it becomes Pause/Resume, with a Stop icon
 It reads your most recent message and all following agent messages through that
 reply, with Pause, Resume and Stop controls. New replies do not extend speech
 already playing; tap Read aloud again to include them.
-Speech is generated locally on your computer with Kokoro ONNX. Phone settings
-has exactly Michael (US man) and Emma (UK woman); the choice is saved on that
-phone. Browser voice lists and other accents are not used. No API key or paid
-speech provider is required. Run the read-aloud command from
-[local voice setup](#local-voice-setup-on-the-computer) once on your computer
-(`python3.12 scripts/setup-local-voice.py read-aloud` on macOS) to install an
-isolated CPU environment and download the official model.
-After setup, inference is offline; text/audio are not sent to a cloud provider.
+Speech is generated locally on your computer by **Toxic** with Pocket TTS.
+Toxic owns the voice, language and model; Project KO lists the single voice
+**Toxic · Pocket TTS** and Phone settings shows it without a browser voice list.
+No API key or paid speech provider is required. Toxic must be running: when it
+is not, the speaker row says so and offers **Check again**.
+Inference is offline; text/audio are not sent to a cloud provider.
 The phone receives short WAV segments through its paired, authenticated session.
 Audio and text are kept in memory and discarded after playback. Stop cancels
 in-progress synthesis; disconnecting the phone revokes it. Code, tables and
 images are skipped. Playback starts only after a tap and stops when changing
 chats, opening Terminal or leaving Conversation.
 
-Voice definitions: [Kokoro voice catalogue](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md).
+The voice is chosen in Toxic's Text to speech pane. Project KO passes text and
+receives WAV audio; it never loads a speech model itself.
 
 Returning from phone sleep immediately replaces the stale connection without
 reloading the app. The current view, selected chat, draft and scroll position stay

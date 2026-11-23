@@ -32,11 +32,10 @@ class Downloads(unittest.TestCase):
     def test_macos_minimum_on_apple_silicon(self):
         darwin = setup.sys.platform == 'darwin'
         self.assertEqual(bool(setup.macos_too_old('dictation', '13.6', 'arm64')), darwin)
-        self.assertEqual(bool(setup.macos_too_old('read-aloud', '12.7.4', 'arm64')), darwin)
-        self.assertIsNone(setup.macos_too_old('read-aloud', '13.0', 'arm64'))
         self.assertIsNone(setup.macos_too_old('dictation', '14.0', 'arm64'))
         self.assertIsNone(setup.macos_too_old('dictation', '26.0.1', 'arm64'))
         self.assertIsNone(setup.macos_too_old('dictation', '12.0', 'x86_64'))
+        self.assertEqual(sorted(setup.MODELS), ['dictation'], 'read aloud is installed by Toxic, not here')
 
     def test_platform_venv_paths(self):
         self.assertEqual(setup.python_path(Path('root'), True), Path('root/venv/Scripts/python.exe'))

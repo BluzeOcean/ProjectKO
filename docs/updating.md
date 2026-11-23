@@ -68,8 +68,9 @@ and phone pairings remain available. It also includes macOS compatibility,
 terminal restart and Windows updater fixes. See the [changelog](../CHANGELOG.md).
 
 The 0.5.1 source update preserves your selected dictation provider, custom model
-and terminal appearance. Fresh setups default to local Whisper, which requires
-the optional [local voice setup](mobile-access.md#local-voice-setup-on-the-computer).
+and terminal appearance. Fresh setups now default to **Toxic · local**, which
+needs the Toxic app open but no Python setup. Local Whisper remains an optional
+free fallback via [local voice setup](mobile-access.md#optional-local-whisper-fallback).
 OpenAI and OpenRouter remain explicit paid choices; a missing local model never
 causes an automatic cloud request. New mobile media previews, report-position
 restore and desktop dictation are included alongside the macOS port.

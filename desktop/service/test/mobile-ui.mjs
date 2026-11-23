@@ -375,14 +375,20 @@ try {
   await expect(readButton.locator('svg')).toHaveCount(1);
   await expect(phone.locator('.mobile-message').last().getByRole('button', { name: 'Read aloud', exact: true })).toBeVisible();
   await readButton.click();
-  await phone.waitForFunction(() => window.testSpeech.spoken.length > 0);
+  // Wait for the first segment to reach the player: driving endings before an
+  // audio element exists sees the previous "closed" state and skips the reading.
+  await phone.waitForFunction(() => window.testSpeech.spoken.length > 0 && window.testSpeech.current !== null);
   // The reply is read, not the question before it and not the note the agent
   // wrote on the way: the bar sits under the reply, and that is what it says.
   assert.ok((await phone.evaluate(() => window.testSpeech.spoken[0].text)).startsWith('Ready for review'));
-  const spokenRange = await phone.evaluate(async () => {
-    for (let index = 0; index < 500 && !window.testSpeech.closed; index++) { if (window.testSpeech.current) { const current = window.testSpeech.current; window.testSpeech.current = null; current.onend?.(); } await new Promise(resolve => setTimeout(resolve, 10)); }
-    return window.testSpeech.spoken.map(part => part.text).join(' ');
-  });
+  // Drive each segment to its end until the reading releases the player. A fixed
+  // iteration budget made this race the number of segments in the reply.
+  await phone.waitForFunction(() => {
+    if (window.testSpeech.closed) return true;
+    if (window.testSpeech.current) { const current = window.testSpeech.current; window.testSpeech.current = null; current.onend?.(); }
+    return false;
+  }, { timeout: 20000 });
+  const spokenRange = await phone.evaluate(() => window.testSpeech.spoken.map(part => part.text).join(' '));
   assert.ok(spokenRange.includes('Ready for review'));
   assert.ok(!spokenRange.includes('Intermediate agent progress is included.'), 'the note before the reply is not read');
   assert.ok(!spokenRange.includes('Can we make'), 'the question before the reply is not read');
@@ -398,15 +404,15 @@ try {
   assert.equal(await phone.evaluate(() => window.testSpeech.paused), false);
   assert.equal(await phone.locator('.mobile-messages select').count(), 0, 'Voice selection stays in settings');
   await phone.getByRole('button', { name: 'Phone settings' }).click();
-  const readingVoice = phone.getByRole('combobox', { name: 'English reading voice' });
+  const readingVoice = phone.getByRole('combobox', { name: 'Read aloud voice' });
   // The engine on this computer is the voice, so there is one to choose from.
   await expect(readingVoice.locator('option')).toHaveCount(1);
-  assert.deepEqual(await readingVoice.locator('option').evaluateAll(options => options.map(option => option.value)), ['chatterbox']);
-  await readingVoice.selectOption('chatterbox');
-  assert.equal(await phone.evaluate(() => localStorage.getItem('mrmak.mobile.read-aloud.voice')), 'chatterbox');
+  assert.deepEqual(await readingVoice.locator('option').evaluateAll(options => options.map(option => option.value)), ['toxic']);
+  await readingVoice.selectOption('toxic');
+  assert.equal(await phone.evaluate(() => localStorage.getItem('mrmak.mobile.read-aloud.voice')), 'toxic');
   await phone.getByRole('button', { name: 'Phone settings' }).click();
   await readButton.click();
-  await phone.waitForFunction(() => window.testSpeech.spoken.at(-1)?.voice === 'chatterbox');
+  await phone.waitForFunction(() => window.testSpeech.spoken.at(-1)?.voice === 'toxic');
   await phone.getByRole('button', { name: 'Stop reading' }).click();
   assert.equal(await phone.evaluate(() => window.testSpeech.current), null);
   await readButton.click();

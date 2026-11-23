@@ -34,14 +34,17 @@ changes with every build. Image and report downloads go to `~/Downloads` and are
 in Finder. To update, follow the
 [macOS update steps](updating.md#macos-source-build).
 
-Optional local dictation and Read aloud need Python 3.10–3.12. The system `python3` is 3.9
-and Homebrew's default is usually newer, so install and call 3.12 by name:
-`brew install python@3.12`, then `python3.12 scripts/setup-local-voice.py dictation`
-(or `read-aloud`). Plain `python3` also works when a Python 3.10–3.12 is installed
-(Homebrew or uv): the script switches to it, and it handles the python.org installer's
-missing certificates. On Apple Silicon, local dictation needs macOS 14 or later and Read
-aloud macOS 13 or later (the pinned `av` and `onnxruntime` wheels); the script stops on older
-versions. See [local voice setup](mobile-access.md#local-voice-setup-on-the-computer).
+Dictation uses the **Toxic** app by default; it runs Hex and exposes speech to
+text over a local MCP endpoint, so it needs no Python setup. The optional local
+Whisper fallback needs Python 3.10–3.12. The system `python3` is 3.9 and
+Homebrew's default is usually newer, so install and call 3.12 by name:
+`brew install python@3.12`, then `python3.12 scripts/setup-local-voice.py dictation`.
+Plain `python3` also works when a Python 3.10–3.12 is installed (Homebrew or
+uv): the script switches to it, and it handles the python.org installer's missing
+certificates. On Apple Silicon, local dictation needs macOS 14 or later; the
+script stops on older versions. Read aloud is provided by Toxic with Pocket TTS
+and has no Python requirement. See
+[local voice setup](mobile-access.md#optional-local-whisper-fallback).
 
 Development: `./node_modules/.bin/tauri dev -- -- --repo "$PWD"`. Without `--repo`,
 `tauri dev` starts in `src-tauri/` and waits on a (hidden) repository picker. Dev mode serves
@@ -125,8 +128,8 @@ and two timing races).
 - Ad-hoc signed only, Apple Silicon only (`aarch64`); no notarisation. An Intel or universal build needs
   `--target universal-apple-darwin` and both Rust targets.
 - The Live voice coordinator needs `OPENAI_API_KEY` in the ignored `.env`.
-  Dictation can use optional local Whisper instead. The real microphone permission
-  prompt was not exercised in the contributor's native checks.
+  Dictation uses Toxic by default, with optional local Whisper as a fallback. The
+  real microphone permission prompt was not exercised in the contributor's native checks.
 - Mobile access over Tailscale was only tested in automation (WebKit = iPhone Safari's engine),
   not with a real phone.
 - The tray (menu-bar) menu is not reachable through Accessibility, so it is not in the native checks.

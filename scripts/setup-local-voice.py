@@ -1,4 +1,9 @@
-"""Optional local voice setup. Run explicitly with Python 3.10-3.12; no app restart."""
+"""Optional local dictation setup. Run explicitly with Python 3.10-3.12; no app restart.
+
+Read aloud is no longer installed here: Project KO speaks through the Toxic app,
+which owns its own voice model. This script now installs only the optional
+local Whisper fallback for speech to text.
+"""
 import argparse
 import functools
 import hashlib
@@ -14,7 +19,6 @@ import urllib.request
 import venv
 
 WHISPER = 'https://huggingface.co/Systran/faster-whisper-small/resolve/536b0662742c02347bc0e980a01041f333bce120/'
-KOKORO = 'https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/'
 MODELS = {
     'dictation': [
         ('model/config.json', WHISPER + 'config.json', 2370, 'b55496ac7940a7ae47d2c01eab40edfd8701feec1229d9cce3b40014383fb828'),
@@ -22,12 +26,8 @@ MODELS = {
         ('model/vocabulary.txt', WHISPER + 'vocabulary.txt', 459861, '34ce3fe1c5041027b3f8d42912270993f986dbc4bb34cf27f951e34a1e453913'),
         ('model/model.bin', WHISPER + 'model.bin', 483546902, '3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671'),
     ],
-    'read-aloud': [
-        ('kokoro-v1.0.int8.onnx', KOKORO + 'kokoro-v1.0.int8.onnx', 114119327, 'ae315a79b623f244700e4afb9246c46a26066782e049ba174bf3ba433970ee9c'),
-        ('voices-v1.0.bin', KOKORO + 'voices-v1.0.bin', 28214398, 'bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d'),
-    ],
 }
-PACKAGES = {'dictation': ['faster-whisper==1.2.1', 'av==16.1.0'], 'read-aloud': ['kokoro-onnx==0.6.1']}
+PACKAGES = {'dictation': ['faster-whisper==1.2.1', 'av==16.1.0']}
 
 def python_path(root, windows=os.name == 'nt'):
     return root / 'venv' / ('Scripts/python.exe' if windows else 'bin/python')
@@ -63,7 +63,7 @@ def download(file, url, size, digest, opener=urllib.request.urlopen):
 
 # On Apple Silicon the pinned wheels start at av 16.1.0 (macOS 14) and onnxruntime (macOS 13);
 # below that pip falls back to a source build that fails.
-MACOS_MINIMUM = {'dictation': (14, 0), 'read-aloud': (13, 0)}
+MACOS_MINIMUM = {'dictation': (14, 0)}
 
 def macos_too_old(feature, version=None, machine=None):
     if sys.platform != 'darwin' or (machine or platform.machine()) != 'arm64':
@@ -132,13 +132,9 @@ def main():
                 sys.exit('TLS certificate verification failed. With the python.org installer, run'
                          ' "Install Certificates.command" in /Applications/Python 3.12, or use Homebrew python@3.12; then rerun.')
             raise
-    if args.feature == 'dictation':
-        probe = 'from faster_whisper import WhisperModel; import sys; WhisperModel(sys.argv[1], device="cpu", compute_type="int8", local_files_only=True)'
-        subprocess.run([str(python), '-c', probe, str(root / 'model')], check=True)
-    else:
-        probe = 'from kokoro_onnx import Kokoro; import sys; Kokoro(sys.argv[1],sys.argv[2])'
-        subprocess.run([str(python), '-c', probe, str(root / 'kokoro-v1.0.int8.onnx'), str(root / 'voices-v1.0.bin')], check=True)
-    print('Local voice is ready. Refresh Phone settings to select it. No app restart performed.')
+    probe = 'from faster_whisper import WhisperModel; import sys; WhisperModel(sys.argv[1], device="cpu", compute_type="int8", local_files_only=True)'
+    subprocess.run([str(python), '-c', probe, str(root / 'model')], check=True)
+    print('Local dictation is ready. Refresh Phone settings to select Local Whisper. No app restart performed.')
 
 if __name__ == '__main__':
     main()
