@@ -71,9 +71,9 @@ process.
 
 ## Dictation is Toxic's listening mode
 
-Status: the Project KO side is built and tested; Toxic does not publish the
-`dictation` tool yet, so the button reports "This Toxic build cannot dictate for
-Project KO yet" until [the handoff](handoff-toxic-dictation.md) lands.
+Status: verified 2026-11-24 against Toxic `23b65df` (`fbbd015 feat(mcp): let a
+partner app drive dictation`). The tool exists and this route answers it; the
+brief that produced it stays in [the handoff](handoff-toxic-dictation.md).
 
 The chat microphone in **Chatspace** is a switch, not a recorder. Pressing it
 calls the service route `POST /api/dictation/listen`, which calls the `dictation`

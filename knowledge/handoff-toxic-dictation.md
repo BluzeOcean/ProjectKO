@@ -1,5 +1,11 @@
 # Handoff: a dictation tool for Toxic
 
+Status: **done**. Toxic shipped `fbbd015 feat(mcp): let a partner app drive
+dictation` (verified 2026-11-24 against `23b65df`); the tool, its partner rules
+and its README entry are in Toxic, and this brief stays as the record of what was
+asked for. The Project KO side was built against it and answers `start`,
+`status` and `stop` end to end.
+
 You are taking over one task in the **Toxic** repo at `V:\04_Projects\Toxic`
 (Tauri 2, Rust, branch `master` at `014f893`, working tree clean). Project KO
 (`V:\06_App\ProjectKO`) is finished on its own side and is waiting for a single
@@ -107,9 +113,9 @@ It touched five files and 146 lines:
   `state.history.first()` for `last`.
 - `MCP_README.md` — the tools table and the tool-result notes.
 
-The full patch as it was written is kept in Project KO at
-`V:\06_App\ProjectKO\.cache\toxic-dictation.patch` until this lands. Read it,
-do not copy it blindly, and write it however fits your code.
+Toxic's own `fbbd015` is the record of what landed. It follows that sketch and
+goes further: while a partner owns the microphone the dictation chord is ignored
+too, so a stray `Ctrl+T` cannot start a second take behind the partner's back.
 
 ## 4. How Project KO calls it
 
