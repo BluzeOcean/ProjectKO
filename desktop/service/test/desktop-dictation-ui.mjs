@@ -67,15 +67,19 @@ try {
   await expect(stop(page)).toBeVisible();
   await stop(page).click();
   await expect(page.locator('.conversation-composer textarea')).toHaveValue(transcript);
-  // Toxic's own shortcut works inside the chat too, without the button.
+  // Toxic's own shortcut works inside the chat too, without the button, and any
+  // key finishes the take the way Toxic's own dictation does.
   const before = actions.filter(action => action === 'start').length;
   await page.locator('.conversation-composer textarea').focus();
   await page.keyboard.press('Control+t');
   await expect(stop(page)).toBeVisible();
   assert.equal(actions.filter(action => action === 'start').length, before + 1);
-  await stop(page).click();
+  await page.keyboard.press('Space');
   await expect(mic(page)).toBeEnabled();
-  assert.ok(!(await page.locator('.conversation-composer textarea').inputValue()).includes('\t'));
+  assert.ok(actions.includes('stop'), 'a key press ends the take');
+  const typed = await page.locator('.conversation-composer textarea').inputValue();
+  assert.ok(!typed.includes('\t'), 'the chord never reaches the draft');
+  assert.ok(!typed.endsWith(' '), 'the key that ends the take is swallowed');
   // A missing Toxic is a prompt to install it, in the composer's status line.
   unavailable = true;
   await mic(page).click();

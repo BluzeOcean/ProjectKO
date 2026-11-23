@@ -43,6 +43,9 @@ export interface DesktopState {
   ready: boolean; connected: boolean; error: string | null; repo: string; contentBase: string
   agents: AgentInfo[]; sessions: ChatSession[]; selectedId: string | null; notices: Notice[]
   settings: Settings; coordinator: string; coordinatorEngine: CoordinatorEngine; voice: { configured: boolean; owner: VoiceOwner | null }
+  // Toxic's speech-to-text chord, read when the app connects, so the chat can
+  // bind the same shortcut its owner already knows.
+  dictationShortcut?: string | null
   operations: Operation[]; preview: Preview | null
   voiceHistory: { id: string; at: string; captions: { role: 'user' | 'assistant'; text: string; start: number; end: number }[] }[]
 }

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api } from './client'
+import { api, useDesktop } from './client'
 import { Icon } from './Icons'
 
 type Phase = 'idle' | 'starting' | 'listening' | 'stopping'
 interface ListenState { listening: boolean; text?: string; last?: { text?: string; at?: number } | null }
 interface Chord { ctrl: boolean; alt: boolean; shift: boolean; meta: boolean; key: string }
+
+const modifiers = new Set(['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'ContextMenu', 'OS'])
 
 // Toxic's shortcut arrives as "Ctrl+T". Parse it rather than assume one chord:
 // the owner can rebind it in Toxic, and the chat follows that setting.
@@ -28,13 +30,11 @@ function parseChord(value: string): Chord | null {
  *
  * Toxic owns the listening: it records with its own device, draws its own HUD
  * and transcribes with Hex. Project KO saves no audio and shows no recorder
- * panel; this button starts and stops Toxic and puts the words in the draft.
- * Starting it wakes Toxic when the app is closed, and asks for an install when
- * it is not on the computer at all.
+ * panel; this control starts and stops Toxic and puts the words in the draft.
  *
- * The keyboard shortcut is Toxic's own setting, read from the service, so the
- * chat honours the same chord while it has focus even when Toxic's global hook
- * is idle or busy.
+ * The shortcut is Toxic's own speech-to-text chord, read when the app connects,
+ * and it works like a native one: it starts listening, and the next key of any
+ * kind finishes the take and inserts the words, as Toxic's own dictation does.
  */
 export default function DictationButton({ connected, disabled, onText, onNote, toggleEvent }: {
   connected: boolean
@@ -44,7 +44,9 @@ export default function DictationButton({ connected, disabled, onText, onNote, t
   toggleEvent?: string
 }) {
   const [phase, setPhase] = useState<Phase>('idle')
-  const [shortcut, setShortcut] = useState('')
+  const [learned, setLearned] = useState('')
+  const state = useDesktop()
+  const shortcut = state.dictationShortcut || learned
   const started = useRef(0), alive = useRef(true), phaseRef = useRef<Phase>('idle')
   const note = useRef(onNote), deliver = useRef(onText)
   useEffect(() => { note.current = onNote; deliver.current = onText })
@@ -52,20 +54,20 @@ export default function DictationButton({ connected, disabled, onText, onNote, t
   useEffect(() => () => { alive.current = false }, [])
   const say = (message: string) => note.current?.(message)
 
-  const listen = useCallback(async () => {
-    const phase = phaseRef.current
-    if (phase === 'starting' || phase === 'stopping') return
-    if (phase === 'listening') {
-      setPhase('stopping')
-      try {
-        const answer = await api<ListenState>('/dictation/listen', { action: 'stop' })
-        const text = (answer.text || '').trim()
-        if (text) deliver.current(text)
-        say(text ? '' : 'Toxic heard nothing. Try again a little closer to the microphone.')
-      } catch (error) { say(error instanceof Error ? error.message : String(error)) }
-      if (alive.current) setPhase('idle')
-      return
-    }
+  const finishTaking = useCallback(async () => {
+    if (phaseRef.current !== 'listening') return
+    setPhase('stopping')
+    try {
+      const answer = await api<ListenState>('/dictation/listen', { action: 'stop' })
+      const text = (answer.text || '').trim()
+      if (text) deliver.current(text)
+      say(text ? '' : 'Toxic heard nothing. Try again a little closer to the microphone.')
+    } catch (error) { say(error instanceof Error ? error.message : String(error)) }
+    if (alive.current) setPhase('idle')
+  }, [])
+
+  const startTaking = useCallback(async () => {
+    if (phaseRef.current !== 'idle') return
     setPhase('starting')
     // Waking Toxic from cold takes a few seconds; say so only when it does.
     const hint = window.setTimeout(() => { if (phaseRef.current === 'starting') say('Starting Toxic…') }, 700)
@@ -78,7 +80,7 @@ export default function DictationButton({ connected, disabled, onText, onNote, t
   }, [])
 
   // Toxic can end a take on its own: Escape cancels, and its maximum recording
-  // length stops it. Watching the state keeps the button honest and recovers
+  // length stops it. Watching the state keeps the control honest and recovers
   // the words that Toxic already transcribed.
   useEffect(() => {
     if (phase !== 'listening') return
@@ -95,47 +97,53 @@ export default function DictationButton({ connected, disabled, onText, onNote, t
     return () => { active = false; window.clearInterval(timer) }
   }, [phase])
 
-  // The dictation chord is Toxic's setting, so ask the service what it is. The
-  // terminal view keeps its own binding: xterm swallows the key there and
-  // dispatches the toggle event, which must not fire twice.
+  // The chord comes from Toxic when the app connects. If the connection predates
+  // this build, ask the service for it once instead.
   useEffect(() => {
-    if (toggleEvent) return
+    if (state.dictationShortcut) return
     let live = true
     void api<{ shortcut?: string | null }>('/dictation')
-      .then(info => { if (live) setShortcut(typeof info.shortcut === 'string' ? info.shortcut : '') })
-      .catch(() => { /* No Toxic, no chord; the button still works. */ })
+      .then(info => { if (live && typeof info.shortcut === 'string') setLearned(info.shortcut) })
+      .catch(() => { /* No Toxic, no chord; the microphone still works. */ })
     return () => { live = false }
-  }, [toggleEvent])
+  }, [state.dictationShortcut])
 
-  // Toxic's global hook normally owns this chord. Honouring it here means the
-  // shortcut still starts listening when the hook is idle, busy or missing, and
-  // it is swallowed so the chat never receives the raw key.
+  // One listener for the whole gesture. While a take is open any key finishes it
+  // and is swallowed, the way Toxic's own dictation behaves; otherwise the
+  // shortcut starts it. The terminal view leaves the chord to xterm, which
+  // already swallows it and dispatches the toggle event.
   useEffect(() => {
-    const chord = parseChord(shortcut)
-    if (!chord) return
+    const chord = toggleEvent ? null : parseChord(shortcut)
     const onKey = (event: KeyboardEvent) => {
       if (event.repeat || event.isComposing || event.keyCode === 229) return
+      if (phaseRef.current === 'listening') {
+        if (modifiers.has(event.key)) return
+        event.preventDefault(); event.stopPropagation()
+        void finishTaking()
+        return
+      }
+      if (!chord || phaseRef.current !== 'idle') return
       if (event.ctrlKey !== chord.ctrl || event.altKey !== chord.alt || event.shiftKey !== chord.shift || event.metaKey !== chord.meta) return
       if ((event.key || '').toLowerCase() !== chord.key) return
       event.preventDefault(); event.stopPropagation()
-      void listen()
+      void startTaking()
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [shortcut, listen])
+  }, [shortcut, toggleEvent, startTaking, finishTaking])
 
   // The terminal's Ctrl+T asks this microphone to toggle.
   useEffect(() => {
     if (!toggleEvent) return
-    const listener = () => { void listen() }
+    const listener = () => { if (phaseRef.current === 'listening') void finishTaking(); else void startTaking() }
     window.addEventListener(toggleEvent, listener)
     return () => window.removeEventListener(toggleEvent, listener)
-  }, [toggleEvent, listen])
+  }, [toggleEvent, startTaking, finishTaking])
 
   const listening = phase === 'listening', busy = phase === 'starting' || phase === 'stopping'
   return <button type="button" className={'dictation-button ' + phase}
     aria-label={listening ? 'Stop dictating' : busy ? 'Toxic is starting' : 'Dictate a message'}
     title={listening ? 'Stop dictating and add the words' : shortcut ? 'Dictate with Toxic · ' + shortcut : 'Dictate with Toxic'}
     disabled={busy || (!listening && (disabled || !connected))}
-    onClick={() => void listen()}><Icon name={listening ? 'stop' : 'mic'} size={16} /></button>
+    onClick={() => { if (listening) void finishTaking(); else void startTaking() }}><Icon name={listening ? 'stop' : 'mic'} size={16} /></button>
 }

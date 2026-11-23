@@ -19,7 +19,7 @@ const listeners = new Set<() => void>()
 const events = new Set<(event: ServiceEvent) => void>()
 let state: DesktopState = {
   ready: false, connected: false, error: null, repo: '', contentBase: '', agents: [], sessions: [], selectedId: null, notices: [],
-  settings: { defaultAgent: 'codex', defaultBypass: false }, coordinator: 'idle', coordinatorEngine: { name: 'codex', label: 'Codex', note: 'Codex subscription' }, voice: { configured: false, owner: null }, operations: [], preview: null, voiceHistory: [],
+  settings: { defaultAgent: 'codex', defaultBypass: false }, dictationShortcut: null, coordinator: 'idle', coordinatorEngine: { name: 'codex', label: 'Codex', note: 'Codex subscription' }, voice: { configured: false, owner: null }, operations: [], preview: null, voiceHistory: [],
 }
 let socket: WebSocket | null = null
 let started = false
