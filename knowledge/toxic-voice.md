@@ -106,24 +106,34 @@ take is never lost silently.
 
 ## The shortcut inside a chat
 
-Toxic's dictation chord does not reach Toxic while a Project KO window is in
-front: it is delivered to the system (a stand-alone hook and a registered hotkey
-both see it) but Toxic drops it there, exactly as Hex did before it. Measured
-2026-11-24 over both windows; [the Hex note](hex-dictation-shortcut.md) records the
-same measurement and the probe that ruled out an input bug on this side.
-
-So a chat sweeps the chord up itself:
+Toxic has a global low-level keyboard hook for the speech-to-text chord
+(`Ctrl+T` here) and it sees the key in whichever app has focus, Project KO
+included. The chat therefore binds the same chord, but it does not insist on
+owning the take:
 
 - `GET /api/dictation` reports Toxic's own setting (`hotkeys.sttChord` from
-  `%APPDATA%\app.toxic.desktop\config.json`, when chord mode is on).
+  `%APPDATA%\app.toxic.desktop\config.json`, when chord mode is on), and the
+  connection's bootstrap carries it too.
 - `DictationButton` matches that chord at the window, swallows it, and calls the
-  same service route as the button. Press it again to stop and insert the words.
+  same service route as the button.
+- When Toxic's hook got there first, Toxic answers `Toxic is already listening`.
+  The service reports that as `{ listening: true, owner: "toxic" }` and the
+  control drops back to idle instead of holding a second state: Toxic ends the
+  take on the next key and types the words into the focused field itself. A stop
+  it did not start would insert the same sentence twice.
+- Only takes Project KO started (`owner: "project-ko"`) hand a transcript back.
 - The terminal view keeps its own binding: xterm swallows the key and dispatches
   `mrmak-toggle-dictation`, so the conversation view's handler is skipped there
   and the chord never fires twice.
 
 A Toxic whose chord is off, or that is set to double-tap Ctrl, reports no chord
 and the chat binds nothing; the button still works.
+
+A Toxic older than `fbbd015` has no `dictation` tool and answers
+`unknown tool: dictation`. The control turns that into one sentence — update
+Toxic — instead of showing the protocol error. Measured 2026-11-24: the release
+binary built at 00:34 advertises only `transcribe` and `speak`, while the source
+at `23b65df` has the tool.
 
 ## Waking Toxic
 

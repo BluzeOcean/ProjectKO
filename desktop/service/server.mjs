@@ -87,6 +87,9 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   // Desktop dictation is a switch: Project KO draws the microphone, Toxic does
   // the listening. Starting it wakes Toxic when it is closed, so one press is
   // enough from a cold machine.
+  // Whether the open take belongs to Project KO. Toxic's own shortcut opens
+  // takes too, and those are Toxic's to finish and type.
+  let pkoTake = false;
   const dictationListen = async action => {
     if (!['start', 'stop', 'cancel', 'status'].includes(action)) throw Object.assign(new Error('Choose start, stop, cancel or status.'), { status: 400 });
     // Chat dictation always runs in Toxic, but "Off" still means off.
@@ -94,7 +97,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
     const client = dictation.toxicClient();
     // A Toxic built before this tool existed answers "unknown tool: dictation".
     const ask = (name, timeout) => client.dictation(name, timeout).catch(error => {
-      if (/unknown tool:?s*dictation/i.test(error?.message || '')) throw Object.assign(new Error('This Toxic build cannot dictate for Project KO yet. Update Toxic, then press the microphone again.'), { status: 503 });
+      if (/unknown tool:?\s*dictation/i.test(error?.message || '')) throw Object.assign(new Error('The Toxic running on this machine has no dictation tool for Project KO. Update Toxic, then press the microphone again.'), { status: 503 });
       throw error;
     });
     if (action === 'status') {
@@ -106,14 +109,30 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
     }
     if (action === 'start') {
       await (mobileOptions?.ensureToxic || ensureToxic)(client);
-      await ask('start', 90_000);
-      return { listening: true };
+      try {
+        await ask('start', 90_000);
+        pkoTake = true;
+        return { listening: true, owner: 'project-ko' };
+      } catch (error) {
+        // Toxic's own shortcut usually reaches the microphone first: the system
+        // hook sees the key before the web view does. That take is already
+        // running and Toxic will type the words itself, so this side backs off
+        // rather than asking twice or reporting a failure.
+        if (/already listening/i.test(error?.message || '')) { pkoTake = false; return { listening: true, owner: 'toxic' }; }
+        throw error;
+      }
     }
     if (action === 'cancel') {
+      pkoTake = false;
       await ask('cancel', 90_000);
       return { listening: false };
     }
-    return { listening: false, text: (await ask('stop')).trim() };
+    const mine = pkoTake;
+    pkoTake = false;
+    const text = (await ask('stop')).trim();
+    // A take Toxic started types the words where the caret is; handing them
+    // back as well would insert the same sentence twice.
+    return { listening: false, text: mine ? text : '', owner: mine ? 'project-ko' : 'toxic' };
   };
   const projectList = () => recentProjects({ repo, sessions: sessions.list(), pinned: settings.pinnedProjects || [] });
   let selectedId = sessions.active().some(item => item.id === settings.selectedId) ? settings.selectedId : sessions.active()[0]?.id || null;

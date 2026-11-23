@@ -4,6 +4,7 @@ import { Icon } from './Icons'
 
 type Phase = 'idle' | 'starting' | 'listening' | 'stopping'
 interface ListenState { listening: boolean; text?: string; last?: { text?: string; at?: number } | null }
+interface StartState { listening?: boolean; owner?: 'project-ko' | 'toxic' }
 interface Chord { ctrl: boolean; alt: boolean; shift: boolean; meta: boolean; key: string }
 
 const modifiers = new Set(['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'ContextMenu', 'OS'])
@@ -72,7 +73,12 @@ export default function DictationButton({ connected, disabled, onText, onNote, t
     // Waking Toxic from cold takes a few seconds; say so only when it does.
     const hint = window.setTimeout(() => { if (phaseRef.current === 'starting') say('Starting Toxic…') }, 700)
     try {
-      await api('/dictation/listen', { action: 'start' })
+      const answer = await api<StartState>('/dictation/listen', { action: 'start' })
+      // Toxic's own shortcut opened the microphone a moment before this call.
+      // That take belongs to Toxic: it finishes on the next key and types the
+      // words itself, so this control stays out of the way instead of holding a
+      // second, competing state.
+      if (answer?.owner === 'toxic') { if (alive.current) setPhase('idle'); return }
       started.current = Date.now()
       if (alive.current) { setPhase('listening'); say('') }
     } catch (error) { say(error instanceof Error ? error.message : String(error)); if (alive.current) setPhase('idle') }

@@ -27,6 +27,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1000, height: 800 } });
   const actions = [];
   let unavailable = false;
+  let toxicOwned = false;
   // The service route is the only thing Project KO talks to: the button never
   // opens a microphone of its own.
   // The button reads Toxic's dictation chord from the service so the chat can
@@ -36,7 +37,8 @@ try {
     const action = route.request().postDataJSON()?.action;
     actions.push(action);
     if (action === 'start' && unavailable) return route.fulfill({ status: 503, json: { error: 'Toxic is not installed on this computer. Install Toxic, then press the microphone again.' } });
-    if (action === 'start') return route.fulfill({ json: { listening: true } });
+    if (action === 'start' && toxicOwned) return route.fulfill({ json: { listening: true, owner: 'toxic' } });
+    if (action === 'start') return route.fulfill({ json: { listening: true, owner: 'project-ko' } });
     if (action === 'stop') return route.fulfill({ json: { listening: false, text: transcript } });
     if (action === 'status') return route.fulfill({ json: { listening: true, last: null } });
     return route.fulfill({ json: { listening: false } });
@@ -80,6 +82,19 @@ try {
   const typed = await page.locator('.conversation-composer textarea').inputValue();
   assert.ok(!typed.includes('\t'), 'the chord never reaches the draft');
   assert.ok(!typed.endsWith(' '), 'the key that ends the take is swallowed');
+  // Sometimes Toxic's own shortcut opens the microphone a moment before this
+  // control asks. That take is Toxic's: it finishes on the next key and types
+  // the words itself, so here the control must not pretend to own it and must
+  // not send a stop that would hand the same sentence back twice.
+  unavailable = false;
+  toxicOwned = true;
+  const stopsBefore = actions.filter(action => action === 'stop').length;
+  await page.locator('.conversation-composer textarea').focus();
+  await page.keyboard.press('Control+t');
+  await expect(mic(page)).toBeEnabled();
+  await expect(stop(page)).toHaveCount(0);
+  assert.equal(actions.filter(action => action === 'stop').length, stopsBefore, 'a take Toxic owns is left alone');
+  toxicOwned = false;
   // A missing Toxic is a prompt to install it, in the composer's status line.
   unavailable = true;
   await mic(page).click();

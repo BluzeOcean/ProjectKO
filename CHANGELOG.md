@@ -3,6 +3,7 @@
 ## Unreleased
 
 - The chat microphone is a switch for **Toxic**, not a recorder. Project KO keeps no audio and draws no recording panel: the button starts Toxic's own listening mode, Toxic shows its HUD and transcribes with Hex, and the words land in the composer or the terminal when it stops. Starting it wakes Toxic when the app is closed, and asks you to install Toxic when the app is missing.
+- A chat also answers Toxic's own speech-to-text chord, but it no longer fights Toxic for the take: Toxic's global hook usually opens the microphone first, Project KO reads that as Toxic's take and stays out of its way, so the microphone is never started twice and a sentence is never inserted twice. A Toxic older than its dictation tool now says so in one sentence instead of showing `unknown tool: dictation`.
 - Speech to text and read aloud now go through the **Toxic** app over its loopback MCP server. Dictation defaults to **Toxic · local** (Hex inside Toxic); recordings are converted to 16 kHz mono WAV before transcription. Optional Local Whisper and the paid providers remain selectable.
 - Read aloud uses Toxic's Pocket TTS. The Chatterbox installer, its GPU worker, the unused Kokoro worker and the voice-clip management UI were removed; the voice and language are chosen in Toxic.
 - Removed the direct Hex bridge and its Ctrl+T hand-off. The chat's Ctrl+T now toggles the same microphone, and Toxic keeps the machine-wide double-tap Ctrl shortcut.
