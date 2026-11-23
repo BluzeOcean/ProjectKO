@@ -64,7 +64,7 @@ export default function Sidebar({
         <PkoLogo size={54} animated={activeId !== 'my-dream-game'} />
         <div className="brand-text">
           <MakText height={26} animated={activeId !== 'my-dream-game'} />
-          <span className="brand-sub">workspace</span>
+          <span className="brand-sub">vaultspace</span>
         </div>
         <button
           className="sidebar-collapse"

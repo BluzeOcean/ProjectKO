@@ -1,16 +1,16 @@
-# Make Workspace yours
+# Make Vaultspace yours
 
 ## Change in Settings
 
 Use the right-hand Settings rail for the available display and behavior controls.
-Under **Appearance**, choose **Dark**, **Light** or **System** for Workspace.
+Under **Appearance**, choose **Dark**, **Light** or **System** for Vaultspace.
 Dark is the default. Light uses dark text on white; System follows your device.
 The choice applies immediately to navigation, file previews, Markdown and
 standard reports, and is saved for the next launch. It also syncs between
-Workspace windows connected to the same local service. Browser Preview has a
+Vaultspace windows connected to the same local service. Browser Preview has a
 Settings button in the top bar and saves the choice in that browser.
 
-Terminal text settings, tab colors and tab groups live with Chats. A group is a
+Terminal text settings, tab colors and tab groups live with Chatspace. A group is a
 short English label chosen in New chat or from a tab's right-click menu, and
 renamed or deleted from its chip's right-click menu; History's group filters
 delete a group that only closed chats still carry. Collapsed groups are
@@ -32,8 +32,8 @@ Some voice changes take effect on the next voice connection.
 | “Remember how I want reports written.” | `context/preferences.md` |
 | “Save this reliable modeling method.” | A focused note in `knowledge/` |
 | “Make this repeatable.” | A workflow in `processes/` and, if useful, a project skill |
-| “Add a report tab to this project.” | The existing card's steps in `workspace/workspace.json` |
-| “Create a new research task.” | A dated Workspace folder and one registry entry |
+| “Add a report tab to this project.” | The existing board's steps in `workspace/workspace.json` |
+| “Create a new research task.” | A dated board folder and one registry entry |
 | “Change fonts, colors or spacing everywhere.” | Shared application and report styles |
 | “Add another main folder.” | Files rail defaults in the application source |
 
@@ -43,9 +43,9 @@ verify the result, and prepare the update. Ask before restarting the desktop app
 ## A small project structure
 
 Keep one pinned project hub with Brief, Plan and Assets tabs. Put lasting source
-files under `projects/<project>/`; keep the pages you read under its Workspace
-folder. Add one card for an independent task, not one card per generated image.
-Related iterations become tabs in the same card. Mark superseded work archived.
+files under `projects/<project>/`; keep the pages you read under its Vault
+folder. Add one board for an independent task, not one board per generated image.
+Related iterations become tabs in the same board. Mark superseded work archived.
 
 ## Optional providers
 
@@ -64,7 +64,7 @@ starting a paid job. Higgsfield uses its own CLI setup and account.
 
 Use the shared report style, readable headings and consistent card spacing.
 Standard HTML reports use `data-mak-report="document"` on the root element and
-follow the reader's Workspace theme. Use shared color tokens so custom sections
+follow the reader's Vaultspace theme. Use shared color tokens so custom sections
 remain readable. For an intentionally independent design, such as a game demo,
 add `data-mak-theme="custom"` to the root element to keep its original palette.
 Images, videos and canvases keep their colors in every theme.
@@ -73,5 +73,5 @@ Every report image must open at full size and offer a download. Keep wide tables
 scrollable inside the report, and test tabs at narrow window widths. Preserve
 the selected document surface while a tab loads so switching does not flash.
 
-The Workspace authoring skill contains the maintained rules. If you change the
+The `workspace-authoring` skill contains the maintained rules. If you change the
 design system, update that skill and the shared implementation together.

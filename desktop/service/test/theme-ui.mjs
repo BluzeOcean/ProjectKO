@@ -62,7 +62,7 @@ try {
   await report().getByRole('textbox', { name: 'Keep my draft' }).fill('Keep this edit');
   await report().locator('body').evaluate(() => scrollTo(0, 400));
   await page.getByRole('button', { name: 'Toggle settings', exact: true }).click();
-  await page.getByLabel('Workspace theme', { exact: true }).selectOption('light');
+  await page.getByLabel('Vaultspace theme', { exact: true }).selectOption('light');
   await expect(page.locator('html')).toHaveAttribute('data-workspace-theme', 'light');
   await expect(second.locator('html')).toHaveAttribute('data-workspace-theme', 'light');
   await expect(second.locator('.content')).toHaveCSS('background-color', 'rgb(247, 248, 250)');
@@ -88,13 +88,13 @@ try {
   const terminalElement = await chats.locator('.terminal-host .xterm').elementHandle();
   await chats.getByRole('button', { name: 'Chat appearance', exact: true }).click();
   for (const theme of themes) {
-    await page.getByLabel('Workspace theme', { exact: true }).selectOption(theme.id);
+    await page.getByLabel('Vaultspace theme', { exact: true }).selectOption(theme.id);
     await expect(page.locator('html')).toHaveAttribute('data-workspace-theme', theme.id);
     await expect(second.locator('html')).toHaveAttribute('data-workspace-theme', theme.id);
     await expect(report().locator('html')).toHaveAttribute('data-mrmak-theme', theme.id);
     assert.equal(await report().locator('html').evaluate(() => window.mountId), mountId);
     assert.equal(await report().getByRole('textbox', { name: 'Keep my draft' }).inputValue(), 'Keep this edit');
-    await chats.getByLabel('Chat theme', { exact: true }).selectOption(theme.id);
+    await chats.getByLabel('Chatspace theme', { exact: true }).selectOption(theme.id);
     await expect(chats.locator('html')).toHaveAttribute('data-workspace-theme', theme.id);
     assert.equal(await terminalElement.evaluate(node => node.isConnected), true);
     await readable(chats.locator('.chat-group-chip .chip-name'), theme.bg, `${theme.id} group label`);
@@ -114,7 +114,7 @@ try {
   await draft.fill('Keep my chat draft');
   await chats.getByRole('button', { name: 'Chat appearance', exact: true }).click();
   for (const theme of themes) {
-    await chats.getByLabel('Chat theme', { exact: true }).selectOption(theme.id);
+    await chats.getByLabel('Chatspace theme', { exact: true }).selectOption(theme.id);
     await expect(chats.locator('html')).toHaveAttribute('data-workspace-theme', theme.id);
     await expect(draft).toHaveValue('Keep my chat draft');
     await readable(chats.locator('.agent-label'), theme.bg, `${theme.id} provider label`);
@@ -130,8 +130,8 @@ try {
     await chats.getByRole('button', { name: 'Chat appearance', exact: true }).click();
   }
   assert.deepEqual(writes, [], 'Theme changes must not send input to the CLI');
-  await chats.getByLabel('Chat theme', { exact: true }).selectOption('nordic-polar-night');
-  await page.getByLabel('Workspace theme', { exact: true }).selectOption('light');
+  await chats.getByLabel('Chatspace theme', { exact: true }).selectOption('nordic-polar-night');
+  await page.getByLabel('Vaultspace theme', { exact: true }).selectOption('light');
   await expect(chats.locator('html')).toHaveAttribute('data-workspace-theme', 'nordic-polar-night');
   await page.getByRole('button', { name: 'Close settings', exact: true }).click();
   await page.getByRole('tab', { name: 'Notes', exact: true }).click();
@@ -145,12 +145,12 @@ try {
   assert.equal(await page.locator('.markdown-editor').evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(255, 255, 255)');
   await page.getByRole('button', { name: 'Close file preview', exact: true }).click();
   await page.getByRole('button', { name: 'Toggle settings', exact: true }).click();
-  await page.getByLabel('Workspace theme', { exact: true }).selectOption('system');
+  await page.getByLabel('Vaultspace theme', { exact: true }).selectOption('system');
   await expect(page.locator('html')).toHaveAttribute('data-workspace-theme', 'dark');
   await page.bringToFront();
   await page.emulateMedia({ colorScheme: 'light' });
   await expect(page.locator('html')).toHaveAttribute('data-workspace-theme', 'light');
-  await page.getByLabel('Workspace theme', { exact: true }).selectOption('light');
+  await page.getByLabel('Vaultspace theme', { exact: true }).selectOption('light');
   await page.getByRole('button', { name: 'Close settings', exact: true }).click();
   await page.getByRole('tab', { name: 'Custom game', exact: true }).click();
   await report().getByRole('heading', { name: 'Custom game' }).waitFor();

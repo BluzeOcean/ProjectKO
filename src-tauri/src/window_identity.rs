@@ -62,6 +62,37 @@ pub fn set_window(window: &tauri::WebviewWindow) -> Result<(), Box<dyn std::erro
     Ok(())
 }
 
+// Everything this app owns is either one of the two product windows or an
+// implementation detail (the single-instance event target, tao's thread
+// window). Details become tool windows, which Windows keeps out of the Alt+Tab
+// switcher and the taskbar, so the app can only ever offer two entries.
+struct HelperScan { pid: u32 }
+
+unsafe extern "system" fn mark_helper(hwnd: *mut std::ffi::c_void, lparam: isize) -> i32 {
+    let scan = &*(lparam as *const HelperScan);
+    let mut owner = 0u32;
+    GetWindowThreadProcessId(hwnd, &mut owner);
+    if owner != scan.pid { return 1; }
+    let mut class = [0u16; 96];
+    let len = GetClassNameW(hwnd, class.as_mut_ptr(), class.len() as i32);
+    if len <= 0 { return 1; }
+    let name = String::from_utf16_lossy(&class[..len as usize]);
+    if matches!(name.as_str(), "Tauri Window" | "IME" | "MSCTFIME UI") { return 1; }
+    let style = GetWindowLongW(hwnd, GWL_EXSTYLE) as u32;
+    if style & WS_EX_TOOLWINDOW == 0 {
+        SetWindowLongW(hwnd, GWL_EXSTYLE, (style | WS_EX_TOOLWINDOW) as i32);
+        SetWindowPos(hwnd, std::ptr::null_mut(), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
+    1
+}
+
+pub fn hide_helper_windows(_app: &tauri::AppHandle) {
+    unsafe {
+        let scan = HelperScan { pid: std::process::id() };
+        EnumWindows(Some(mark_helper), &scan as *const _ as isize);
+    }
+}
+
 pub fn refresh_shortcuts(app: &tauri::AppHandle) {
     let mut shortcuts = Vec::new();
     if let Ok(desktop) = app.path().desktop_dir() { shortcuts.push(desktop.join("Project KO.lnk")); }

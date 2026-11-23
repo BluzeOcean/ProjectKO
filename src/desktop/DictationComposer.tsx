@@ -1,15 +1,15 @@
-import { useRef } from 'react'
-import { api, transcribeDesktopAudio } from './client'
-import VoiceInput from '../mobile/VoiceInput'
-import { useDictation } from './useDictation'
+import { useState } from 'react'
+import { api } from './client'
+import DictationButton from './DictationButton'
 
+// The terminal view of a chat keeps Ctrl+T: Toxic does the listening, and the
+// words are typed into the CLI without a second recorder in the browser.
 export default function DictationComposer({ id, connected, running }: { id: string; connected: boolean; running: boolean }) {
-  const voiceIds = useRef(new Set<string>())
-  const { info: config } = useDictation()
-  return <div className="terminal-dictation"><VoiceInput id={`desktop-chat-${id}`} connected={connected} disabled={!running} config={config} toggleEvent="mrmak-toggle-dictation" transcriber={transcribeDesktopAudio} onBusy={() => {}} onText={async (text, recordingId) => {
-    if (voiceIds.current.has(recordingId)) return
-    await api(`/sessions/${id}/input`, { text, paste: true, submit: false })
-    voiceIds.current.add(recordingId)
-    window.dispatchEvent(new CustomEvent('mrmak-dictation-inserted', { detail: { id } }))
-  }} /></div>
+  const [note, setNote] = useState('')
+  return <div className="terminal-dictation"><DictationButton connected={connected} disabled={!running} toggleEvent="mrmak-toggle-dictation" onNote={setNote} onText={text => {
+    setNote('')
+    api(`/sessions/${id}/input`, { text, paste: true, submit: false })
+      .then(() => window.dispatchEvent(new CustomEvent('mrmak-dictation-inserted', { detail: { id } })))
+      .catch(error => setNote(error instanceof Error ? error.message : String(error)))
+  }} />{note && <span className="terminal-dictation-note" role="status">{note}</span>}</div>
 }

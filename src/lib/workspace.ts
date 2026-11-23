@@ -9,12 +9,12 @@ export type EntityPatch = Partial<Pick<WorkspaceEntity, 'status' | 'category' | 
 
 export async function updateWorkspaceEntity(id: string, patch: EntityPatch) {
   const route = `/workspace/entities/${encodeURIComponent(id)}`
-  if (!isDesktop) throw new Error('Open the desktop app to edit Workspace cards.')
+  if (!isDesktop) throw new Error('Open the desktop app to edit boards.')
   await api(route, patch, 'PATCH')
   window.dispatchEvent(new Event('mrmak-workspace-changed'))
 }
 
-/** Removes a board from the Workspace. The service takes the board's folder
+/** Removes a board from the Vault. The service takes the board's folder
  *  to the system trash with it. */
 export async function deleteWorkspaceEntity(id: string) {
   const route = `/workspace/entities/${encodeURIComponent(id)}`

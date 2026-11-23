@@ -221,9 +221,9 @@ try {
   await phone.getByRole('button', { name: 'Request connection' }).click();
   await phone.getByRole('heading', { name: 'Confirm on your computer' }).waitFor();
   await desktop.getByRole('button', { name: 'Connect phone', exact: true }).click();
-  await phone.getByRole('heading', { name: 'Chats', exact: true }).waitFor();
+  await phone.getByRole('heading', { name: 'Chatspace', exact: true }).waitFor();
   await desktop.getByText('Connected now', { exact: true }).waitFor();
-  assert.deepEqual(await phone.locator('.mobile-header button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label'))), ['Reconnect', 'New chat', 'History', 'Chats', 'Results', 'Phone settings']);
+  assert.deepEqual(await phone.locator('.mobile-header button').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label'))), ['Reconnect', 'New chat', 'History', 'Chatspace', 'Results', 'Phone settings']);
   await phone.getByRole('button', { name: 'History', exact: true }).click();
   await phone.getByRole('heading', { name: 'History', exact: true }).waitFor();
   assert.deepEqual(await phone.locator('.mobile-main-nav button.active').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label'))), ['History']);
@@ -232,8 +232,8 @@ try {
   // The phone's back gesture returns to the screen above instead of leaving the app. Esc is the
   // desktop's close request, the same one Android's back gesture sends.
   await phone.keyboard.press('Escape');
-  await phone.getByRole('heading', { name: 'Chats', exact: true }).waitFor();
-  assert.deepEqual(await phone.locator('.mobile-main-nav button.active').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label'))), ['Chats']);
+  await phone.getByRole('heading', { name: 'Chatspace', exact: true }).waitFor();
+  assert.deepEqual(await phone.locator('.mobile-main-nav button.active').evaluateAll(buttons => buttons.map(button => button.getAttribute('aria-label'))), ['Chatspace']);
   assert.equal(await phone.locator('.mobile-connection-logo').evaluate(dot => getComputedStyle(dot).animationDuration), '3.6s');
   await phone.emulateMedia({ reducedMotion: 'reduce' });
   assert.equal(await phone.locator('.mobile-connection-logo').evaluate(dot => getComputedStyle(dot).animationName), 'none');
@@ -242,7 +242,7 @@ try {
   await phone.getByRole('button', { name: 'Reconnect', exact: true }).click();
   await phone.waitForFunction(() => !document.querySelector('.mobile-offline'));
   assert.equal(await phone.evaluate(() => window.testDocumentIdentity), documentIdentity, 'Reconnect never reloads the document');
-  await phone.getByRole('heading', { name: 'Chats', exact: true }).waitFor();
+  await phone.getByRole('heading', { name: 'Chatspace', exact: true }).waitFor();
   for (const width of [320, 360, 393, 430, 768]) {
     await phone.setViewportSize({ width, height: 844 });
     const layout = await phone.evaluate(() => {
@@ -499,8 +499,8 @@ try {
   const selectedBeforeWorkspace = await phone.locator('.mobile-header h1').innerText();
   await stableDraft.fill('A draft retained across mobile views.');
   await phone.getByRole('button', { name: 'Results', exact: true }).click();
-  await phone.getByRole('heading', { name: 'Workspace', exact: true }).waitFor();
-  await phone.getByRole('button', { name: 'Chats', exact: true }).click();
+  await phone.getByRole('heading', { name: 'Vaultspace', exact: true }).waitFor();
+  await phone.getByRole('button', { name: 'Chatspace', exact: true }).click();
   await phone.getByRole('heading', { name: selectedBeforeWorkspace, exact: true }).waitFor();
   await expect(stableDraft).toHaveValue('A draft retained across mobile views.');
   await expect.poll(() => phone.locator('.mobile-messages').evaluate(box => box.scrollTop)).toBe(0);
@@ -711,7 +711,7 @@ try {
   for (const width of [320, 390, 768]) {
     await phone.setViewportSize({ width, height: 844 });
     for (let round = 0; round < 4; round++) {
-      await phone.getByRole('button', { name: 'Chats', exact: true }).click();
+      await phone.getByRole('button', { name: 'Chatspace', exact: true }).click();
       await phone.getByRole('button', { name: 'Results', exact: true }).click();
       await phone.getByLabel('Select report page', { exact: true }).tap();
       const menuBox = await phone.locator('.mobile-page-menu').boundingBox();
@@ -740,7 +740,7 @@ try {
   const htmlIdentity = await frame.locator('body').evaluate(() => { window.testReportIdentity = Math.random(); location.hash = '#chapter-two'; window.scrollTo(0,500); document.getElementById('nested-scroll').scrollTop = 180; return window.testReportIdentity; });
   const reportKey = 'mrmak.mobile.report.mobile-report.0';
   await expect.poll(() => phone.evaluate(key => JSON.parse(localStorage.getItem(key) || '{}').top, reportKey)).toBe(500);
-  await phone.getByRole('button', { name: 'Chats', exact: true }).click();
+  await phone.getByRole('button', { name: 'Chatspace', exact: true }).click();
   await expect(stableDraft).toBeVisible();
   await phone.getByRole('button', { name: 'Results', exact: true }).click();
   await frame.getByRole('heading', { name: 'Report ready' }).waitFor();
@@ -773,7 +773,7 @@ try {
   const originalSubmit = service.mobile.submit;
   service.mobile.submit = function (device, id, data) { if (id === ids[1]) contextPayloads.push(structuredClone(data)); return originalSubmit.call(this, device, id, data); };
   await loseNextReply(phone, contextRoute);
-  await phone.getByRole('button', { name: 'Chats', exact: true }).click();
+  await phone.getByRole('button', { name: 'Chatspace', exact: true }).click();
   await input.fill('Adjust this section when I ask.');
   const contextBefore = writes.length;
   await phone.getByRole('button', { name: 'Send', exact: true }).click();
@@ -786,7 +786,7 @@ try {
   await phone.getByRole('button', { name: 'Results', exact: true }).click();
   await phone.getByLabel('Select report page', { exact: true }).tap();
   await phone.getByRole('button', { name: 'Plan', exact: true }).tap(); await phone.getByRole('heading', { name: 'Mobile plan' }).waitFor();
-  await phone.getByRole('button', { name: 'Chats', exact: true }).click(); await reloadPhone();
+  await phone.getByRole('button', { name: 'Chatspace', exact: true }).click(); await reloadPhone();
   await phone.getByRole('button', { name: 'Retry', exact: true }).waitFor();
   await restoreReplies(phone, contextRoute);
   await phone.getByRole('button', { name: 'Retry', exact: true }).click(); await phone.getByText('Delivered to terminal', { exact: true }).waitFor();
@@ -844,7 +844,7 @@ try {
   await phone.getByLabel('Select report page', { exact: true }).tap();
   await phone.getByRole('button', { name: 'Plan', exact: true }).tap(); await phone.getByRole('heading', { name: 'Mobile plan' }).waitFor();
   await phone.locator('.mobile-report-markdown').evaluate(node => { node.scrollTop = 350; node.dispatchEvent(new Event('scroll')); });
-  await phone.getByRole('button', { name: 'Chats', exact: true }).click();
+  await phone.getByRole('button', { name: 'Chatspace', exact: true }).click();
   await expect(stableDraft).toBeVisible();
   await phone.getByRole('button', { name: 'Results', exact: true }).click();
   await phone.getByRole('heading', { name: 'Mobile plan' }).waitFor();
@@ -868,23 +868,23 @@ try {
   await frame.getByRole('heading', { name: 'Report ready' }).waitFor();
   await phone.getByLabel('Select report page', { exact: true }).tap();
   await phone.getByRole('button', { name: 'Close report', exact: true }).tap();
-  await phone.getByRole('heading', { name: 'Workspace', exact: true }).waitFor();
+  await phone.getByRole('heading', { name: 'Vaultspace', exact: true }).waitFor();
   const listRefresh = phone.waitForRequest(request => request.url().endsWith('/mobile/api/reports'));
   await pullDown(phone.locator('.mobile-results-list'), 200);
   await listRefresh;
   await expect(phone.locator('.mobile-pull-refresh')).toHaveCount(0);
   // Back steps up one screen at a time: report, Workspace list, then the chat list.
   await phone.getByRole('button', { name: /A useful report/ }).click(); await frame.getByRole('heading', { name: 'Report ready' }).waitFor();
-  await phone.keyboard.press('Escape'); await phone.getByRole('heading', { name: 'Workspace', exact: true }).waitFor();
+  await phone.keyboard.press('Escape'); await phone.getByRole('heading', { name: 'Vaultspace', exact: true }).waitFor();
   // A back request that reaches the focused report frame steps back the same way.
   await phone.getByRole('button', { name: /A useful report/ }).click(); await frame.getByRole('heading', { name: 'Report ready' }).waitFor();
-  await frame.locator('body').press('Escape'); await phone.getByRole('heading', { name: 'Workspace', exact: true }).waitFor();
-  await phone.waitForTimeout(300); assert.equal(await phone.getByRole('heading', { name: 'Workspace', exact: true }).isVisible(), true, 'One back request steps back once');
-  await phone.keyboard.press('Escape'); await phone.getByRole('heading', { name: 'Chats', exact: true }).waitFor();
-  await phone.getByRole('button', { name: 'Chats', exact: true }).click(); await input.waitFor();
-  await phone.keyboard.press('Escape'); await phone.getByRole('heading', { name: 'Chats', exact: true }).waitFor();
+  await frame.locator('body').press('Escape'); await phone.getByRole('heading', { name: 'Vaultspace', exact: true }).waitFor();
+  await phone.waitForTimeout(300); assert.equal(await phone.getByRole('heading', { name: 'Vaultspace', exact: true }).isVisible(), true, 'One back request steps back once');
+  await phone.keyboard.press('Escape'); await phone.getByRole('heading', { name: 'Chatspace', exact: true }).waitFor();
+  await phone.getByRole('button', { name: 'Chatspace', exact: true }).click(); await input.waitFor();
+  await phone.keyboard.press('Escape'); await phone.getByRole('heading', { name: 'Chatspace', exact: true }).waitFor();
   assert.equal(await phone.getByRole('button', { name: 'Back to chats' }).count(), 0);
-  await phone.getByRole('button', { name: 'Chats', exact: true }).click();
+  await phone.getByRole('button', { name: 'Chatspace', exact: true }).click();
   await input.fill('There is no selected Workspace now.');
   const clearedBefore = writes.length;
   await phone.getByRole('button', { name: 'Send', exact: true }).click(); await phone.getByText('Delivered to terminal', { exact: true }).waitFor();
@@ -906,7 +906,7 @@ try {
   assert.equal(writes[legacyBefore].data, '\x1b[200~An older pending draft.\x1b[201~');
   // Close the selected desktop chat from the phone, then resume it from History.
   // Only the launch is stubbed; closing/persistence/selection use the real service.
-  await phone.getByRole('button', { name: 'Chats', exact: true }).click();
+  await phone.getByRole('button', { name: 'Chatspace', exact: true }).click();
   await phone.getByRole('button', { name: 'Back to chats', exact: true }).click();
   await phone.getByRole('button', { name: /Game animations/ }).click();
   await desktop.getByRole('button', { name: 'Close mobile access', exact: true }).click();
@@ -917,7 +917,7 @@ try {
   assert.equal(service.sessions.get(ids[0]).open, true);
   phone.once('dialog', dialog => { assert.match(dialog.message(), /History/); void dialog.accept(); });
   await phone.getByRole('button', { name: 'Close chat', exact: true }).click();
-  await phone.getByRole('heading', { name: 'Chats', exact: true }).waitFor();
+  await phone.getByRole('heading', { name: 'Chatspace', exact: true }).waitFor();
   assert.equal(await phone.getByRole('button', { name: /Game animations/ }).count(), 0);
   await desktop.locator(`[data-chat-tab="${ids[0]}"]`).waitFor({ state: 'detached' });
   const afterClose = await (await fetch(`${service.origin}/api/bootstrap`, { headers: { Authorization: `Bearer ${service.token}` } })).json();

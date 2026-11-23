@@ -80,13 +80,29 @@ export default function WorkspaceSettings({ onClose }: { onClose: () => void }) 
     try { await api('/settings', patch) } catch (error) { setError(String(error instanceof Error ? error.message : error)) }
     finally { setBusy(false) }
   }
-  // The boards are the app's workspaces: one folder each, created here.
+  // The boards are the Vault: one folder each, created here. It can sit on
+  // another drive, so the path comes from settings rather than the repository.
   const separator = repo.includes('\\') ? '\\' : '/'
-  const workspaceDir = repo.replace(/[\\/]+$/, '') + separator + 'workspace'
+  const workspaceDir = settings.vaultPath || repo.replace(/[\\/]+$/, '') + separator + 'workspace'
   const showWorkspaceDir = async () => {
     setError('')
     try { await api('/reveal', { path: workspaceDir }) }
     catch (failure) { setError(String(failure instanceof Error ? failure.message : failure)) }
+  }
+  // The Vault can be pointed at another folder, on another drive. The service
+  // only changes the setting: existing boards stay where they are.
+  // The draft is only what has been typed: the panel still reads the folder in
+  // force, so a rejected path does not pretend the Vault moved.
+  const [vaultDraft, setVaultDraft] = useState<string | null>(null)
+  const [vaultError, setVaultError] = useState('')
+  const vaultValue = vaultDraft ?? workspaceDir
+  // The action only appears once the path differs: the field itself is the value.
+  const vaultDirty = vaultValue.trim() !== workspaceDir
+  const pickVaultFolder = async () => {
+    setBusy(true); setVaultError('')
+    try { await api<Settings>('/settings', { vaultPath: vaultValue.trim() }); setVaultDraft(null) }
+    catch (failure) { setVaultError(String(failure instanceof Error ? failure.message : failure)) }
+    finally { setBusy(false) }
   }
   const winKey = async (enabled: boolean) => {
     setBusy(true); setError('')
@@ -109,23 +125,25 @@ export default function WorkspaceSettings({ onClose }: { onClose: () => void }) 
 
   const sections: { id: string; label: string; summary: string; rows: SettingsRow[]; foot?: ReactNode }[] = [
     {
-      id: 'workspace-directory', label: 'Workspace Directory', summary: pathTail(workspaceDir, 2),
+      id: 'workspace-directory', label: 'Vault', summary: pathTail(workspaceDir, 2),
       rows: [{
-        key: 'workspace-directory', name: 'Workspace directory', search: 'folder path boards home',
+        key: 'workspace-directory', name: 'Vault folder', search: 'folder path boards home',
         node: <>
-          <div className="settings-row">
-            <span className="settings-path settings-path-lead" title={workspaceDir}>{workspaceDir}</span>
-            <button type="button" className="settings-row-action" title={'Open in ' + fileManager} aria-label={'Open the workspaces folder in ' + fileManager} onClick={() => void showWorkspaceDir()}><Icon name="external" size={12} /></button>
+          <div className="settings-field">
+            <input className="settings-field-input" aria-label="Vault folder" title={workspaceDir} value={vaultValue} spellCheck={false} onChange={event => setVaultDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void pickVaultFolder() } }} />
+            {vaultDirty && <button type="button" className="settings-field-use" disabled={busy || !vaultValue.trim()} onClick={() => void pickVaultFolder()}>Use folder</button>}
+            <button type="button" className="settings-field-open" title={'Open in ' + fileManager} aria-label={'Open the vault folder in ' + fileManager} onClick={() => void showWorkspaceDir()}><Icon name="external" size={13} /></button>
           </div>
-          <p className="settings-row-help">Every board is a folder here, and a new board is created here. Open it to copy files in or out.</p>
+          {vaultError && <p className="settings-field-error" role="alert">{vaultError}</p>}
+          <p className="settings-row-help">Where the boards live: one folder each, and a new board is created here. It can be any folder on any drive; changing it does not move the boards already here.</p>
         </>,
       }],
     },
     {
       id: 'appearance', label: 'Appearance', summary: themeName(settings.workspaceTheme) + ' · ' + themeName(settings.chatTheme),
       rows: [
-        { key: 'workspace-theme', name: 'Workspace theme', search: 'palette colour color', node: <ThemeRow target="workspace" /> },
-        { key: 'chat-theme', name: 'Chat theme', search: 'palette colour color', node: <ThemeRow target="chat" /> },
+        { key: 'workspace-theme', name: 'Vaultspace theme', search: 'palette colour color', node: <ThemeRow target="workspace" /> },
+        { key: 'chat-theme', name: 'Chatspace theme', search: 'palette colour color', node: <ThemeRow target="chat" /> },
       ],
     },
     {

@@ -110,7 +110,7 @@ test('closing immediately captures a native ID before terminating the process; a
   }
 });
 
-test('working folders reached through a symlink match the resolved folder the CLIs record', { skip: process.platform === 'win32' && 'needs POSIX symlinks' }, async () => {
+test('workspaces reached through a symlink match the resolved folder the CLIs record', { skip: process.platform === 'win32' && 'needs POSIX symlinks' }, async () => {
   const home = await fixture();
   // os.tmpdir() is itself under the /var -> /private/var link on macOS.
   const name = 'Görsel project';

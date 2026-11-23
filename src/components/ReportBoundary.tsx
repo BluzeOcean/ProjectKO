@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from 'react'
 
-// A failed lazy import or renderer must not unmount the Workspace navigation.
+// A failed lazy import or renderer must not unmount the Vaultspace navigation.
 export default class ReportBoundary extends Component<{
   children: ReactNode
   onHome: () => void
@@ -15,10 +15,10 @@ export default class ReportBoundary extends Component<{
     if (!this.state.error) return this.props.children
     return <div className="report-error" role="alert">
       <strong>This report could not be opened.</strong>
-      <p>Reload to try again, or return to your Workspace. Your project files have not changed.</p>
+      <p>Reload to try again, or return to Vaultspace. Your project files have not changed.</p>
       <div className="report-error-actions">
         <button onClick={() => window.location.reload()}>Reload page</button>
-        <button onClick={this.props.onHome}>Back to Workspace</button>
+        <button onClick={this.props.onHome}>Back to Vaultspace</button>
       </div>
       <details><summary>Error details</summary><pre>{this.state.error.message || String(this.state.error)}</pre></details>
     </div>

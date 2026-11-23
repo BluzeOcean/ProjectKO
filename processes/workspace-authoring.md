@@ -1,4 +1,4 @@
-# Authoring a Workspace card
+# Authoring a board
 
 1. Read the current registry and reuse the relevant project or task card.
 2. Create a dated folder only for a new independent task. Keep sources and

@@ -1,15 +1,14 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { api, pickFiles, reportError, speakDesktopText, transcribeDesktopAudio, uploadImage, useDesktop } from './client'
+import { api, pickFiles, reportError, speakDesktopText, uploadImage, useDesktop } from './client'
 import type { ChatSession, SystemEventsMode } from './types'
 import SystemEvent, { type SystemEventData } from '../mobile/SystemEvent'
 import BackgroundWork, { type BackgroundCommand, type WorkingAgent } from '../mobile/BackgroundWork'
 import { AgentLogo, Icon } from './Icons'
-import { useDictation } from './useDictation'
 import ConversationImages from '../mobile/ConversationImages'
 import type { ConversationImage } from '../mobile/ImageViewer'
-import VoiceInput from '../mobile/VoiceInput'
+import DictationButton from './DictationButton'
 import { visibleUserMessage } from '../mobile/workspace-context'
 import { spokenText, useReadAloud } from '../mobile/useReadAloud'
 import { lastReplyIndex } from '../mobile/replySpeech'
@@ -65,9 +64,8 @@ export default function Conversation({ session, connected, agentLabel, openTermi
   const scroller = useRef<HTMLDivElement>(null), area = useRef<HTMLDivElement>(null), input = useRef<HTMLTextAreaElement>(null)
   const follow = useRef(true), [showJump, setShowJump] = useState(false)
   const [draft, setDraft] = useState(() => savedDraft(session.id))
-  const [sending, setSending] = useState(false), [uploading, setUploading] = useState(false), [voiceBusy, setVoiceBusy] = useState(false), [status, setStatus] = useState('')
+  const [sending, setSending] = useState(false), [uploading, setUploading] = useState(false), [status, setStatus] = useState('')
   const [dragging, setDragging] = useState(false)
-  const { info: dictation } = useDictation()
   const running = session.status === 'running', working = running && session.activity === 'working'
   const reload = useRef<() => Promise<void>>(async () => {})
   // Speaking speed and voice are app settings: the player stretches each
@@ -190,7 +188,7 @@ export default function Conversation({ session, connected, agentLabel, openTermi
 
   async function send() {
     const text = draft.text.trimEnd()
-    if (sending || uploading || voiceBusy || !connected || !running || (!text.trim() && !draft.paths.length)) return
+    if (sending || uploading || !connected || !running || (!text.trim() && !draft.paths.length)) return
     setSending(true); setStatus('')
     try {
       await api(`/sessions/${session.id}/send`, { text, paths: draft.paths })
@@ -306,12 +304,11 @@ export default function Conversation({ session, connected, agentLabel, openTermi
             api('/settings', { dshPermissionMode: mode }).catch(() => { /* The chat already changed; the next one falls back. */ })
           }} />}
         <span className="conversation-status" role="status">{status || (uploading ? 'Saving images…' : session.agent === 'dsh' ? '' : 'Enter to send · Shift+Enter for a new line')}</span>
-        {/* Project KO records here and asks Toxic to transcribe; Toxic's own
-            global shortcut stays the one double-tap Ctrl, so this button does
-            not add a second listener for the same gesture. */}
-        <div className="terminal-dictation"><VoiceInput id={`desktop-conversation-${session.id}`} connected={connected} disabled={sending} config={dictation} transcriber={transcribeDesktopAudio} onBusy={setVoiceBusy} onText={text => setDraft(current => ({ ...current, text: current.text ? `${current.text}${/\s$/.test(current.text) ? '' : '\n'}${text}` : text }))} /></div>
+        {/* Toxic listens, not Project KO: no recorder panel, no second hotkey.
+            The button only starts and stops Toxic's own listening mode. */}
+        <DictationButton connected={connected} disabled={sending} onNote={setStatus} onText={text => setDraft(current => ({ ...current, text: current.text ? `${current.text}${/\s$/.test(current.text) ? '' : '\n'}${text}` : text }))} />
         {working && <button type="button" className="conversation-stop" onClick={stop} title="Interrupt the agent (Esc)"><Icon name="stop" size={14} />Stop</button>}
-        <button type="submit" className="conversation-send" aria-label={sending ? 'Sending…' : 'Send'} title="Send" disabled={!connected || !running || sending || uploading || voiceBusy || (!draft.text.trim() && !draft.paths.length)}><Icon name="send" size={16} /></button>
+        <button type="submit" className="conversation-send" aria-label={sending ? 'Sending…' : 'Send'} title="Send" disabled={!connected || !running || sending || uploading || (!draft.text.trim() && !draft.paths.length)}><Icon name="send" size={16} /></button>
       </div>
     </form>
   </div>

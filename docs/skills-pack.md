@@ -7,7 +7,7 @@ desktop app. Sign in to at least one of those CLIs first.
 Read `docs/skills.md` for the complete index. The six new game workflows cover
 VFX, UI, animation integration, levels, audio and native visual review. Existing
 skills cover planning, handoffs, image/3D production, Blender animation, video
-inspection, Workspace reports and local dictation setup.
+inspection, Vault reports and local dictation setup.
 
 ## Add selected skills to a project
 
@@ -17,7 +17,7 @@ inspection, Workspace reports and local dictation setup.
    `.claude/skills/` for Claude. Use both if you use both agents.
 3. Merge the required support files listed below. Preserve your own instructions,
    edited skills and report styles. Do not replace `AGENTS.md`, `CLAUDE.md`,
-   context, MCP configuration or existing Workspace cards.
+   context, MCP configuration or existing boards.
 4. Start a fresh CLI session in the project if newly added skills are not listed.
    Ask the agent to read the chosen `SKILL.md` and inspect your actual project
    before making changes.

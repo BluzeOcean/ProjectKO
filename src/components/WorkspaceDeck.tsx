@@ -13,18 +13,18 @@ import NewCard from './NewCard'
 import '../styles/workspace-deck.css'
 
 /**
- * The Workspace overview: the boards as a gallery of thumbnails, with the
+ * The Vaultspace overview: the boards as a gallery of thumbnails, with the
  * facts of the board you are pointing at in a thin column beside it.
  *
  * The board's own page is a different screen and is not built here.
  */
 
-/** A board's genre is its category. It is what the filter groups by and
+/** A board's tag is its category. It is what the filter groups by and
  *  what the tag block sets. */
 const genre = (entity: WorkspaceEntity) => entity.category || 'other'
 
 interface WorkspaceDeckProps {
-  /** Every board the Workspace holds right now, pinned first. */
+  /** Every board the Vault holds right now, pinned first. */
   boards: WorkspaceEntity[]
   /** The genres those boards carry, in the order they first appear. */
   genres: string[]
@@ -78,13 +78,13 @@ export default function WorkspaceDeck({
     <div className="deck">
       <header className="deck-banner">
         <div className="deck-banner-text">
-          <h1 className="deck-banner-title">Workspace</h1>
+          <h1 className="deck-banner-title">Vaultspace</h1>
         </div>
         <div className="deck-banner-right">
           {isDesktop ? <NewCard label="+ New board" className="deck-new-board" /> : <BrowserSettings />}
         </div>
         <div className="deck-banner-bottom">
-          <div className="deck-genres" role="group" aria-label="Filter boards by genre">
+          <div className="deck-genres" role="group" aria-label="Filter boards by tag">
             <button
               type="button"
               className={`deck-genre${activeGenre === 'all' ? ' active' : ''}`}
@@ -144,7 +144,7 @@ export default function WorkspaceDeck({
 
           {!shown.length && (
             <p className="deck-empty">
-              {boards.length ? 'No board carries this genre.' : 'Nothing here yet. New work will appear as boards, sir.'}
+              {boards.length ? 'No board carries this tag.' : 'Nothing here yet. New work will appear as boards, sir.'}
             </p>
           )}
 

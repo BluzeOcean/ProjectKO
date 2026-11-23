@@ -1,6 +1,6 @@
-# Editable Workspace cards
+# Editable cards
 
-Use **+ New board** in the desktop Workspace to make a Gallery, Workbench or
+Use **+ New board** in the desktop Vaultspace to make a Gallery, Workbench or
 Pinboard board. All three views use the same content format. You can change the
 view without losing the entries, images or prompts.
 
@@ -35,7 +35,7 @@ local recovery copies and are excluded from Git. Use Git for longer history.
 ## The Pinboard
 
 The Pinboard is the third view: a wall of the board's entries as thumbnails,
-one picture chosen, and a workspace where the picture is the point.
+one picture chosen, and a view where the picture is the point.
 
 ![The Pinboard: the picture large with the pen over it, the feedback beside it and the hand-off at the bottom right](assets/editable-cards-pinboard.png)
 
@@ -68,7 +68,7 @@ the choice.
 
 ## Where the content lives
 
-![The same content in the Workbench view with the light Workspace theme](assets/editable-cards-workbench.png)
+![The same content in the Workbench view with the light Vaultspace theme](assets/editable-cards-workbench.png)
 
 ```text
 workspace/
@@ -89,7 +89,7 @@ usual file tools. No database, cloud account, extra model call or plugin is need
 Existing custom HTML, Markdown and 3D comparison tabs remain supported.
 
 Phone access and browser preview can **read** editable cards. Editing and image
-import are available in the authenticated desktop Workspace. Images can be
+import are available in the authenticated desktop Vaultspace. Images can be
 opened at full size and downloaded from the preview.
 
 ## Agent authoring format

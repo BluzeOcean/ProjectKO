@@ -67,7 +67,7 @@ const byName = (a, b) => path.basename(a).toLowerCase().localeCompare(path.basen
 
 export async function findCodexChat(session, { full = false, now = Date.now(), home = codexHome() } = {}) {
   const folders = full ? [path.join(home, 'sessions')] : recentFolders(home, [now, session.startedAt, Date.parse(session.createdAt)]);
-  // Codex records getcwd(). Chats saved before working folders were stored
+  // Codex records getcwd(). Chats saved before workspaces were stored
   // resolved may still hold a symlinked or differently normalised spelling.
   const cwds = [session.cwd];
   if (process.platform !== 'win32' && typeof session.cwd === 'string') cwds.push(await realpath(session.cwd).catch(() => session.cwd));

@@ -10,16 +10,21 @@ const safePath = value => typeof value === 'string' && value.length < 1200 && !v
 const fail = (message, status = 403) => { throw Object.assign(new Error(message), { status }); };
 
 export class MobileReports {
-  constructor(gateway) { this.gateway = gateway; this.grants = new Map(); }
-  async registry() { return (await readJson(path.join(this.gateway.repo, 'workspace/workspace.json'), { entities: [] })).entities || []; }
+  constructor(gateway) {
+    this.gateway = gateway;
+    // A caller that only knows the repository still means its own `workspace/`.
+    this.vault = gateway.vault || { repo: gateway.repo, root: path.join(gateway.repo, 'workspace'), file: path.join(gateway.repo, 'workspace', 'workspace.json') };
+    this.grants = new Map();
+  }
+  async registry() { return (await readJson(this.vault.file, { entities: [] })).entities || []; }
   async list() {
     return (await this.registry()).filter(item => item.status !== 'archived' && safePath(item.folder)).map(item => ({ id: item.id, title: item.title, category: item.category, updated: item.updated || item.created, steps: (item.steps || []).map((step, index) => ({ name: step.name, index })) })).filter(item => item.steps.length).sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
   }
   async open(device, { entityId, step = 0 }) {
     const entity = (await this.registry()).find(item => item.id === entityId);
     if (!entity || !safePath(entity.folder) || !Number.isInteger(step) || !safePath(entity.steps?.[step]?.path)) fail('This report is unavailable on mobile.', 404);
-    const root = await realpath(path.join(this.gateway.repo, 'workspace', entity.folder));
-    if (!within(await realpath(this.gateway.repo), root)) fail('This report folder is outside the Workspace repository.');
+    const root = await realpath(path.join(this.vault.root, entity.folder));
+    if (!within(this.vault.root, root)) fail('This report folder is outside the Vault.');
     const relative = entity.steps[step].path, { file, info } = await realFile(root, relative);
     if (!info.isFile()) fail('Report not found', 404);
     const extension = path.extname(file).toLowerCase();
@@ -46,7 +51,7 @@ export class MobileReports {
     if (!safePath(relative)) fail('Invalid report path');
     let root, filePath;
     if (relative.startsWith(grant.prefix)) { root = grant.root; filePath = relative.slice(grant.prefix.length); }
-    else if (/^workspace\/_shared\/(report\.(css|js)|examples\.css)$/.test(relative)) { root = path.join(gateway.repo, 'workspace/_shared'); filePath = relative.slice('workspace/_shared/'.length); }
+    else if (/^(?:.*\/)?_shared\/(report\.(?:css|js)|examples\.css)$/.test(relative)) { root = path.join(gateway.repo, 'workspace/_shared'); filePath = relative.replace(/^.*_shared\//, ''); }
     else fail('This file is outside the selected report.');
     if (!extensions.has(path.extname(filePath).toLowerCase())) fail('This file type is unavailable in report previews.');
     const { file, info } = await realFile(root, filePath);

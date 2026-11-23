@@ -1,8 +1,8 @@
-# Workspace overview (the board deck)
+# Vaultspace overview (the board deck)
 
 Status: approved by the owner on 2026-11-20; shipped in `6066179`.
 
-The Workspace overview is a gallery of board thumbnails with a thin facts column
+The Vaultspace overview is a gallery of board thumbnails with a thin facts column
 beside it, not a grid of cards. It was designed as a mock in `lab/` (Mock 1, page
 one) and then ported into the app. Page two of that mock — the board detail page —
 is still a mock and was deliberately left out: a deck tile opens the app's existing
@@ -26,7 +26,7 @@ The grid it replaced is gone: `src/components/HomeGrid.tsx` and
 
 ## The shape of the page
 
-- **Banner** — "Workspace" in Fraunces, a pink **+ New board** on the right, and the
+- **Banner** — "Vaultspace" in Fraunces, a pink **+ New board** on the right, and the
   genre filter group on the banner's bottom row.
 - **Stage** — a "Boards" label with a count, the thumbnail gallery
   (`repeat(auto-fill, 92px)`; 92px is the narrowest cell that still breaks every
@@ -57,7 +57,7 @@ not be seen — the owner said so and the mock was redrawn.
 **One confirmation, and it names the board.** The dialog gives the board's name,
 its step count (or the names of its steps when it has three or fewer) and its
 folder, then says the files in that folder go with it. Cancel changes nothing.
-There is no undo in the Workspace: the board cannot be brought back.
+There is no undo in Vaultspace: the board cannot be brought back.
 
 **What the service does.** `DELETE /api/workspace/entities/:id` takes the entity
 out of `workspace/workspace.json` (`Workspace.remove` in

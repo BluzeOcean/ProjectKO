@@ -12,7 +12,7 @@ import { Icon } from './Icons'
 
 const permissionChoices: { id: PermissionMode; label: string; hint: string }[] = [
   { id: 'read-only', label: 'Read Only', hint: 'Reads files and runs nothing that writes' },
-  { id: 'workspace-write', label: 'Workspace Write', hint: 'Writes inside the working folder; wider work asks first' },
+  { id: 'workspace-write', label: 'Workspace Write', hint: 'Writes inside the workspace; wider work asks first' },
   { id: 'danger-full-access', label: 'Full access', hint: 'No sandbox and no approval prompts' },
 ]
 

@@ -1,4 +1,4 @@
-# Update an existing Workspace
+# Update an existing installation
 
 The application and your project folder are separate. The Windows installer
 (or, on macOS and Linux, a fresh build) updates the app and its local service.
@@ -48,7 +48,7 @@ from the disk image over the one in Applications and choose Replace.
 macOS asks again for permissions such as microphone access after each rebuild,
 because the ad-hoc signature changes. See [macOS notes](macos.md).
 
-Version 0.6.4 puts project, working folder, group, reasoning effort and native
+Version 0.6.4 puts project, workspace, group, reasoning effort and native
 resume in **New chat > Advanced**, closed by default. Your existing defaults
 are preserved. Conversation avoids reparsing unchanged messages while you type,
 and Japanese IME confirmation in macOS/WebKit no longer sends a message or
@@ -76,7 +76,7 @@ causes an automatic cloud request. New mobile media previews, report-position
 restore and desktop dictation are included alongside the macOS port.
 
 Version 0.5.0 adds optional [mobile access](mobile-access.md). After updating,
-use the phone button in Chats to connect your own devices through Tailscale.
+use the phone button in Chatspace to connect your own devices through Tailscale.
 Existing pairings survive application updates. Mobile dictation uses an
 OpenRouter or OpenAI transcription key on the computer; typed messages use
 your existing CLI account. Long links and paths stay within mobile chat cards.
@@ -92,7 +92,7 @@ Version 0.4.18 adds Linux packaging and project/knowledge-provider foundations.
 Windows keeps its native terminal behavior and existing account sign-ins.
 No external integration is connected automatically.
 
-Version 0.4.17 added **Settings > Appearance > Workspace theme**. Choose Light
+Version 0.4.17 added **Settings > Appearance > Vault theme**. Choose Light
 for dark text on white, or System to follow your device. Dark remains the default.
 Standard HTML reports follow this preference. For a report with an independent
 visual design, merge its updated source or add `data-mak-theme="custom"` to the

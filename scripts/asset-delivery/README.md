@@ -1,10 +1,10 @@
 # Asset delivery evidence
 
-This optional, offline tool records the local input and output files for a Workspace card. Existing cards work without a manifest. The manifest proves only that the selected files still have the recorded size and SHA-256 hash. Visual approval and engine readiness require their own review.
+This optional, offline tool records the local input and output files for a board. Existing cards work without a manifest. The manifest proves only that the selected files still have the recorded size and SHA-256 hash. Visual approval and engine readiness require their own review.
 
 ## Build and verify
 
-Use Node.js 22 or newer from the repository root. Edit [examples/plan.json](examples/plan.json) to list files under the root you select. Each file has a relative forward-slash `path`, a short `role`, and `kind` (`input` or `output`). At least one output is required. `card_id` identifies the Workspace card, while `step` is a short milestone name chosen for this delivery.
+Use Node.js 22 or newer from the repository root. Edit [examples/plan.json](examples/plan.json) to list files under the root you select. Each file has a relative forward-slash `path`, a short `role`, and `kind` (`input` or `output`). At least one output is required. `card_id` identifies the board, while `step` is a short milestone name chosen for this delivery.
 
 ```sh
 node scripts/asset-delivery/manifest.mjs build --plan scripts/asset-delivery/examples/plan.json --root . --out delivery.json

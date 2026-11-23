@@ -16,8 +16,9 @@ const fail = (message, status = 400) => { throw Object.assign(new Error(message)
  * it travels with the board and stays readable.
  */
 export class BoardAgents {
-  constructor({ repo, cards, sessions, settings, focus = () => {} }) {
-    Object.assign(this, { repo, cards, sessions, settings, focus });
+  constructor({ repo, vault, cards, sessions, settings, focus = () => {} }) {
+    Object.assign(this, { cards, sessions, settings, focus });
+    this.vault = vault || { repo, root: path.join(repo, 'workspace'), file: path.join(repo, 'workspace', 'workspace.json') };
   }
 
   async entity(entityId) {
@@ -77,7 +78,7 @@ export class BoardAgents {
     const session = await this.sessions.create({
       agent: settings.defaultAgent || 'codex',
       name: entity.title,
-      cwd: path.join(this.repo, 'workspace', entity.folder),
+      cwd: path.join(this.vault.root, entity.folder),
       effort: settings.defaultEffort,
       bypass: settings.defaultBypass === true,
     });

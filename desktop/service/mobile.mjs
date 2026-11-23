@@ -28,8 +28,8 @@ const DEVICE_IDLE_TTL = 30 * 24 * 60 * 60 * 1000;
 const send = (ws, value) => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(value)); };
 
 export class MobileGateway {
-  constructor({ repo, uiDir, stateDir, sessions, attachments, settings, changed, closeChat, transport = new TailscaleTransport(), dictation = new MobileDictation(repo), chooseDictation, readAloud = new ToxicReadAloud(), transcripts = new ConversationTranscripts() }) {
-    Object.assign(this, { repo, uiDir, sessions, attachments, settings, changed, closeChat, transport });
+  constructor({ repo, vault = { repo, root: path.join(repo, 'workspace'), file: path.join(repo, 'workspace', 'workspace.json') }, uiDir, stateDir, sessions, attachments, settings, changed, closeChat, transport = new TailscaleTransport(), dictation = new MobileDictation(repo), chooseDictation, readAloud = new ToxicReadAloud(), transcripts = new ConversationTranscripts() }) {
+    Object.assign(this, { repo, vault, uiDir, sessions, attachments, settings, changed, closeChat, transport });
     this.file = path.join(stateDir, 'mobile-access.json');
     this.saves = Promise.resolve(); this.pending = new Map(); this.clients = new Set(); this.inflight = new Map(); this.uploads = new Map(); this.queues = new Map();
     this.transcripts = transcripts; this.conversationMedia = new ConversationMedia(); this.active = false; this.error = ''; this.origin = ''; this.rates = new Map();

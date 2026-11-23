@@ -20,7 +20,7 @@ if (isMacOS) Object.assign(mime, { '.mov': 'video/quicktime', '.heic': 'image/he
 const textExtensions = new Set(['.txt', '.md', '.json', '.js', '.mjs', '.ts', '.tsx', '.jsx', '.css', '.py', '.rs', '.toml', '.yaml', '.yml', '.csv', '.log', '.xml', '.ini', '.ps1', '.cmd', '.sh', '.gitignore']);
 const secretPart = value => value.startsWith('.') || /^(node_modules|target|oauth_.*\.json|.*_secret.*\.json|tokens?\.json|auth\.json)$/i.test(value);
 const SCOPED_GRANT_MS = 12 * 60 * 60 * 1000;
-const sharedReportFile = relative => /^workspace\/_shared\/(report\.(css|js)|examples\.css)$/.test(relative);
+const sharedReportFile = relative => /^(?:.*\/)?_shared\/(report\.(?:css|js)|examples\.css)$/.test(relative);
 const encodePath = relative => relative.split('/').map(encodeURIComponent).join('/');
 
 export async function serveFile(request, response, file, info, headers = {}) {
@@ -44,7 +44,7 @@ export async function serveFile(request, response, file, info, headers = {}) {
 }
 
 export class Files {
-  constructor(repo) { this.repo = repo; this.grants = new Map(); this.scoped = new Map(); this.sites = new Map(); this.repoGrant = this.grant(repo); this.writes = Promise.resolve(); }
+  constructor(repo, vault = { root: path.join(repo, 'workspace') }) { this.repo = repo; this.vault = vault; this.grants = new Map(); this.scoped = new Map(); this.sites = new Map(); this.repoGrant = this.grant(repo); this.writes = Promise.resolve(); }
   scopedGrant(root, relative) {
     const folder = relative.split('/').slice(0, -1);
     // A report can use its own card and the shared chrome, never the whole repository.
@@ -95,8 +95,12 @@ export class Files {
   }
   url(file) {
     const absolute = path.resolve(file);
-    const relative = path.relative(this.repo, absolute);
-    const root = within(this.repo, absolute) && !relative.split(/[\\/]/).some(secretPart) ? this.repo : path.dirname(absolute);
+    const clean = candidate => !path.relative(candidate, absolute).split(/[\\/]/).some(secretPart);
+    // A board in the Vault gets the Vault as its root, so the shared report
+    // chrome beside it resolves the same way it does inside the repository.
+    const root = within(this.repo, absolute) && clean(this.repo) ? this.repo
+      : within(this.vault.root, absolute) && clean(this.vault.root) ? this.vault.root
+      : path.dirname(absolute);
     return `${this.origin}/view/${this.grant(root)}/${path.relative(root, absolute).split(path.sep).map(encodeURIComponent).join('/')}`;
   }
   async list(folder = this.repo, mode = 'main', query = '') {
@@ -176,8 +180,8 @@ export class Files {
         fileRoot = path.resolve(root, scoped.prefix); filePath = relative.slice(scoped.prefix.length);
       } else if (!folder && relative === scoped.prefix) {
         fileRoot = path.dirname(path.resolve(root, scoped.prefix)); filePath = path.basename(scoped.prefix);
-      } else if (root === this.repo && sharedReportFile(relative)) {
-        fileRoot = path.join(root, 'workspace/_shared'); filePath = relative.slice('workspace/_shared/'.length);
+      } else if (sharedReportFile(relative)) {
+        fileRoot = path.join(this.repo, 'workspace/_shared'); filePath = relative.replace(/^.*_shared\//, '');
       } else throw Object.assign(new Error('This file is outside the selected report.'), { status: 403 });
     }
     // Resolve links against the allowed folder, not the repository root.
@@ -202,7 +206,7 @@ export class Files {
     }
     if (document) {
       const base = `${url.origin}/view/${match[1]}/`, own = base + encodePath(scoped.prefix);
-      const shared = root === this.repo ? ` ${base}workspace/_shared/` : '';
+      const shared = root === this.repo || root === this.vault.root ? ` ${base}workspace/_shared/ ${base}_shared/` : '';
       const origin = html ? ' allow-same-origin' : '';
       headers['Content-Security-Policy'] = `sandbox allow-scripts${origin} allow-forms allow-popups allow-downloads; default-src 'none'; script-src 'unsafe-inline' ${own}${shared}; style-src 'unsafe-inline' ${own}${shared}; img-src data: blob: ${own}${shared}; media-src blob: ${own}; font-src data: ${own}${shared}; connect-src ${own}; frame-src ${own}; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors ${this.uiOrigin} ${url.origin}`;
       // A port can return in a later session for another folder; start each folder with empty storage.

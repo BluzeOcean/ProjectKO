@@ -87,7 +87,7 @@ try {
 
   // Browser-only Settings use local storage and style embedded reports too.
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-  await page.getByLabel('Workspace theme', { exact: true }).selectOption('light');
+  await page.getByLabel('Vault theme', { exact: true }).selectOption('light');
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   assert.equal(await page.locator('html').getAttribute('data-workspace-theme'), 'light');
   assert.equal(await page.locator('.mak-markdown h1').evaluate(node => getComputedStyle(node).color), 'rgb(17, 21, 33)');

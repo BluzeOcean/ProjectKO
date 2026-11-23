@@ -1,8 +1,8 @@
-# Welcome to Mr. Mak Workspace
+# Welcome to Project KO
 
-Work with your agents in Chats. Read, compare and keep their results in Workspace.
-Your project folders connect the two. You can use the Workspace without reading
-source code or moving every conversation into one agent's app.
+Work with your agents in Chatspace. Read, compare and keep their results in Vaultspace.
+Your workspaces connect the two. You can use Vaultspace without reading source
+code or moving every conversation into one agent's app.
 
 ## Accounts and API keys
 
@@ -14,46 +14,52 @@ requires an OpenAI API key; optional generation services use their own accounts.
 OpenCode is available in **+ > OpenCode** after installation. Configure its models
 and providers in OpenCode; their authentication and billing rules apply. History
 and pinned tabs keep its native conversation ID. Keep one conversation per tab.
-OpenCode connections are managed in its own MCP controls, separately from the
-Workspace MCP inspector.
+OpenCode connections are managed in its own MCP controls, separately from
+Project KO's MCP inspector.
 
 ## Start with one task
 
-1. In Chats, press **+**, choose your agent and its working folder, and give the
+1. In Chatspace, press **+**, choose your agent and its workspace, and give the
    conversation a clear English name.
 2. Describe the result you want. Drop reference files or folders into the chat
-   when they help: "Compare these concepts and put the findings in a Workspace card."
+   when they help: "Compare these concepts and put the findings in a board."
 3. Let the agent work. A glowing logo marks activity; an unread completion marker
    helps you find a result you have not reviewed.
-4. Open the Workspace card, compare its tabs and images, then give your decision
+4. Open the board, compare its tabs and images, then give your decision
    back to the chat: "Use version B. Keep its shape and change only the material."
-5. Keep related revisions as tabs in the same card. Archive the card when you no
-   longer need it in the active list. Archiving a card preserves its files.
+5. Keep related revisions as tabs in the same board. Archive the board when you no
+   longer need it in the active list. Archiving a board preserves its files.
 
-## Two windows, one project
+## Two windows, one repository
 
-**Chats** contains real terminal sessions for your chosen CLI agents. **Workspace**
-contains the cards, reports, previews and files they produce. You can minimize
-either window independently while continuing in a browser, Blender or another app.
+**Chatspace** contains real terminal sessions for your chosen CLI agents.
+**Vaultspace** contains the boards, reports, previews and files they produce. You
+can minimize either window independently while continuing in a browser, Blender
+or another app.
+
+The Vault is a folder of your own, so it can live on another drive or in a synced
+folder. Settings > **Vault folder** names it, and a new board is created there.
+Changing it points the app at another folder; the boards already on disk stay where
+they are.
 
 Drag chat tabs to reorder them. Pinned tabs stay ahead of ordinary tabs, and can
-be reordered among themselves. Group tabs by project: choose a group in New chat,
+be reordered among themselves. Group tabs by workspace: choose a group in New chat,
 or right-click a tab to add it to an existing group or start a new one. Grouped
 tabs sit together behind a header chip; click the chip to collapse or expand the
 group, drag it to move the whole group, right-click it to rename or delete the
 group or choose its color, and drop a tab on a chip to move it there. History's
 group filters find an old group and delete it; the chats stay. A tab's right-click menu also holds rename, pin, tab color and close. Use History to find and pin
-conversations you want to return to. Closing a tab and deleting a project's files are separate
+conversations you want to return to. Closing a tab and deleting a board's files are separate
 actions. Conversation recovery also depends on the selected CLI's native history.
 
 ## Edit a card yourself
 
-Choose **+ New board** in Workspace to start a Gallery or Workbench page. Use
+Choose **+ New board** in Vaultspace to start a Gallery or Workbench page. Use
 **Edit** to add images, Markdown notes, saved prompts, source links and statuses.
 Drag the order chips, or use the arrow buttons, to reorder entries. Switch
 between Gallery and Workbench without losing the content.
 
-**Preview** shows your draft; **Save** writes it to the project's `.card.json`
+**Preview** shows your draft; **Save** writes it to the board's `.card.json`
 file. An agent can work with that same file. If it changes while you are editing,
 the editor keeps your draft and asks you to review the latest version. Save
 before closing the app. Previous saved contents are kept locally in
@@ -61,7 +67,7 @@ before closing the app. Previous saved contents are kept locally in
 
 The starter's My Dream Game and Creative MCP Connections include editable example
 tabs. Existing custom HTML pages keep their layouts. Phone access can read the
-new cards; their editor is available in the desktop Workspace.
+new cards; their editor is available in the desktop Vaultspace.
 
 ## Files and previews
 
@@ -80,7 +86,7 @@ opens with **Preview** and **Edit** modes. Save only when you want to change the
 | `processes/` | Repeatable workflows and checklists |
 | `.claude/skills/`, `.agents/skills/` | Project-local skills for the agents |
 
-Dropping files or folders into Chats inserts their paths. Pasting a clipboard
+Dropping files or folders into Chatspace inserts their paths. Pasting a clipboard
 image saves it in `inbox/` and inserts that path. This gives the agent an input;
 it does not automatically publish or upload it to a service.
 
@@ -143,12 +149,12 @@ key turns it into a Meta key.
 A CLI permission setting affects what that agent can do on your machine; choose
 it deliberately for your workflow.
 
-## Keep the Workspace understandable
+## Keep the Vault understandable
 
-- Use clear English card titles and chat names.
-- Keep Workspace information in English by default. Another language is used
+- Use clear English board titles and chat names.
+- Keep Vault information in English by default. Another language is used
   only when explicitly requested for that particular output.
-- Put revisions of the same task in one card, with readable tab names.
+- Put revisions of the same task in one board, with readable tab names.
 - Make images openable and downloadable. Keep editable sources beside results.
 - Record what was checked and what still needs a decision. Do not label a
   technically completed generation as visually approved without reviewing it.

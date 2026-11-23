@@ -59,12 +59,12 @@ Development: `./node_modules/.bin/tauri dev -- -- --repo "$PWD"`. Without `--rep
 | Login-shell `PATH` and settings for the service | Finder/Dock launches can find installed CLIs; after two seconds an unresponsive shell falls back to the inherited PATH plus common CLI folders. The same bounded probe also imports `CODEX_HOME`, `CLAUDE_CONFIG_DIR`, `OPENCODE_CONFIG(_DIR)`, `XDG_CONFIG/DATA/STATE/CACHE_HOME` and `LANG`/`LC_ALL`/`LC_CTYPE`, only when the launch environment lacks them; `LANG` defaults to `en_US.UTF-8` when no locale is set. API keys are not imported (`launchctl setenv` is the manual override) |
 | `mac_key.rs`: ⌃⌥⌘Space recall shortcut (`tauri-plugin-global-shortcut`), shared with the Win-key setting | macOS counterpart of the Win-key recall. ⌃⌥Space was dropped because it is macOS's "Select next source in Input menu" |
 | `RunEvent::Reopen` brings both windows back | Closing a window only hides it; a Dock click must restore it |
-| Native file drag-out enabled on macOS (`drag` crate) | Drag files from Workspace to Finder and other apps |
+| Native file drag-out enabled on macOS (`drag` crate) | Drag files from Vaultspace to Finder and other apps |
 | Show in Finder uses `open -R` (also for packages such as `.app` folders) | Finder selects the file instead of only opening its folder, and a package is selected rather than launched |
 | Move to Trash uses `NSFileManager` | No Finder Automation prompt and no sound; Finder may not offer **Put Back** for these items |
 | Downloads from the webview are saved to `~/Downloads` and selected in Finder | WKWebView otherwise cancels them |
 | Menu-bar icon is a template image | It follows the light or dark menu bar |
-| **Chats** menu with Chat 1–9 on ⌘1–⌘9 | The WKWebView never receives ⌘+number, so tab switching lives in the menu (as in other Mac apps) |
+| **Chatspace** menu with Chat 1–9 on ⌘1–⌘9 | The WKWebView never receives ⌘+number, so tab switching lives in the menu (as in other Mac apps) |
 
 ### Packaging (`desktop/prepare.mjs`, `scripts/fix-pty-permissions.mjs`)
 - Homebrew's `node` is a launcher linked to `libnode.dylib` and cannot run from the bundle
@@ -111,9 +111,9 @@ Development: `./node_modules/.bin/tauri dev -- -- --repo "$PWD"`. Without `--rep
 | Service tests | `npm run desktop:test` | 90 pass, 0 fail, 2 skipped |
 | Rust tests | `cargo test` in `src-tauri` | 2/2 |
 | Template checks | `npm run test:template` | 9/9 |
-| Native checks | `scripts/check-macos-native.sh` (Accessibility; needs the screen ~30 s) | Chats menu, ⌘1/⌘2, menu switch, ⌘⇧W, Dock reopen, recall shortcut: all pass with the earlier ⌃⌥Space; the script now sends ⌃⌥⌘Space and has not been rerun |
+| Native checks | `scripts/check-macos-native.sh` (Accessibility; needs the screen ~30 s) | Chatspace menu, ⌘1/⌘2, menu switch, ⌘⇧W, Dock reopen, recall shortcut: all pass with the earlier ⌃⌥Space; the script now sends ⌃⌥⌘Space and has not been rerun |
 | Manual, on the release app | — | macOS labels; dropping a path with an apostrophe + `ls`; Show in Finder (folder and file); drag a file out to Finder; drag a file into a terminal |
-| Manual, still to run after the 0.5.1 fixes | — | On a Retina display, drop a file onto the top ~100 px of a Chats terminal (it must attach) and onto the History or voice overlay (it must not); press Download in the image lightbox (the file must appear in `~/Downloads`); Show in Finder on a `.app` folder selects it instead of launching it |
+| Manual, still to run after the 0.5.1 fixes | — | On a Retina display, drop a file onto the top ~100 px of a Chatspace terminal (it must attach) and onto the History or voice overlay (it must not); press Download in the image lightbox (the file must appear in `~/Downloads`); Show in Finder on a `.app` folder selects it instead of launching it |
 
 The UI tests now run in the engine of each platform's app (WebView2/Edge on Windows,
 WKWebView/WebKit on macOS); `MRMAK_TEST_BROWSER=chromium|webkit|msedge` overrides.

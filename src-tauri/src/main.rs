@@ -141,16 +141,23 @@ impl std::fmt::Display for Cancelled {
 }
 impl std::error::Error for Cancelled {}
 
+/// The boards live in the Vault, which can sit outside the repository. A
+/// repository is usable when it carries the default `workspace/` or a saved
+/// setting that points somewhere else.
+fn has_vault(root: &std::path::Path) -> bool {
+    root.join("workspace/workspace.json").is_file() || root.join(".mrmak/settings.json").is_file()
+}
+
 fn repo_path(app: &tauri::AppHandle) -> Result<PathBuf, Box<dyn std::error::Error>> {
     let config = app.path().app_config_dir()?.join("repository.json");
     let args: Vec<String> = std::env::args().collect();
     let supplied = args.iter().position(|v| v == "--repo").and_then(|i| args.get(i + 1)).map(PathBuf::from);
     let saved = fs::read_to_string(&config).ok().and_then(|s| serde_json::from_str::<String>(&s).ok()).map(PathBuf::from);
-    let current = std::env::current_dir().ok().filter(|root| root.join("workspace/workspace.json").is_file());
+    let current = std::env::current_dir().ok().filter(|root| has_vault(root));
     let mut selected = supplied.or(saved).or(current);
     loop {
         if let Some(ref root) = selected {
-            if root.join("workspace/workspace.json").is_file() {
+            if has_vault(root) {
                 fs::create_dir_all(config.parent().unwrap())?;
                 fs::write(&config, serde_json::to_string(&root.to_string_lossy())?)?;
                 return Ok(root.to_owned());
@@ -158,8 +165,8 @@ fn repo_path(app: &tauri::AppHandle) -> Result<PathBuf, Box<dyn std::error::Erro
         }
         selected = rfd::FileDialog::new().set_title("Choose your Project KO repository").pick_folder();
         if selected.is_none() { return Err(Cancelled.into()); }
-        if !selected.as_ref().unwrap().join("workspace/workspace.json").is_file() {
-            rfd::MessageDialog::new().set_title("Choose the Workspace folder").set_description("Select the repository folder containing workspace/workspace.json.").show();
+        if !selected.as_ref().map(|root| has_vault(root)).unwrap_or(false) {
+            rfd::MessageDialog::new().set_title("Choose the Project KO folder").set_description("Select the repository folder that holds Project KO, or a folder with a saved Vault setting.").show();
         }
     }
 }
@@ -204,6 +211,15 @@ fn window_defaults(builder: WebviewWindowBuilder<'_, tauri::Wry, tauri::AppHandl
 }
 
 fn make_windows(app: &tauri::AppHandle, workspace: &str, chats: &str) -> Result<(), Box<dyn std::error::Error>> {
+    // Two windows per view, always. A restarted service (the dev loop does this)
+    // must never build a second pair: point the open windows at the new service.
+    if app.get_webview_window("workspace").is_some() || app.get_webview_window("chats").is_some() {
+        if let (Ok(workspace_url), Ok(chats_url)) = (workspace.parse(), chats.parse()) {
+            if let Some(window) = app.get_webview_window("workspace") { let _ = window.navigate(workspace_url); }
+            if let Some(window) = app.get_webview_window("chats") { let _ = window.navigate(chats_url); }
+        }
+        return Ok(());
+    }
     let service_url: tauri::Url = workspace.parse()?;
     let service_token = service_url.query_pairs().find(|(key, _)| key == "token").map(|(_, value)| value.into_owned()).ok_or("Service credential unavailable")?;
     let auth_script = include_str!("desktop-auth.js")
@@ -264,6 +280,9 @@ fn make_windows(app: &tauri::AppHandle, workspace: &str, chats: &str) -> Result<
     }
     #[cfg(windows)]
     window_identity::refresh_shortcuts(app);
+    // Only the two product windows may ever appear in the window switcher.
+    #[cfg(windows)]
+    window_identity::hide_helper_windows(app);
     Ok(())
 }
 
@@ -350,7 +369,7 @@ fn install_chats_menu(app: &tauri::AppHandle) -> tauri::Result<()> {
     let items = (1..=9).map(|n| MenuItem::with_id(app, format!("chat-{n}"), format!("Chat {n}"), true, Some(format!("CmdOrCtrl+{n}"))))
         .collect::<tauri::Result<Vec<_>>>()?;
     let refs: Vec<&dyn tauri::menu::IsMenuItem<tauri::Wry>> = items.iter().map(|item| item as &dyn tauri::menu::IsMenuItem<tauri::Wry>).collect();
-    menu.append(&Submenu::with_items(app, "Chats", true, &refs)?)?;
+    menu.append(&Submenu::with_items(app, "Chatspace", true, &refs)?)?;
     app.set_menu(menu)?;
     app.on_menu_event(|app, event| {
         let Some(index) = event.id.as_ref().strip_prefix("chat-").and_then(|n| n.parse::<u8>().ok()) else { return };
@@ -499,8 +518,8 @@ fn main() {
             });
             #[cfg(target_os = "macos")]
             install_chats_menu(app.handle())?;
-            let workspace_item = MenuItem::with_id(app, "workspace", "Show Workspace", true, None::<&str>)?;
-            let chats_item = MenuItem::with_id(app, "chats", "Show Chats", true, None::<&str>)?;
+            let workspace_item = MenuItem::with_id(app, "workspace", "Show Vaultspace", true, None::<&str>)?;
+            let chats_item = MenuItem::with_id(app, "chats", "Show Chatspace", true, None::<&str>)?;
             let both_item = MenuItem::with_id(app, "both", "Show both windows", true, None::<&str>)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit Project KO and stop terminals", true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
@@ -563,7 +582,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{normalize_node_path, template_mask};
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
 
     #[test]
     fn template_mask_keeps_light_shapes_and_cuts_dark_ones() {

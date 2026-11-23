@@ -88,7 +88,7 @@ export class QuickActions {
     match = /^(?:прочитай|прочти|что в|read|summarize)\s+(.+)$/iu.exec(text);
     if (match) { const { card } = resolve(match[1]); return card ? async () => { const value = await call('read_workspace', { entityId: card.id }); return `${value.title}\n${value.description || ''}\n\n${value.text.slice(0, 4000)}${value.note ? '\n' + value.note : ''}`; } : null; }
     if (/^(?:покажи |список |list |show )?(?:все |all )?(?:чаты|chats)$/iu.test(text)) return async () => state.chats.length ? state.chats.map(({ name, attention }) => `• ${name}${attention ? ' — needs attention' : ''}`).join('\n') : 'There are no open chats.';
-    if (/^(?:покажи |список |list |show )?(?:все |all )?(?:карточки|cards)$/iu.test(text)) return async () => `${cards.length} Workspace cards:\n${cards.slice(0, 15).map(({ title }) => `• ${title}`).join('\n')}`;
+    if (/^(?:покажи |список |list |show )?(?:все |all )?(?:карточки|cards)$/iu.test(text)) return async () => `${cards.length} boards:\n${cards.slice(0, 15).map(({ title }) => `• ${title}`).join('\n')}`;
     match = /^(?:создай|открой|create|open)\s+(?:новый |new )?(?:(codex|кодекс|claude|клод|antigravity|agy|opencode|kimi)\s+)?(?:чат|chat)\s+(?:с названием |под названием |named |called )?[«"“]([^»"”]+)[»"”]$/iu.exec(text);
     if (match) {
       let name; try { name = taskTitle(match[2]); } catch { return null; }

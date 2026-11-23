@@ -65,7 +65,7 @@ try {
   // Right-click: move an ungrouped tab into an existing group, then into a new one, then ungroup from the chip.
   await tab('Animator').click({ button: 'right' });
   await page.locator('.tab-menu').waitFor();
-  assert.deepEqual(await page.locator('.tab-menu [role=menuitem]').allTextContents(), ['Rename chat', 'Pin in History', 'Dungeon', 'ThugLife', 'Show working folder', 'Clear terminal scrollback', 'Close tab · keep in History'], 'the tab menu keeps the chat settings and offers groups most recently active first');
+  assert.deepEqual(await page.locator('.tab-menu [role=menuitem]').allTextContents(), ['Rename chat', 'Pin in History', 'Dungeon', 'ThugLife', 'Show workspace', 'Clear terminal scrollback', 'Close tab · keep in History'], 'the tab menu keeps the chat settings and offers groups most recently active first');
   await page.locator('.tab-menu [aria-label="Rose tab color"]').click();
   await page.locator('.chat-tab.has-color').filter({ hasText: 'Animator' }).waitFor();
   assert.equal(service.sessions.get('g-2').tabColor, '#dba3bb');
@@ -155,7 +155,7 @@ try {
   assert.equal(await roster.locator(`.agent-option[data-agent="${picked}"]`).getAttribute('aria-selected'), 'true', 'the chosen agent is marked in the roster');
   assert.equal(await page.locator('.desk-dialog .agent-select').getAttribute('aria-expanded'), 'false', 'the roster closes after a choice');
 
-  // The working folder opens the same floating popover: the panel keeps its size.
+  // The workspace opens the same floating popover: the panel keeps its size.
   const folders = page.locator('.desk-dialog .folder-menu');
   await page.locator('.desk-dialog .where').click();
   await folders.waitFor({ state: 'visible' });

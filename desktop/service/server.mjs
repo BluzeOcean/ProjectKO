@@ -33,6 +33,8 @@ import { projectKey, recentProjects } from './recent-projects.mjs';
 import { answerPrompt, readPrompt } from './terminal-prompt.mjs';
 import { rewindToMessage } from './message-edit.mjs';
 import { ToxicReadAloud } from './toxic-read-aloud.mjs';
+import { ensureToxic } from './toxic-launch.mjs';
+import { Vault } from './vault.mjs';
 import { Handoffs } from './handoff.mjs';
 import { chatCommands } from './chat-commands.mjs';
 import { isThemePreference } from './appearance.mjs';
@@ -44,8 +46,16 @@ const listen = server => new Promise((resolve, reject) => { server.once('error',
 export async function createService({ repo, uiDir, stateDir, token = secret(), native = () => {}, restoreSessions = false, mcpOptions, mobileOptions, quotaOptions, dev = false }) {
   repo = await realpath(repo);
   stateDir ||= path.join(repo, '.mrmak');
+  const environment = parseEnv(await readFile(path.join(repo, '.env'), 'utf8').catch(() => ''));
+  const settingsPath = path.join(stateDir, 'settings.json');
+  const savedSettings = await readJson(settingsPath, null);
+  let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, dshPermissionMode: 'workspace-write', readAloudSpeed: 1, readAloudVoice: '', terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', ...savedSettings };
+  // The boards can live outside the app. `workspace/` stays the default, so an
+  // existing repository opens exactly as before.
+  const vault = await new Vault(repo, settings.vaultPath).open();
+  settings.vaultPath = vault.root;
   const dictation = mobileOptions?.dictation || new MobileDictation(repo);
-  const files = new Files(repo);
+  const files = new Files(repo, vault);
   const attachments = new Attachments(repo);
   const library = new ContextLibrary(repo);
   const knowledgeSources = await readJson(path.join(stateDir, 'knowledge-sources.json'), []);
@@ -59,10 +69,6 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const conversationMedia = new ConversationMedia();
   const readAloud = mobileOptions?.readAloud || new ToxicReadAloud();
   const quota = new Quota(quotaOptions);
-  const environment = parseEnv(await readFile(path.join(repo, '.env'), 'utf8').catch(() => ''));
-  const settingsPath = path.join(stateDir, 'settings.json');
-  const savedSettings = await readJson(settingsPath, null);
-  let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, dshPermissionMode: 'workspace-write', readAloudSpeed: 1, readAloudVoice: '', terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', ...savedSettings };
   if (settings.groupTabsByProject === true) {
     await sessions.groupByProject(settings.projectOrder);
     settings.groupTabsByProject = false;
@@ -77,6 +83,37 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
     broadcast('settings', { settings }); broadcast('dictation', { dictation: info });
     mobile?.broadcast({ type: 'dictation', dictation: info });
     return info;
+  };
+  // Desktop dictation is a switch: Project KO draws the microphone, Toxic does
+  // the listening. Starting it wakes Toxic when it is closed, so one press is
+  // enough from a cold machine.
+  const dictationListen = async action => {
+    if (!['start', 'stop', 'cancel', 'status'].includes(action)) throw Object.assign(new Error('Choose start, stop, cancel or status.'), { status: 400 });
+    // Chat dictation always runs in Toxic, but "Off" still means off.
+    if (action === 'start' && settings.transcribeProvider === 'off') throw Object.assign(new Error('Dictation is off. Turn it on in Settings > Speech-to-text.'), { status: 409 });
+    const client = dictation.toxicClient();
+    // A Toxic built before this tool existed answers "unknown tool: dictation".
+    const ask = (name, timeout) => client.dictation(name, timeout).catch(error => {
+      if (/unknown tool:?s*dictation/i.test(error?.message || '')) throw Object.assign(new Error('This Toxic build cannot dictate for Project KO yet. Update Toxic, then press the microphone again.'), { status: 503 });
+      throw error;
+    });
+    if (action === 'status') {
+      // An older Toxic answers nothing here; the button simply reads as idle.
+      const answer = await client.dictation('status', 8_000).catch(() => '');
+      let state = {};
+      try { state = JSON.parse(answer) } catch { state = {} }
+      return { listening: state.listening === true, last: state.last && typeof state.last === 'object' ? state.last : null };
+    }
+    if (action === 'start') {
+      await (mobileOptions?.ensureToxic || ensureToxic)(client);
+      await ask('start', 90_000);
+      return { listening: true };
+    }
+    if (action === 'cancel') {
+      await ask('cancel', 90_000);
+      return { listening: false };
+    }
+    return { listening: false, text: (await ask('stop')).trim() };
   };
   const projectList = () => recentProjects({ repo, sessions: sessions.list(), pinned: settings.pinnedProjects || [] });
   let selectedId = sessions.active().some(item => item.id === settings.selectedId) ? settings.selectedId : sessions.active()[0]?.id || null;
@@ -98,14 +135,14 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const nativeSettings = new NativeSettings(native, value => broadcast('native-settings', value));
   const show = (window, extra = {}) => { native({ type: 'window', action: 'show', window }); broadcast('navigate', { window, ...extra }); };
   const focus = id => { sessions.get(id); selectedId = id; settings.selectedId = id; scheduleSettings(); show('chats', { sessionId: id }); return { selectedId: id }; };
-  const registry = async () => readJson(path.join(repo, 'workspace', 'workspace.json'), { entities: [] });
-  const workspace = new Workspace(repo, () => broadcast('workspace-changed', {}));
+  const registry = async () => readJson(vault.file, { entities: [] });
+  const workspace = new Workspace(vault, () => broadcast('workspace-changed', {}));
   const cards = new CardDocuments(workspace);
   // The one choice the user makes in a board. It is stored here, not in the
   // document, and an agent pulls it when it wants it.
   const selection = new Selection({ cards, changed: value => broadcast('board-selection', { selection: value }) });
   // The chat a board remembers, so a hand-off always lands in the same place.
-  const boardAgents = new BoardAgents({ repo, cards, sessions, settings: () => settings, focus });
+  const boardAgents = new BoardAgents({ vault, cards, sessions, settings: () => settings, focus });
   const history = query => sessions.list().filter(item => !query || `${item.name} ${item.agent} ${item.cwd} ${item.preview || ''}`.normalize('NFC').toLowerCase().includes(query.normalize('NFC').toLowerCase())).sort((a, b) => Number(b.pinned) - Number(a.pinned) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
   const closeChat = async id => {
     await sessions.remove(id);
@@ -262,6 +299,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         if (method === 'POST' && url.pathname === '/api/transcribe') return json(response, 200, await dictation.transcribe(request, 'desktop', () => !closing));
         const data = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) ? await body(request, url.pathname === '/api/files/markdown' ? 12 * 1024 * 1024 : url.pathname.startsWith('/api/workspace/cards') ? 2 * 1024 * 1024 : 256 * 1024) : {};
         if (method === 'POST' && url.pathname === '/api/dictation') return json(response, 200, await chooseDictation(data.provider));
+        if (method === 'POST' && url.pathname === '/api/dictation/listen') return json(response, 200, await dictationListen(data.action));
         if (method === 'GET' && url.pathname === '/api/quota') return json(response, 200, await quota.status());
         if (method === 'GET' && url.pathname === '/api/mobile') return json(response, 200, mobile.status());
         if (method === 'GET' && url.pathname === '/api/mobile/check') return json(response, 200, await mobile.transport.probe());
@@ -321,7 +359,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         }
         if (method === 'GET' && url.pathname === '/api/read-aloud') return json(response, 200, await readAloud.status());
         if (method === 'POST' && url.pathname === '/api/preview/show') {
-          // A link in a chat may be relative to that chat's working folder.
+          // A link in a chat may be relative to that chat's workspace.
           const base = typeof data.sessionId === 'string' ? sessions.get(data.sessionId).cwd : repo;
           if (typeof data.path !== 'string' || !data.path.trim() || /[\x00-\x1f]/.test(data.path)) throw new Error('Choose a local file or folder.');
           const target = await realpath(path.resolve(base, data.path));
@@ -377,6 +415,14 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           if (['cedar', 'marin'].includes(data.voiceName)) settings.voiceName = data.voiceName;
           if (data.groupColors && typeof data.groupColors === 'object' && !Array.isArray(data.groupColors)) settings.groupColors = Object.fromEntries(Object.entries(data.groupColors).filter(([name, value]) => name.length <= 60 && typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)).slice(0, 200).map(([name, value]) => [name, value.toLowerCase()]));
           if (Array.isArray(data.collapsedGroups)) settings.collapsedGroups = [...new Set(data.collapsedGroups.filter(item => typeof item === 'string' && item.length <= 60))].slice(0, 200);
+          // Moving the Vault only points the app at another folder; the boards
+          // themselves are never moved or copied by the service.
+          if (typeof data.vaultPath === 'string' && data.vaultPath.trim() && data.vaultPath.trim() !== vault.root) {
+            await vault.pointTo(data.vaultPath);
+            settings.vaultPath = vault.root;
+            watchVault();
+            broadcast('workspace-changed', {});
+          }
           await saveSettings(); broadcast('settings', { settings }); return json(response, 200, settings);
         }
         if (method === 'POST' && url.pathname === '/api/sessions') { const session = await sessions.create({ ...data, permissionMode: data.permissionMode ?? settings.dshPermissionMode, bypass: data.bypass ?? settings.defaultBypass, effort: data.effort ?? settings.defaultEffort }); await integrations.publish('session', { event: 'started', session }); focus(session.id); return json(response, 201, session); }
@@ -520,7 +566,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
       server: { middlewareMode: true, ws: { server, path: '/__vite_hmr' } },
     });
   }
-  mobile = await new MobileGateway({ ...mobileOptions, transcripts, readAloud, dictation, chooseDictation, repo, uiDir, stateDir, sessions, attachments, closeChat, settings: () => settings, changed: state => broadcast('mobile-state', { mobile: state }) }).init();
+  mobile = await new MobileGateway({ ...mobileOptions, transcripts, readAloud, dictation, chooseDictation, repo, vault, uiDir, stateDir, sessions, attachments, closeChat, settings: () => settings, changed: state => broadcast('mobile-state', { mobile: state }) }).init();
   const wss = new WebSocketServer({ noServer: true, maxPayload: 128 * 1024 });
   server.on('upgrade', (request, socket, head) => {
     const url = new URL(request.url, origin);
@@ -564,7 +610,11 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
     ws.on('error', () => {});
   });
   let watcher;
-  try { watcher = watch(path.join(repo, 'workspace', 'workspace.json'), () => broadcast('workspace-changed', {})); watcher.on('error', () => {}); } catch { /* Registry may be created after first setup. */ }
+  const watchVault = () => {
+    watcher?.close();
+    try { watcher = watch(vault.file, () => broadcast('workspace-changed', {})); watcher.on('error', () => {}); } catch { /* Registry may be created after first setup. */ }
+  };
+  watchVault();
   const restoreTimer = restoreSessions ? setTimeout(() => sessions.restore().catch(error => sessions.emit('service-error', error)), 100) : null;
   return {
     origin, contentOrigin: files.origin, token, sessions, coordinator, quick, workspace, cards, files, projects, knowledge, integrations, mobile,

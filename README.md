@@ -1,26 +1,26 @@
 # Project KO
 
-Your CLI agents, a visual Workspace, and access from your phone.
+Your CLI agents, a visual Vaultspace, and access from your phone.
 
 Project KO has **two connected desktop windows**:
 
-- **Chats** is where you give tasks to Codex, Claude Code, Antigravity, OpenCode or Kimi. Each
+- **Chatspace** is where you give tasks to Codex, Claude Code, Antigravity, OpenCode or Kimi. Each
   conversation runs in a real CLI terminal, with its own tab and saved history.
-- **Workspace** is where you review the results: project pages, research, images,
+- **Vaultspace** is where you review the results: project pages, research, images,
   saved prompts and reports. Files, skills, MCP connections and settings sit
   alongside your work.
 
 Keep the windows side by side, or minimize either one independently. You can
-leave Chats in view while working in Blender, a game engine or your browser.
+leave Chatspace in view while working in Blender, a game engine or your browser.
 
-**New in 0.6: [edit Workspace cards yourself](docs/editable-cards.md).** Add
+**New in 0.6: [edit cards yourself](docs/editable-cards.md).** Add
 images, notes and prompts in Gallery or Workbench views. Agents use the same
 content files. You can also [connect your phone](#on-your-phone) to follow chats,
 send ideas and dictate messages while the agents keep working on your computer.
 
-![The two Project KO windows side by side: CLI chats on the left and the My Dream Game project in Workspace on the right](docs/assets/desktop-chats-workspace.png)
+![The two Project KO windows side by side: CLI chats on the left and the My Dream Game project in Vaultspace on the right](docs/assets/desktop-chats-workspace.png)
 
-*Chats on the left, Workspace on the right. App views arranged side by side
+*Chatspace on the left, Vaultspace on the right. App views arranged side by side
 with sample conversations and the included My Dream Game project.*
 
 ## Read and answer a chat as a conversation
@@ -34,7 +34,7 @@ and dictation to the same terminal, and **Stop** (Esc) interrupts the agent.
 
 A new chat opens in Terminal until it has a conversation, so folder-trust and
 sign-in questions are never hidden. Links to local files in a reply open a
-Workspace preview, resolved against the chat's folder.
+A preview opens in Vaultspace, resolved against the chat's workspace.
 
 - **Answer permission menus with a click.** When the CLI asks for permission,
   the numbered menu at the bottom of the terminal appears as buttons. Before
@@ -71,27 +71,27 @@ Codex 0.163 chats are supported: Project KO starts Codex with `--no-daemon` when
 the installed version offers it, so every chat stays linked to its conversation,
 and a chat follows a rewind or a `/new` made in its terminal.
 
-## Workspace and Chat themes
+## Vaultspace and Chatspace themes
 
-Choose independent themes for Workspace and Chat in **Settings → Appearance**,
+Choose independent themes for Vaultspace and Chatspace in **Settings → Appearance**,
 or use the Chat header's Appearance button. Thirteen named palettes include
 **Codex / ChatGPT**, **Antigravity** and **Claude Code**, plus light and dark
 variants of **Nordic**, **Forest**, **Sandstone**, **Ocean** and **Plum**.
 Dark, Light and System remain available.
 
-Workspace themes also style standard reports. Chat themes cover Conversation
+Vaultspace themes also style standard reports. Chatspace themes cover Conversation
 and Terminal while retaining drafts and terminal connections. Choices save and
-sync across open windows. See the [palette list](desktop/README.md#workspace-and-chat-themes).
+sync across open windows. See the [palette list](desktop/README.md#vaultspace-and-chatspace-themes).
 
 ## Projects and long chats
 
-**New chat** lists the folders you have worked in: the Workspace, projects
+**New chat** lists the folders you have worked in: the Project KO folder, projects
 opened in Claude Code, folders where Codex ran and folders of earlier Project KO
-chats. Pin favorites to keep them at the top. History can filter by project, and
+chats. Pin favorites to keep them at the top. History can filter by workspace, and
 the voice coordinator can open a chat in a project you name. A paired phone may
 only start a chat in a listed folder, never in an arbitrary path.
 
-<img src="docs/assets/new-chat-projects.png" alt="The New chat dialog with Claude Code selected and a project list: the Workspace, a pinned arachne-lab, the selected dream-game and other recent folders" width="420">
+<img src="docs/assets/new-chat-projects.png" alt="The New chat dialog with Claude Code selected and a project list: the Project KO folder, a pinned arachne-lab, the selected dream-game and other recent folders" width="420">
 
 After a set number of your messages (40 by default; chat options **⋯**), a chat
 offers **Summarize and continue**. Project KO asks the agent for a handoff, saves it
@@ -108,7 +108,7 @@ tabs. Double-click a tab, or press F2, to rename its chat.
 
 ## On your phone
 
-Read replies, send follow-ups or images, and open Workspace reports from a mobile
+Read replies, send follow-ups or images, and open Vault reports from a mobile
 web app you can add to your Home Screen. The phone connects to Project KO on your
 computer through **Tailscale**. Your agents keep running on the computer with
 their existing CLI accounts.
@@ -118,7 +118,7 @@ their existing CLI accounts.
 *Your chats, a conversation, and voice input in one overview. Tap the image
 to see it at full size. Sample conversations shown.*
 
-- **Pair from Chats.** Press the phone button on your computer, enable mobile
+- **Pair from Chatspace.** Press the phone button on your computer, enable mobile
   access, scan the QR code and confirm the matching code on the desktop.
 - **Pick up where you left off.** Pair once, then reopen the same phone shortcut.
   Phone and desktop can show different chats while sharing the conversation.
@@ -126,7 +126,7 @@ to see it at full size. Sample conversations shown.*
   transcribe it. Review the text before pressing Send.
 - **Review the result.** Enlarge shared images, play videos, or reopen a report
   at its saved position. Optional local voices can read a reply aloud.
-- **Move around like an app.** Pull down from the top of the Workspace to
+- **Move around like an app.** Pull down from the top of Vaultspace to
   refresh it; an open report reloads at the same page and section. The back
   gesture returns to the previous screen instead of leaving the app (Chrome and
   Edge on Android).
@@ -156,26 +156,29 @@ the optional Live voice coordinator still uses OpenAI API billing.
 - **Your files, close at hand.** Browse a folder tree with Main folders or All
   files, jump to `inbox`, `projects`, `workspace`, `knowledge` and `processes`,
   and open any folder in Windows Explorer, macOS Finder or your file manager.
+- **Your data, your folder.** The Vault can be any folder on any drive: Settings >
+  **Vault folder** points the boards at it, `workspace/` stays only the default,
+  and reports keep the app's shared styling wherever the folder lives.
 - **Readable notes you can edit.** Open Markdown as a formatted document, switch
   to Edit, and save changes in the same window. Preview images, video and audio
   alongside the file tree.
 - **Choose a reading theme.** Settings > Appearance offers Dark, Light and
-  System. Light uses dark text on white across Workspace and standard reports.
+  System. Light uses dark text on white across Vaultspace and standard reports.
   Images keep their original colors; terminal appearance is set separately.
 - **Chats you can return to.** Pin conversations in history, reorder and color
   tabs, and see which agents are working or have a reply you have not viewed.
   Drop files or folders into a chat to insert their paths; clipboard images are
   saved in `inbox/attachments`.
-- **Projects with their work attached.** Keep research, design versions, saved
-  prompts and motion tests in tabs inside a card. Open images at full size and
-  download them from the preview. In the desktop app, click a card's status dot
-  to change its status or category, pin it, or archive it. Restore archived cards
+- **Boards with their work attached.** Keep research, design versions, saved
+  prompts and motion tests in tabs inside a board. Open images at full size and
+  download them from the preview. In the desktop app, click a board's status dot
+  to change its status or category, pin it, or archive it. Restore archived boards
   from search or Show archive; their files and tabs stay in place.
 - **Skills and tools within reach.** The right rail opens project skills,
   knowledge, workflows, MCP connections, Settings and Help. See which MCP
   connections come from the project and which come from your agent's global setup.
 
-![Workspace with the My Dream Game project open and the Files tree showing project knowledge and workflows](docs/assets/workspace-files.png)
+![Vaultspace with the My Dream Game project open and the Files tree showing project knowledge and workflows](docs/assets/workspace-files.png)
 
 ## Before you start
 
@@ -198,7 +201,7 @@ and [Codex authentication](https://developers.openai.com/codex/auth).
 
 **OpenCode** uses the providers and authentication you configure in OpenCode.
 Their access and billing rules still apply; support here does not turn a Claude
-Code subscription into OpenCode API access. Choose **+ > OpenCode** in Chats.
+Code subscription into OpenCode API access. Choose **+ > OpenCode** in Chatspace.
 
 **Antigravity** runs Google's `agy` CLI in a chat tab. Install it from the
 [official guide](https://www.antigravity.google/docs/cli/install/), then choose
@@ -234,11 +237,11 @@ On Windows, download the installer from [Releases](https://github.com/BluzeOcean
 install **Project KO**, then open **Start Project KO.cmd** in your cloned
 repository. On Linux, build the Tauri desktop target after installing the Node,
 Rust and WebKitGTK prerequisites, then launch the resulting AppImage/deb install
-with `--repo /path/to/your/workspace`. On macOS (Apple Silicon), download the
+with `--repo /path/to/your/repo`. On macOS (Apple Silicon), download the
 `.dmg` from the same Releases page or run `./setup.sh desktop` to build
 `Project KO.app`, then open **Start Project KO.command**
 ([macOS notes](docs/getting-started.md#macos)). On every system, use **+** in
-Chats to open an installed CLI and sign in with your own account.
+Chatspace to open an installed CLI and sign in with your own account.
 
 The installer includes the local Node service. It does not include Codex,
 Claude Code, Antigravity, OpenCode, Kimi, Blender, Python or provider accounts.
@@ -303,7 +306,7 @@ visual approval and engine readiness remain separate decisions.
 
 ## Skills you can keep
 
-Twenty project skills cover planning, handoffs, Workspace reports, image
+Twenty project skills cover planning, handoffs, Vault reports, image
 references, fal.ai generation, Higgsfield workflows, character sheets, procedural
 Three.js modeling, materials, motion references, Blender game animation, video
 inspection and dictation setup. Game workflows cover **VFX, UI, animation

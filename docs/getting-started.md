@@ -1,6 +1,6 @@
 # Getting started
 
-Project KO is a local desktop workspace for working with several agents. Its files
+Project KO is a local desktop app for working with several agents. Its files
 are ordinary project files, and its chats are ordinary CLI sessions. You can
 keep using the same agents outside the app.
 
@@ -24,7 +24,7 @@ is installed by its bootstrapper if needed. No administrator terminal is needed
 for ordinary app use.
 
 Run **Start Project KO.cmd** from the cloned folder. The app remembers the selected
-repository. It opens Workspace and Chats as separate windows with separate
+repository. It opens Vaultspace and Chatspace as separate windows with separate
 taskbar identities. Closing a chat saves it to History; restoring its full
 conversation also relies on that CLI's native session files.
 
@@ -40,9 +40,9 @@ your operating system:
 [Kimi Code CLI](https://moonshotai.github.io/kimi-cli/en/) is available as an
 additional terminal integration after the base setup.
 
-Finish the CLI's sign-in flow with your own account. In Chats, press **+**, choose
+Finish the CLI's sign-in flow with your own account. In Chatspace, press **+**, choose
 the provider and a descriptive English title. Start with a task such as
-`Dream Game Plan`. Choose the repository as the working folder. The normal CLI
+`Dream Game Plan`. Choose the repository as the workspace. The normal CLI
 permission flow is enabled by default; bypass is a deliberate per-chat choice.
 
 New Codex and Claude chats default to `xhigh` reasoning effort. Saved effort
@@ -145,12 +145,12 @@ window closes itself.
 Differences from Windows:
 
 - Shortcuts use ⌘ instead of Ctrl (⌘⇧T new chat, ⌘⇧P find, ⌘⇧H history,
-  ⌘1–9 switch chats, also in the Chats menu; Ctrl+Tab still cycles). In terminals ⌘C/⌘V copy and paste,
+  ⌘1–9 switch chats, also in the Chatspace menu; Ctrl+Tab still cycles). In terminals ⌘C/⌘V copy and paste,
   and Ctrl+C reaches the CLI as in Terminal.app.
 - Settings > Shortcut: **⌃⌥⌘Space** brings back the windows from any app (the
   Win-key equivalent). Clicking the Dock icon also restores closed windows.
-- Both windows share one Dock icon; the menu-bar icon offers Show Workspace,
-  Show Chats and Quit.
+- Both windows share one Dock icon; the menu-bar icon offers Show Vaultspace,
+  Show Chatspace and Quit.
 - The first voice recording asks for microphone access.
 - In terminals, Option types your keyboard layout's characters (such as @ or
   #); Settings > Chats > **Use Option as Meta key** turns Option into a Meta key.
@@ -179,10 +179,18 @@ every change:
 npm run desktop:dev -- -- -- --repo "V:\06_App\ProjectKO"
 ```
 
-The `--repo` argument is the workspace the app opens. Without it the app asks
-for a folder that holds a `workspace/workspace.json`. A debug build runs the
-service from `desktop/service/` rather than from the packaged runtime, so a
-change to the service is picked up when the app restarts.
+The `--repo` argument is the repository the app opens. Without it the app asks
+for a folder that holds a `workspace/workspace.json` or a saved Vault setting. A
+debug build runs the service from `desktop/service/` rather than from the packaged
+runtime, so a change to the service is picked up when the app restarts.
+
+The boards do not have to live in the repository. **Settings > Vault folder**
+takes any folder on any drive — type the path, then Enter or **Use folder** — and
+keeps it in `.mrmak/settings.json`; every board
+is then created there, and `workspace/` is only the default a fresh install gets.
+The shared report styles and scripts stay with the app, so a report moving with
+the Vault keeps its layout. Changing the folder points the app at the new place
+and leaves the old files untouched.
 
 To work on the interface alone, without the desktop windows:
 
@@ -238,7 +246,7 @@ On macOS or Linux:
 ./setup.sh preview
 ```
 
-That starts Vite and links `public/workspace` to the real Workspace folder.
+That starts Vite and links `public/workspace` to the real Vault folder.
 It does not start managed terminals or the voice service.
 
 ## On another computer

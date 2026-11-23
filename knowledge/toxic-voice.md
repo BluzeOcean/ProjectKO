@@ -5,7 +5,9 @@ Status: verified 2026-11-23 on Toxic 1.2.0 with Project KO 0.6.4.
 Project KO no longer owns a speech engine. Speech to text and text to speech both
 go through the [Toxic](https://github.com/anomalyco/hex) desktop app on the same
 machine, over Toxic's MCP server. Toxic keeps Hex for transcription and Pocket TTS
-for speech; Project KO only records, normalizes and plays audio.
+for speech. On the desktop Project KO records nothing: a chat microphone asks
+Toxic to listen, and Toxic's own recorder, HUD and Hex do the work. Only the
+phone still records in the page and uploads the audio for the `transcribe` tool.
 
 ## What was removed
 
@@ -62,9 +64,65 @@ at a time, in request order, a 64-segment cache, a per-surface cancel, and a
 24-segment queue. `ToxicReadAloud.status()` reports one voice,
 `Toxic · Pocket TTS`; the voice itself is chosen in Toxic's Text to speech pane.
 
-For dictation, `MobileDictation` gained a `toxic` provider (the default) next to
-the optional Local Whisper and paid providers. It health-checks Toxic only when
-that provider is selected, so listing providers never starts a process.
+For the phone and the optional fallbacks, `MobileDictation` has a `toxic` provider
+(the default) next to Local Whisper and the paid providers. It health-checks
+Toxic only when that provider is selected, so listing providers never starts a
+process.
+
+## Dictation is Toxic's listening mode
+
+Status: the Project KO side is built and tested; Toxic does not publish the
+`dictation` tool yet, so the button reports "This Toxic build cannot dictate for
+Project KO yet" until [the handoff](handoff-toxic-dictation.md) lands.
+
+The chat microphone in **Chatspace** is a switch, not a recorder. Pressing it
+calls the service route `POST /api/dictation/listen`, which calls the `dictation`
+MCP tool on Toxic:
+
+| Action | Effect |
+| --- | --- |
+| `start` | Toxic opens its microphone, plays its start cue and shows the `Listening` HUD |
+| `stop` | Toxic stops, transcribes with Hex and returns the transcript as text |
+| `cancel` | Toxic throws the take away (`Esc` in Project KO does the same) |
+| `status` | `{ listening, last }` — `last` is Toxic's newest transcript |
+
+Three rules make a partner take behave differently from Toxic's own hotkey take,
+in `src-tauri/src/dictation.rs` and `hotkeys.rs` (see the handoff for the code that
+implements them):
+
+- **No paste.** A partner take never pastes; the transcript goes back to the
+  caller. Otherwise the words would be typed twice, or into whichever window
+  happened to have focus.
+- **No keystroke ends it.** Toxic's hook normally ends a take on any key press.
+  While a partner owns the recording it only handles `Esc` (cancel), so typing in
+  the composer cannot swallow the take. Toxic's maximum recording length still
+  applies.
+- **The HUD says so.** It reads `Click the microphone again to finish · Esc to
+  cancel` instead of `Any key to finish`.
+
+The button polls `status` while listening. When Toxic ended the take itself
+(Escape, or the maximum length) the newest `last` transcript is inserted, so a
+take is never lost silently.
+
+## Waking Toxic
+
+The same button works while Toxic is closed. `desktop/service/toxic-launch.mjs`
+asks `/health` first; when nothing answers it finds the app and starts it
+detached, then waits up to 30 seconds for the MCP server:
+
+1. `PKO_TOXIC_EXE`, when set.
+2. `%LOCALAPPDATA%\Programs\Toxic\Toxic.exe`, either `Program Files` folder, and
+   `%LOCALAPPDATA%\Toxic\Toxic.exe`.
+3. The target inside a Start Menu `Toxic*.lnk`, read from the shortcut bytes
+   (a `.lnk` stores its path as ANSI and again as UTF-16). This is how the dev
+   checkout at `V:\04_Projects\Toxic\src-tauri\target\release\toxic.exe` is
+   found on this machine.
+4. `/Applications/Toxic.app` on macOS, opened with `open -a`.
+
+Nothing found means the composer says **"Toxic is not installed on this
+computer. Install Toxic, then press the microphone again."** The button stays
+enabled, so the next press retries. A Toxic that starts but never answers its MCP
+server reports its own message instead, which points at Toxic's MCP setting.
 
 ## Verification performed
 

@@ -98,7 +98,7 @@ export function tailNativeFile(file, agent, onEvent, from = 0) {
 export async function claudeTranscript(cwd, nativeId) {
   const root = path.join(process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude'), 'projects');
   const folders = await readdir(root).catch(() => []);
-  // Claude names the folder after getcwd(). Chats saved before working folders
+  // Claude names the folder after getcwd(). Chats saved before workspaces
   // were stored resolved may hold a symlinked or differently normalised spelling.
   const spellings = [cwd];
   if (process.platform !== 'win32') spellings.push(await realpath(cwd).catch(() => cwd));

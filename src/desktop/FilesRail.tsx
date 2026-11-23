@@ -198,7 +198,7 @@ export default function FilesRail() {
     const gesture = internalDrag.current
     if (gesture) {
       gesture.handled = true
-      if (gesture.directory) { setStatus(''); setError(`Drop folders into Chats to insert their paths. Use ${fileManager} to move folders.`); return }
+      if (gesture.directory) { setStatus(''); setError(`Drop folders into Chatspace to insert their paths. Use ${fileManager} to move folders.`); return }
       if (copyLock.current) return
       copyLock.current = true; setCopying(true); setError('')
       try {
@@ -240,7 +240,7 @@ export default function FilesRail() {
     preview: entry => { setSelected(entry.path); setDestination(parentPath(entry.path)); api<Preview>(`/preview?path=${encodeURIComponent(entry.path)}`).then(setPreview).catch(reportError) },
     drag: (event, path, directory) => {
       // Hand the held mouse gesture to the OS (Windows OLE / macOS drag session) with real file paths.
-      event.preventDefault(); internalDrag.current = { path, directory, handled: false }; setError(''); setStatus(directory ? 'Drop into Chats to insert this folder path. Esc cancels.' : 'Drop into Chats to insert a path, or into another folder to move. Esc cancels.')
+      event.preventDefault(); internalDrag.current = { path, directory, handled: false }; setError(''); setStatus(directory ? 'Drop into Chatspace to insert this folder path. Esc cancels.' : 'Drop into Chatspace to insert a path, or into another folder to move. Esc cancels.')
       api('/files/drag', { paths: [path] }).catch(error => { internalDrag.current = null; setError(message(error)); setStatus('') })
     },
   }

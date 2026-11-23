@@ -76,7 +76,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    document.title = entity ? `Project KO — ${entity.title}` : 'Project KO — Workspace'
+    document.title = entity ? `Project KO — ${entity.title}` : 'Project KO — Vaultspace'
   }, [entity])
 
   const goHome = useCallback(() => {

@@ -11,7 +11,7 @@ export function categoryIcon(category: string): string {
   return CATEGORY_ICONS[category] ?? '\u{1F4C1}'
 }
 
-/* The words the Workspace shows for a genre: the filter group, the tag
+/* The words the Vault shows for a tag: the filter group, the tag
    chip and the pills that assign another one all read the same. */
 const CATEGORY_LABELS: Record<string, string> = {
   'image-gen': 'Image gen',

@@ -29,7 +29,7 @@ export default function DictationSettings({ info, onChange, disabled = false }: 
     <label>Dictation provider<select aria-label="Dictation provider" value={info?.provider || 'toxic'} disabled={disabled || busy || !info} onChange={event => void change(event.target.value)}>
       {(info?.providers || fallback).map(provider => <option key={provider.id} value={provider.id}>{provider.label}</option>)}
     </select></label>
-    <p>{selected?.detail} Shared by desktop and all paired phones. Changes apply to the next transcription; text stays a draft.</p>
+    <p>{selected?.detail} Chat dictation always runs in Toxic. This choice sets the phone and the Mak composer. Changes apply to the next transcription; text stays a draft.</p>
     {unavailable && <p role="status">{unavailable} No automatic switch to another provider.</p>}
     {error && <p role="alert">{error}</p>}
   </section>
@@ -46,7 +46,7 @@ export function DictationRows({ info, onChange }: { info?: DictationInfo; onChan
         </select>
       </span>
     </label>
-    <p className="settings-row-help">{selected?.detail} Shared by desktop and all paired phones. Changes apply to the next transcription; text stays a draft.</p>
+    <p className="settings-row-help">{selected?.detail} Chat dictation always runs in Toxic. This choice sets the phone and the Mak composer. Changes apply to the next transcription; text stays a draft.</p>
     {unavailable && <p className="settings-status" role="status">{unavailable} No automatic switch to another provider.</p>}
     {error && <p className="settings-status" role="alert">{error}</p>}
   </>

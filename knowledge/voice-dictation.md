@@ -7,10 +7,12 @@ either, both or neither.
 Project KO's speech to text now goes through the **Toxic** app on this computer.
 Toxic wraps Hex and publishes two loopback interfaces: an HTTP API and an MCP
 server. The Project KO service reads Toxic's discovery file
-(`%APPDATA%\app.toxic.desktop\mcp.json`) on first use and calls the
-`transcribe` tool over JSON-RPC. It converts the browser recording to 16 kHz mono
-WAV with ffmpeg first, because Hex accepts only WAV. The audio never leaves the
-machine. See [Toxic as the voice layer](toxic-voice.md) for the implementation
+(`%APPDATA%\app.toxic.desktop\mcp.json`) on first use and calls Toxic over
+JSON-RPC. On the desktop Project KO sends no audio at all: the chat microphone
+asks Toxic to run its own listening mode, and Toxic records and transcribes in
+place. The phone still records in the page, and that recording is converted to
+16 kHz mono WAV with ffmpeg before the `transcribe` tool sees it. No audio leaves
+the machine. See [Toxic as the voice layer](toxic-voice.md) for the implementation
 and the checks behind it.
 
 ## Choosing a provider
@@ -32,11 +34,12 @@ automatic fallback from one provider to another.
 
 ## Where the microphone is
 
-- **Desktop chat** — the microphone in the composer records in the page and asks
-  the service to transcribe. It does not open Hex's global dictation.
-- **Desktop terminal** — the microphone in the chat toolbar, or **Ctrl+T**, starts
-  and stops the same recorder and pastes the text into the terminal without
-  pressing Enter.
+- **Desktop chat** — the microphone in the composer is a switch for Toxic. It
+  starts Toxic's own listening mode (Toxic's HUD shows the take) and the
+  transcript lands in the draft. Project KO saves no audio and shows no timer.
+  Pressing it while Toxic is closed opens Toxic first.
+- **Desktop terminal** — the microphone in the chat toolbar, or **Ctrl+T**, drives
+  the same switch and types the words into the terminal without pressing Enter.
 - **Phone** — the microphone beside the attachment button records, uploads over
   the paired connection, and leaves the text as a draft for you to send.
 - **Workspace Mak composer** — its microphone uses the same provider.

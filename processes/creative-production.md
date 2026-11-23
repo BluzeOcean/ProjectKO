@@ -14,7 +14,7 @@ Explain a rejection with concrete evidence, such as a missing limb, a changed
 face, an unwanted camera move or sliding foot contact. Make the smallest useful
 revision instead of restarting the entire design without a reason.
 
-Present selected and rejected takes in the task's Workspace card with clear
+Present selected and rejected takes in the task's board with clear
 labels and usable media previews. Retain enough prompt and version information
 to reproduce the work, while excluding tokens and signed provider links from
 public exports. End with a precise next step or the verified final artifact.

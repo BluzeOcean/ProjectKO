@@ -227,6 +227,18 @@
 .settings-row-action{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;width:22px;height:22px;margin-left:8px;border:0;border-radius:6px;background:none;color:var(--text-muted);transition:background var(--t-fast) var(--ease),color var(--t-fast) var(--ease)}
 .settings-row-action:hover{background:color-mix(in srgb,var(--text) 6%,transparent);color:var(--pink)}
 .settings-row-action:focus-visible{outline:1px solid var(--pink);outline-offset:1px}
+/* The Vault's own folder: the path and its two actions are one control, so a
+   long path reads as a field rather than as a stray line of text. */
+.settings-field{display:flex;align-items:center;gap:6px;padding:3px 0 1px}
+.settings-field-input{flex:1;min-width:0;height:30px;padding:0 10px;border:1px solid color-mix(in srgb,var(--text) 13%,transparent);border-radius:7px;background:var(--bg-deep);color:var(--text);font:11px var(--font-mono);text-align:left;transition:border-color var(--t-fast) var(--ease),background var(--t-fast) var(--ease)}
+.settings-field-input:hover{border-color:color-mix(in srgb,var(--text) 22%,transparent)}
+.settings-field-input:focus{outline:none;border-color:color-mix(in srgb,var(--pink) 55%,transparent);background:var(--surface-solid)}
+.settings-field-use{flex:0 0 auto;height:30px;padding:0 11px;border:1px solid color-mix(in srgb,var(--pink) 42%,transparent);border-radius:7px;background:color-mix(in srgb,var(--pink) 15%,transparent);color:var(--pink);font:550 11px var(--font-body);white-space:nowrap}
+.settings-field-use:not(:disabled):hover{background:color-mix(in srgb,var(--pink) 24%,transparent)}
+.settings-field-use:disabled{border-color:color-mix(in srgb,var(--text) 10%,transparent);background:transparent;color:var(--text-muted);opacity:.5;cursor:default}
+.settings-field-open{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:1px solid color-mix(in srgb,var(--text) 13%,transparent);border-radius:7px;background:transparent;color:var(--text-muted)}
+.settings-field-open:hover{color:var(--pink);border-color:color-mix(in srgb,var(--pink) 40%,transparent)}
+.settings-field-error{display:block;padding:5px 0 2px;font:10px/1.6 var(--font-body);color:var(--red)}
 .files-panel>header{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 12px 0 18px;flex-shrink:0}.files-panel h2{font-size:13px;font-weight:550}.files-panel header>div{display:flex;gap:2px}.file-mode{display:flex;gap:4px;margin:5px 15px 15px;background:var(--bg-deep);padding:3px;border-radius:7px}.file-mode button{flex:1;font-size:10px;border:0;padding:7px 0;border-radius:5px;background:transparent;color:var(--text-dim)}.file-mode button.selected{background:color-mix(in srgb,var(--text) 4%,transparent);color:var(--text)}
 .file-shortcuts{display:flex;gap:5px;padding:0 14px 14px}.file-shortcuts button{display:flex;gap:5px;align-items:center;background:color-mix(in srgb,var(--text) 2%,transparent);border:1px solid color-mix(in srgb,var(--text) 12%,transparent);padding:5px 6px;border-radius:5px;font-size:9px;color:var(--text-dim)}
 .file-path{margin:0 14px;display:flex;align-items:center;background:var(--bg-deep);border:1px solid color-mix(in srgb,var(--text) 12%,transparent);border-radius:6px}.file-path input{padding:8px 2px;border:0;background:none;width:100%;font-size:9px;color:var(--text-dim);font-family:var(--font-mono)}.file-path button{display:flex;align-items:center;background:none;border:0;color:var(--text-dim);padding:5px}
@@ -298,16 +310,15 @@
 .mak-composer .recording .mobile-mic{background:var(--red);color:var(--text-bright)}
 .mak-composer .voice-compose{flex-wrap:wrap}
 
-.terminal-dictation{position:relative;flex-shrink:0}
-.terminal-dictation .mobile-voice{display:flex;align-items:center}
-.terminal-dictation .mobile-mic{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border:0;border-radius:5px;background:transparent;color:var(--text);cursor:pointer}
-.terminal-dictation .mobile-mic:hover{background:color-mix(in srgb,var(--text) 4%,transparent)}
-.terminal-dictation .mobile-mic:disabled{opacity:.4}
-.terminal-dictation .recording .mobile-mic{background:var(--red);color:var(--text-bright)}
-.terminal-dictation .mobile-voice-panel,.terminal-dictation .mobile-voice-error{position:absolute;right:0;top:34px;width:min(340px,80vw);padding:12px;border:1px solid color-mix(in srgb,var(--text) 24%,transparent);border-radius:8px;background:var(--surface-solid);z-index:30;font-size:12px;white-space:normal}
-.terminal-dictation .mobile-voice-panel small{display:block;margin-top:8px;color:var(--text)}
-.terminal-dictation .mobile-voice-panel button{margin:8px 5px 0 0;padding:6px;border:1px solid color-mix(in srgb,var(--text) 24%,transparent);background:var(--surface-solid);color:var(--text-bright);border-radius:4px}
-.terminal-dictation .saved .mobile-voice-error{top:155px}
+/* The chat microphone is a switch for Toxic. Toxic draws the listening state, so
+   this is one icon: no recorder panel, no timer and no saved recording here. */
+.terminal-dictation{position:relative;flex-shrink:0;display:flex;align-items:center}
+.dictation-button{display:flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;border:0;border-radius:5px;background:transparent;color:var(--text);cursor:pointer}
+.dictation-button:hover{background:color-mix(in srgb,var(--text) 4%,transparent)}
+.dictation-button:disabled{opacity:.4;cursor:default}
+.dictation-button.listening{background:var(--red);color:var(--text-bright)}
+.dictation-button.starting,.dictation-button.stopping{opacity:.55}
+.terminal-dictation-note{position:absolute;right:0;top:34px;width:max-content;max-width:min(320px,80vw);padding:6px 9px;border:1px solid color-mix(in srgb,var(--text) 24%,transparent);border-radius:6px;background:var(--surface-solid);color:var(--text-bright);font-size:11px;z-index:30;white-space:normal}
 /* Tab groups: a header chip per group, collapse, and the right-click menu. */
 .chat-tab-group{display:flex;flex-wrap:wrap;align-items:stretch;gap:2px 0;margin-right:6px;padding-right:2px;border-radius:6px 6px 0 0;background:color-mix(in srgb,var(--tab-accent) 7%,transparent);box-shadow:inset 0 2px 0 color-mix(in srgb,var(--tab-accent) 45%,transparent)}
 .chat-tab-group.drop-into{box-shadow:inset 0 0 0 1px var(--pink),inset 0 2px 0 color-mix(in srgb,var(--tab-accent) 45%,transparent)}

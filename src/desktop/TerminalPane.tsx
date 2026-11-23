@@ -192,7 +192,7 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
       if (event.type !== 'keydown') return true
       // Leave paste to the DOM clipboard event; do not send Ctrl+V (Cmd+V on macOS) to the CLI.
       if (modKey(event) && (event.code === 'KeyV' || event.key.toLowerCase() === 'v')) return false
-      // App shortcuts belong to Chats, not the terminal.
+      // App shortcuts belong to Chatspace, not the terminal.
       if ((event.ctrlKey && event.code === 'Tab') || (modKey(event) && event.shiftKey && ['KeyP', 'KeyT', 'KeyH', 'KeyW'].includes(event.code)) || ((isMac ? event.metaKey : event.altKey) && /^Digit[1-9]$/.test(event.code))) return false
       return true
     })

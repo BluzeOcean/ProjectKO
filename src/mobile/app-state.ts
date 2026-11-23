@@ -21,7 +21,7 @@ export function setMobileHistory(history: boolean) { update({ history }) }
 export function resetMobileNavigation() { workspaceSelection = { id: null, step: 0 }; workspaceListeners.forEach(listener => listener()); navigation = { view: 'list', history: false }; listeners.forEach(listener => listener()); syncBack() }
 
 // The phone's back gesture returns to the screen above the current one instead of leaving the app:
-// a report to the Workspace list, the Workspace or a chat to the chat list, History to the open chats.
+// a report to the Vault list, the Vault or a chat to the chat list, History to the open chats.
 // While a screen has one, a close watcher takes the back request, as an open dialog does. A history
 // entry would not work here: a report frame's own navigations sit in the same session history.
 function previousScreen(): (() => void) | null {

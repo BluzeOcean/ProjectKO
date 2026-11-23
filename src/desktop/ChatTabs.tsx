@@ -158,7 +158,7 @@ export default function ChatTabs({ items, selectedId, agents, groups, collapsed,
         <form onSubmit={event => { event.preventDefault(); if (draft.trim()) patch(menu.item.id, { group: draft.trim() }) }}><input placeholder="New group…" aria-label="New group name" value={draft} maxLength={60} onChange={event => setDraft(event.target.value)} /><button type="submit" disabled={!draft.trim()}>Add</button></form>
         {menu.item.group && <button type="button" role="menuitem" onClick={() => patch(menu.item.id, { group: null })}>Remove from {menu.item.group}</button>}
         <hr />
-        <button type="button" role="menuitem" onClick={() => { setMenu(null); api('/reveal', { path: menu.item.cwd }).catch(reportError) }}>Show working folder</button>
+        <button type="button" role="menuitem" onClick={() => { setMenu(null); api('/reveal', { path: menu.item.cwd }).catch(reportError) }}>Show workspace</button>
         <button type="button" role="menuitem" title="Clear visible scrollback; keep the agent conversation" onClick={() => { setMenu(null); api(`/sessions/${menu.item.id}/clear`, {}).catch(reportError) }}>Clear terminal scrollback</button>
         <hr />
         <button type="button" role="menuitem" onClick={() => { setMenu(null); close(menu.item.id) }}>Close tab · keep in History</button>

@@ -17,7 +17,7 @@ function ThemeOptions() {
 export default function ThemePicker({ target = 'workspace' }: { target?: ThemeTarget }) {
   const { preference, resolved } = useWorkspaceTheme(target)
   const palette = themePalette(resolved)
-  const label = target === 'chat' ? 'Chat theme' : 'Workspace theme'
+  const label = target === 'chat' ? 'Chatspace theme' : 'Vaultspace theme'
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const change = async (value: WorkspaceTheme) => {
@@ -32,7 +32,7 @@ export default function ThemePicker({ target = 'workspace' }: { target?: ThemeTa
       <div className="theme-preview-bar" style={{ background: palette.panel }}><i style={{ background: palette.accent }} /><span>{palette.name}</span><i style={{ background: palette.secondary }} /></div>
       <div className="theme-preview-copy"><span style={{ color: palette.muted }}>A clear space for your work</span><strong>Ideas with room to grow.</strong><span style={{ color: palette.accent }}>Aa <span style={{ color: palette.secondary }}>Aa</span></span></div>
     </div>
-    <p>{palette.description} {target === 'chat' ? 'Applies to all chats, including Conversation and Terminal.' : 'Applies to Workspace and standard reports.'} System follows your device.</p>
+    <p>{palette.description} {target === 'chat' ? 'Applies to all chats, including Conversation and Terminal.' : 'Applies to Vaultspace and standard reports.'} System follows your device.</p>
     {error && <p role="alert">{error}</p>}
   </div>
 }
@@ -43,7 +43,7 @@ export default function ThemePicker({ target = 'workspace' }: { target?: ThemeTa
 export function ThemeRow({ target = 'workspace' }: { target?: ThemeTarget }) {
   const { preference, resolved } = useWorkspaceTheme(target)
   const palette = themePalette(resolved)
-  const label = target === 'chat' ? 'Chat theme' : 'Workspace theme'
+  const label = target === 'chat' ? 'Chatspace theme' : 'Vaultspace theme'
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const change = async (value: WorkspaceTheme) => {
@@ -64,7 +64,7 @@ export function ThemeRow({ target = 'workspace' }: { target?: ThemeTarget }) {
       <span className="settings-palette-line">Ideas with room to grow.</span>
       <span className="settings-palette-aa" style={{ color: palette.accent }}>Aa <span style={{ color: palette.secondary }}>Aa</span></span>
     </div>
-    <p className="settings-row-help">{palette.description} {target === 'chat' ? 'Applies to all chats, including Conversation and Terminal.' : 'Applies to Workspace and standard reports.'} System follows your device.</p>
+    <p className="settings-row-help">{palette.description} {target === 'chat' ? 'Applies to all chats, including Conversation and Terminal.' : 'Applies to Vaultspace and standard reports.'} System follows your device.</p>
     {error && <p className="settings-row-help" role="alert">{error}</p>}
   </>
 }

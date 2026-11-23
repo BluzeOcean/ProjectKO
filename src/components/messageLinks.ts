@@ -1,6 +1,6 @@
 // Web and mail links open in the browser. A file: URL, a drive path or a scheme-less
 // link is a local path, possibly relative to the chat folder: files preview in
-// Workspace (on the phone, in its file viewer), folders open. Other schemes are shown as text, never followed.
+// Vault (on the phone, in its file viewer), folders open. Other schemes are shown as text, never followed.
 export type LinkTarget = { kind: 'web' } | { kind: 'local'; path: string } | { kind: 'text' }
 export function linkTarget(href = ''): LinkTarget {
   if (/^(https?|mailto):/i.test(href)) return { kind: 'web' }

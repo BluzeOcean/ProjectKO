@@ -2,13 +2,19 @@
 
 ## Unreleased
 
+- The chat microphone is a switch for **Toxic**, not a recorder. Project KO keeps no audio and draws no recording panel: the button starts Toxic's own listening mode, Toxic shows its HUD and transcribes with Hex, and the words land in the composer or the terminal when it stops. Starting it wakes Toxic when the app is closed, and asks you to install Toxic when the app is missing.
 - Speech to text and read aloud now go through the **Toxic** app over its loopback MCP server. Dictation defaults to **Toxic · local** (Hex inside Toxic); recordings are converted to 16 kHz mono WAV before transcription. Optional Local Whisper and the paid providers remain selectable.
 - Read aloud uses Toxic's Pocket TTS. The Chatterbox installer, its GPU worker, the unused Kokoro worker and the voice-clip management UI were removed; the voice and language are chosen in Toxic.
-- Removed the direct Hex bridge and its Ctrl+T hand-off. The terminal's Ctrl+T now starts Project KO's own recorder, and Toxic keeps the machine-wide double-tap Ctrl shortcut.
+- Removed the direct Hex bridge and its Ctrl+T hand-off. The chat's Ctrl+T now toggles the same microphone, and Toxic keeps the machine-wide double-tap Ctrl shortcut.
+- Rename the two folders so they can no longer be mistaken for each other: the window that keeps results is the **Vault**, and its folder is Settings > **Vault folder**; the folder a chat's agent runs in is its **workspace**, used by New chat, the tab menu and the permission hints. They used to read as "Workspace directory" and "working folder". Labels only: no files moved and no settings reset.
+- Say **board** for the unit you open, archive and discuss, and keep **card** for the content inside one of its tabs. History, the phone and Help use that pair, and the board filter groups by **tag**.
+- Name the two windows after what they hold: **Chatspace** for the agent chats and **Vaultspace** for the boards, with matching window titles, tray entries, the phone and Help. **Vault** remains the folder on disk, so a sentence about storage and a sentence about the window no longer use the same word.
+- Keep the window switcher to two entries. The app builds **Chatspace** and **Vaultspace** once: a restarted service now points the open windows at the new service instead of building a second pair, and every other window the app owns (the single-instance event target, tao's thread window, the console) is marked as a tool window so Windows never lists it in Alt+Tab or on the taskbar.
+- Separate the data from the app: **Settings > Vault folder** points the boards at any folder on any drive, kept in `.mrmak/settings.json`, and `workspace/` becomes only the default. Changing it never moves or copies a board; the report chrome stays with the app, so a report keeps its layout wherever the Vault lives. The launcher accepts a repository whose boards are elsewhere.
 
 ## 0.6.4 - 2026-11-12
 
-- Keep New chat compact. Agent selection, chat name and the permission checkbox stay visible; project, working folder, group, reasoning effort and native resume are under Advanced, closed by default. Existing defaults and entered values are preserved.
+- Keep New chat compact. Agent selection, chat name and the permission checkbox stay visible; project, workspace, group, reasoning effort and native resume are under Advanced, closed by default. Existing defaults and entered values are preserved.
 - Reduce typing lag in long Conversation histories by reusing rendered Markdown when a message has not changed.
 - Keep Japanese IME confirmation in macOS/WebKit from sending a message, submitting an edit or accepting a slash command. Ordinary Enter and Shift+Enter keep their existing behavior.
 
@@ -235,7 +241,7 @@ merge them separately or use the skills ZIP. See [the update guide](docs/updatin
 
 ## 0.1.1 - 2026-09-22
 
-- Web links in agent chats and Workspace cards now open in your default browser. Wrapped terminal links and named citations work too.
+- Web links in agent chats and boards now open in your default browser. Wrapped terminal links and named citations work too.
 - The bottom terminal row stays visible above the connection bar, including the model and reasoning effort.
 - New Codex and Claude chats default to `xhigh`. Existing saved effort choices are kept; task-specific voice requests can still select an appropriate effort.
 

@@ -66,7 +66,6 @@
 .conversation-composer textarea::placeholder{color:var(--text-dim)}
 .conversation-actions{display:flex;align-items:center;gap:4px;margin-top:2px}
 .conversation-status{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--text-dim);padding-left:4px}
-.conversation-composer .terminal-dictation .mobile-voice-panel,.conversation-composer .terminal-dictation .mobile-voice-error{top:auto;bottom:36px;left:0;right:auto}
 .conversation-send{display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:9px;background:var(--pink);color:var(--on-accent)}
 .conversation-send:disabled{background:color-mix(in srgb,var(--text) 8%,transparent);color:var(--text-dim)}
 .conversation-stop{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent);border-radius:8px;background:transparent;color:var(--amber);font-size:11px}

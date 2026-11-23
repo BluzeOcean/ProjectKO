@@ -6,7 +6,7 @@ working. Ask for missing personal preferences; do not invent a biography.
 
 ## Working rules
 
-- Keep Workspace content in English unless another language is explicitly
+- Keep Vault content in English unless another language is explicitly
   requested for that output. A conversation in another language does not change
   the default language of stored work.
 - Check `processes/` for an existing workflow and `knowledge/` for prior decisions.

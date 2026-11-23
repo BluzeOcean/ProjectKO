@@ -4,7 +4,7 @@ import { modelShort } from './chatModel'
 import type { ChatSession } from './types'
 
 /**
- * The one line at the bottom of the Chats window.
+ * The one line at the bottom of the Chatspace window.
  *
  * It says what the chat in front of you is doing and how much is left: the
  * connection, the model it answers with and the account's meters — one row, so

@@ -17,7 +17,7 @@ export default function Topbar({ entity, stepIndex, onStep, onHome, reportUrl }:
     <div className="topbar">
       <nav className="breadcrumb" aria-label="Breadcrumb">
         <button className="crumb-link" onClick={onHome}>
-          Workspace
+          Vaultspace
         </button>
         {entity && (
           <>

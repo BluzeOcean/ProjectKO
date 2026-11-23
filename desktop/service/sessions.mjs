@@ -126,7 +126,7 @@ export class Sessions extends EventEmitter {
     nativeConversationId(options.resumeId);
     if (options.effort && !workerEfforts.includes(options.effort)) throw new Error('Reasoning effort must be medium, high, xhigh or max.');
     const cwd = await workingFolder(options.cwd || this.repo);
-    if (!(await stat(cwd)).isDirectory()) throw new Error('Working folder must be a directory');
+    if (!(await stat(cwd)).isDirectory()) throw new Error('Workspace must be a directory');
     const now = new Date().toISOString();
     const session = this.make({
       id: randomUUID(), agent, name: englishTitle(options.name, `Conversation ${this.items.size + 1}`),
@@ -153,7 +153,7 @@ export class Sessions extends EventEmitter {
     nativeId = nativeConversationId(nativeId.trim());
     if (agent === 'antigravity' && !validAntigravityId(nativeId)) throw new Error('Use the Antigravity conversation UUID from its /resume picker.');
     cwd = await workingFolder(cwd || this.repo);
-    if (!(await stat(cwd)).isDirectory()) throw new Error('Working folder must be a directory');
+    if (!(await stat(cwd)).isDirectory()) throw new Error('Workspace must be a directory');
     const existing = [...this.items.values()].find(item => item.agent === agent && item.nativeId === nativeId);
     if (existing) { existing.name = englishTitle(name, existing.name); existing.pinned = pinned; this.changed(existing); await this.persist(); return publicSession(existing); }
     const now = new Date().toISOString();

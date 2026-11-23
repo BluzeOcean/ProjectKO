@@ -24,7 +24,7 @@ export class CardDocuments {
     const entity = (await this.workspace.registry()).entities.find(item => item.id === id);
     const selected = entity?.steps?.[step];
     if (!entity || selected?.viewer !== 'card' || !localCardPath(entity.folder) || !localCardPath(selected.path) || !selected.path.endsWith('.card.json')) fail('This tab is not an editable card.', 404);
-    const workspaceRoot = await realpath(path.join(this.repo, 'workspace'));
+    const workspaceRoot = await realpath(this.workspace.vault.root);
     const { file: folder, info: folderInfo } = await realFile(workspaceRoot, entity.folder);
     if (!folderInfo.isDirectory()) fail('Card folder not found.', 404);
     const { file, info } = await realFile(folder, selected.path);
@@ -108,7 +108,7 @@ export class CardDocuments {
       const document = { format: CARD_FORMAT, version: CARD_VERSION, template, title: title.trim(), summary: description.trim(), items: [] };
       const slug = folderSlug(title, template);
       const id = `${slug}-${randomUUID().slice(0, 8)}`, folder = `${localDay()}_${id}`;
-      const workspaceRoot = await realpath(path.join(this.repo, 'workspace'));
+      const workspaceRoot = await realpath(this.workspace.vault.root);
       const directory = path.join(workspaceRoot, folder), file = path.join(directory, 'content.card.json');
       const entity = { id, title: document.title, description: description.replace(/\s+/g, ' ').trim().slice(0, 240), type: 'standalone', category, created: localDay(), updated: localDay(), folder, steps: [{ name: cardTemplateLabels[template], path: 'content.card.json', viewer: 'card' }], defaultStep: 0, status: 'active' };
       await mkdir(directory);

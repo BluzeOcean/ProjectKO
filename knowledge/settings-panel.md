@@ -17,7 +17,7 @@ bench's README records what each version was arguing.
 | --- | --- |
 | `src/desktop/WorkspaceSettings.tsx` | the eight folds, the search field, the row builders, and the `Section` component that filters and expands. |
 | `src/desktop/desktop.css` `.settings-*` rules | the one row grammar. `.settings-scroll` is still the scroll container. |
-| `Workspace Directory` fold | the first fold, open by default: `<repo>/workspace`, the folder every board is created in, with a button that calls `POST /api/reveal` so the folder opens in Explorer or Finder. |
+| `Vault` fold | the first fold, open by default: `<repo>/workspace`, the folder every board is created in, with a button that calls `POST /api/reveal` so the folder opens in Explorer or Finder. |
 | `src/components/ThemePicker.tsx` | `ThemeRow` — the row plus a palette painting one line of itself. The default export (the card, with its big preview) is still what the Appearance popover draws. |
 | `src/components/DictationSettings.tsx` | `DictationRows` for the panel; the default export still draws the section the phone and the Mobile access panel use. |
 | `src/styles/workspace-theme.css` | the theme overrides that used to target `.settings-scroll select` and friends. |
@@ -27,9 +27,9 @@ bench's README records what each version was arguing.
 1. **A wrapping `<label>` names a select after all of its options.** The
    panel's rows wrap their control in a label so clicking the name focuses it,
    which is right, but the accessible name then read
-   "Workspace themeCodex / ChatGPTAntigravity…". Every control keeps an explicit
+   "Vaultspace themeCodex / ChatGPTAntigravity…". Every control keeps an explicit
    `aria-label`; `theme-ui.mjs` and `quota-ui.mjs` depend on it
-   (`getByLabel('Workspace theme', { exact: true })`).
+   (`getByLabel('Vaultspace theme', { exact: true })`).
 2. **The values are the app's, not the visible words.** A palette option submits
    its id (`light`), the quota interval submits minutes (`5`), because
    `quota-ui.mjs` asserts `toHaveValue('5')`. Labels are for reading.
@@ -37,12 +37,12 @@ bench's README records what each version was arguing.
    and padding for every field in the app; the panel's borderless field is
    `.settings-row .settings-text` for that reason alone.
 4. **A theme override using `background` wipes `background-image`.** The row
-   selects draw their caret as an inline SVG background image, so the workspace
+   selects draw their caret as an inline SVG background image, so the Vaultspace
    theme's rule must set `background-color`, not the shorthand.
 
 ## What the tests expect
 
-`theme-ui.mjs` opens Settings and changes `Workspace theme` and `Chat theme`
+`theme-ui.mjs` opens Settings and changes `Vaultspace theme` and `Chatspace theme`
 — Appearance is the one fold that starts open, so those work unchanged.
 `quota-ui.mjs` changes `Check the quota every`, which lives in the Agent quota
 fold, so it clicks the header first (`getByRole('button', { name: /^Agent quota/ })`).

@@ -129,7 +129,7 @@ export function terminalCommand(agent, { bypass = false, resumeId, nativeId, eff
     if (noDaemon) args.push('--no-daemon');
     if (bypass) args.push('--dangerously-bypass-approvals-and-sandbox');
     if (effort) args.push('-c', `model_reasoning_effort="${effort}"`);
-    // Codex reads outside its working folder by default.
+    // Codex reads outside its workspace by default.
     if (initialPrompt) args.push(initialPrompt);
   } else if (agent === 'claude') {
     // The prompt comes first: --add-dir takes every following argument.

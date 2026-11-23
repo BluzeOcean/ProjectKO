@@ -35,7 +35,7 @@ maintained source. `npm run test:template` checks that the two copies agree.
 | [plan](../.agents/skills/plan/SKILL.md) | Turn a broad project request into a small actionable plan with concrete deliverables, dependencies and acceptance checks. |
 | [video-watch](../.agents/skills/video-watch/SKILL.md) | Inspect a local or publicly accessible video through sampled scene frames, timestamps and a visual report, especially for motion and 3D reference analysis. |
 | [voice-dictation-setup](../.agents/skills/voice-dictation-setup/SKILL.md) | Help configure optional local Whisper dictation into terminals and other apps, with language, hotkey and CPU or GPU checks. |
-| [workspace-authoring](../.agents/skills/workspace-authoring/SKILL.md) | Create or maintain Workspace cards, report tabs and Markdown deliverables with consistent styling, working media previews and clear project organization. |
+| [workspace-authoring](../.agents/skills/workspace-authoring/SKILL.md) | Create or maintain boards, report tabs and Markdown deliverables with consistent styling, working media previews and clear project organization. |
 
 ## Game production in 0.4.14
 
@@ -68,12 +68,12 @@ The eight original creative modules and six new game workflows can be copied
 with their own local resources. Preserve any referenced sibling skill when you
 choose to use it. Keep the full img2threejs folder and its licences.
 
-Workspace authoring, video inspection and dictation setup also reference this
+The workspace-authoring skill, video inspection and dictation setup also reference this
 repository's processes, knowledge and scripts. Copy those referenced files when
 extracting a module; the ZIP includes these support files and shared report
 assets. Merge them with an existing project instead of replacing its instructions,
 reports or shared styles. Planning and handoff skills use the receiving project's
-conventions. The standalone pack contains no Workspace cards or application.
+conventions. The standalone pack contains no boards or application.
 
 A skill does not authenticate a provider or install a tool. Follow its setup
 references and bring your own account. Credentials and raw paid-job receipts

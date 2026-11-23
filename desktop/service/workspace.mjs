@@ -2,7 +2,7 @@ import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { realFile, saveJson, sleep } from './util.mjs';
+import { realFile, saveJson, sleep, within } from './util.mjs';
 import { validateCard, cardText, CARD_MAX_BYTES, localDay } from './card-schema.mjs';
 
 const execute = promisify(execFile);
@@ -37,7 +37,14 @@ export function metadataPatch(value) {
 }
 
 export class Workspace {
-  constructor(repo, changed = () => {}) { this.repo = repo; this.file = path.join(repo, 'workspace', 'workspace.json'); this.changed = changed; this.writes = Promise.resolve(); }
+  constructor(vault, changed = () => {}) {
+    // A plain repository path still means its own `workspace/`, which is what
+    // the service opens when no Vault folder has been chosen.
+    this.vault = typeof vault === 'string'
+      ? { repo: vault, root: path.join(vault, 'workspace'), file: path.join(vault, 'workspace', 'workspace.json') }
+      : vault;
+    this.repo = this.vault.repo; this.file = this.vault.file; this.changed = changed; this.writes = Promise.resolve();
+  }
   async registry() {
     const registry = JSON.parse(await readFile(this.file, 'utf8'));
     if (!Array.isArray(registry.entities)) throw new Error('Workspace registry is not ready.');
@@ -49,12 +56,12 @@ export class Workspace {
   }
   async read(id, step = 0) {
     const entity = (await this.registry()).entities.find(item => item.id === id);
-    if (!entity) throw new Error('Workspace card was not found.');
+    if (!entity) throw new Error('Board was not found.');
     const result = { ...brief(entity), text: '' };
     const selected = entity.steps?.[step];
     if (!selected) return result;
     const relative = path.join(entity.folder, selected.path.split('?')[0]);
-    const { file } = await realFile(path.join(this.repo, 'workspace'), relative);
+    const { file } = await realFile(this.vault.root, relative);
     if (selected.viewer === 'card' && file.endsWith('.card.json') && (await stat(file)).size <= CARD_MAX_BYTES) return { ...result, text: cardText(validateCard(JSON.parse(await readFile(file, 'utf8')))).slice(0, 12000) };
     if (!/\.(html?|md|txt)$/i.test(file) || (await stat(file)).size > 3 * 1024 * 1024) return { ...result, note: 'The card uses a visual or large report. Open it for the full content.' };
     const text = await readFile(file, 'utf8');
@@ -64,11 +71,17 @@ export class Workspace {
   async activity(date) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) throw new Error('Use a date in YYYY-MM-DD format.');
     const registry = await this.registry();
-    const { stdout = '' } = await execute('git', ['log', `--since=${date}T00:00:00`, `--until=${date}T23:59:59`, '--format=%s', '--name-only', '--max-count=45', '--', 'workspace'], { cwd: this.repo, windowsHide: true, maxBuffer: 128 * 1024 }).catch(() => ({}));
+    // A Vault outside the repository has no Git history to read: the dates the
+    // registry keeps are the record then.
+    const relative = within(this.repo, this.vault.root) ? path.relative(this.repo, this.vault.root).split(path.sep).filter(Boolean).join('/') : '';
+    const prefix = relative ? `${relative}/` : '';
+    const { stdout = '' } = relative
+      ? await execute('git', ['log', `--since=${date}T00:00:00`, `--until=${date}T23:59:59`, '--format=%s', '--name-only', '--max-count=45', '--', relative], { cwd: this.repo, windowsHide: true, maxBuffer: 128 * 1024 }).catch(() => ({}))
+      : {};
     const lines = stdout.split(/\r?\n/).filter(Boolean);
-    const paths = lines.filter(line => line.startsWith('workspace/'));
-    const cards = registry.entities.filter(item => item.created === date || item.updated === date || paths.some(file => file.startsWith(`workspace/${item.folder}/`))).map(brief);
-    return { date, cards, commits: [...new Set(lines.filter(line => !line.startsWith('workspace/')))].slice(0, 15), basis: 'Workspace dates and recorded Git changes; not a complete record of unsaved work.' };
+    const paths = prefix ? lines.filter(line => line.startsWith(prefix)) : [];
+    const cards = registry.entities.filter(item => item.created === date || item.updated === date || paths.some(file => file.startsWith(`${prefix}${item.folder}/`))).map(brief);
+    return { date, cards, commits: [...new Set(lines.filter(line => !prefix || !line.startsWith(prefix)))].slice(0, 15), basis: 'Vault dates and recorded Git changes; not a complete record of unsaved work.' };
   }
   update(id, patch) {
     const operation = this.writes.catch(() => {}).then(async () => {
@@ -80,7 +93,7 @@ export class Workspace {
         const source = await readFile(this.file, 'utf8');
         const registry = JSON.parse(source);
         const entity = registry.entities.find(item => item.id === id);
-        if (!entity) throw Object.assign(new Error('Workspace card was not found.'), { status: 404 });
+        if (!entity) throw Object.assign(new Error('Board was not found.'), { status: 404 });
         if (patch.status !== undefined) entity.status = patch.status;
         if (patch.pinned !== undefined) entity.pinned = patch.pinned;
         if (patch.category !== undefined) entity.category = patch.category;
@@ -115,7 +128,7 @@ export class Workspace {
     if (typeof name !== 'string' || !name.trim() || name !== path.basename(name) || name === '.' || name === '..') {
       throw invalid('This board has no folder of its own.');
     }
-    return path.join(this.repo, 'workspace', name);
+    return path.join(this.vault.root, name);
   }
 
   /** Takes a board out of the registry. Its files are left where they are:
@@ -127,7 +140,7 @@ export class Workspace {
         const source = await readFile(this.file, 'utf8');
         const registry = JSON.parse(source);
         const index = registry.entities.findIndex(item => item.id === id);
-        if (index < 0) throw Object.assign(new Error('Workspace card was not found.'), { status: 404 });
+        if (index < 0) throw Object.assign(new Error('Board was not found.'), { status: 404 });
         const [entity] = registry.entities.splice(index, 1);
         // The folder is settled before anything is written, so a board with an
         // odd folder name is never half-removed.

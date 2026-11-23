@@ -3,13 +3,13 @@
 Mobile access connects a phone to the agent chats running in Project KO Desktop.
 The computer keeps the CLI processes, their sign-ins and project files. The
 phone can read conversations, dictate drafts, send messages and images, resume a saved chat,
-start an installed agent, and read Workspace reports.
+start an installed agent, and read Vault reports.
 
 ## First connection
 
 1. Install [Tailscale](https://tailscale.com/download) on your computer and phone.
    Sign in to the same Tailscale account on both and keep them connected.
-2. Open Project KO **Chats** and select the **phone icon** in the top bar.
+2. Open Project KO **Chatspace** and select the **phone icon** in the top bar.
 3. Choose **Enable & show QR code**. If Tailscale requests HTTPS permission,
    follow its [Serve setup](https://tailscale.com/docs/features/tailscale-serve)
    and try again. On Windows, Tailscale may require administrator permission
@@ -18,7 +18,7 @@ start an installed agent, and read Workspace reports.
    screen. Tap the detected link to open your browser. Name the device and
    select **Request connection**.
 5. Compare the six-digit confirmation code on both screens, then choose
-   **Connect phone** in Chats. A QR code alone does not grant access.
+   **Connect phone** in Chatspace. A QR code alone does not grant access.
 6. After connecting, tap Install when the browser makes installation available, or open Phone settings for Install Project KO. Not now dismisses the invitation for this browser session; the settings button remains available. You can also use your browser’s Install app or Add to Home Screen menu (Safari’s Share menu on iPhone). If the installed
    web app asks to connect again, enter the eight-digit connection code shown
    under a fresh desktop QR code and confirm it on the computer.
@@ -51,7 +51,7 @@ between 8443 and 8446. It preserves existing routes and never enables Funnel.
 - **Attach images:** uploads an image to the computer's `inbox/attachments`
   and inserts its path with the message. Other file types and a full remote
   file manager are not part of this version.
-- **Results:** read active Workspace cards and their HTML or Markdown tabs.
+- **Results:** read active boards and their HTML or Markdown tabs.
   HTML previews are isolated and can read only their own report folder and
   the shared report styling. Desktop-only API calls, external embedded frames
   and reports outside the repository are not available in this viewer.
@@ -112,10 +112,13 @@ Project KO. Refresh Phone settings afterward and select **Local Whisper**.
 The Windows PowerShell wrapper `setup-local-dictation.ps1` calls the same setup.
 Nothing is downloaded automatically by opening the app.
 
-Desktop chats offer a microphone in the chat toolbar. Transcription pastes
-directly into the terminal input without pressing Enter. The Workspace's Mak composer
-also supports dictation; its Send button remains a separate action. In a
-terminal, Ctrl+T starts or stops the same recorder. Toxic's own machine-wide
+Desktop chats offer a microphone in the chat toolbar, and it is a switch for
+Toxic rather than a recorder: Project KO starts Toxic's own listening mode, Toxic
+shows the take in its HUD, and the words arrive in the draft or directly in the
+terminal input without pressing Enter. Ctrl+T does the same from the terminal.
+Pressing the microphone while Toxic is closed opens Toxic; if it is not installed,
+the chat asks you to install it. Vaultspace's Mak composer also supports
+dictation; its Send button remains a separate action. Toxic's own machine-wide
 double-tap Ctrl remains available for other apps; Project KO does not add a
 second listener for it on desktop. This feature is separate from conversational
 Talk to Mak.
@@ -130,8 +133,9 @@ On desktop this opens **Phone settings**, combining pairing, devices and
 speech-to-text. On mobile it opens the same provider choice alongside install
 and disconnect controls. Desktop **Settings → Speech-to-text** also has it.
 Choose **Toxic · local**, **Local Whisper · Free**, **OpenAI · Paid**, **OpenRouter · Paid**, or **Off**.
-The saved choice is shared by desktop and all paired phones, updates immediately,
-and applies to the next transcription. An in-progress request finishes using
+Desktop chat dictation always runs in Toxic's listening mode; this choice sets the
+phone and the Mak composer. The saved choice is shared by the phone and desktop,
+updates immediately, and applies to the next transcription. An in-progress request finishes using
 its existing provider. Missing setup or API keys are shown beside the choice;
 keys are entered only in the computer's ignored `.env`.
 
@@ -173,7 +177,7 @@ unavailable; closing the phone does not stop agents.
 After a restart, open Project KO on the computer and the same mobile shortcut on
 the phone. The saved pairing is reused. Tailscale must be connected on both
 devices; opening Project KO restores its private route. If Tailscale was not ready
-when Project KO started, enable mobile access again from the phone panel in Chats.
+when Project KO started, enable mobile access again from the phone panel in Chatspace.
 Project KO does not add itself to operating-system startup automatically.
 On Android, use the system's Always-on VPN option for Tailscale if you want it
 to start with the phone; some devices also need background autostart permission.
@@ -187,7 +191,7 @@ agent accepted or completed the task. If delivery is uncertain, inspect the
 terminal before unlocking the draft for a new attempt. Unsynchronised terminal
 keystrokes should be entered from one device at a time.
 
-The phone button in Chats shows connected and paired devices. **Disconnect**
+The phone button in Chatspace shows connected and paired devices. **Disconnect**
 revokes a device and closes its connections. **Turn off mobile access** stops
 the mobile surface without stopping agent chats; paired devices can reconnect
 when it is enabled again. Pairing codes expire after five minutes. A device's
@@ -197,7 +201,7 @@ Mobile access is off by default. Device credentials are stored as hashes in
 the ignored runtime state; the phone holds its own HttpOnly session cookie.
 It never receives the desktop control token or model API keys. A paired phone
 can ask agents to act with their existing permissions, so disconnect a lost
-device from Chats or remove it from your Tailscale account.
+device from Chatspace or remove it from your Tailscale account.
 
 ## Developing and checking the mobile client
 
@@ -264,26 +268,26 @@ recordings as a Markdown link to the saved file.
 Mobile saves its selected chat, app section, History choice and each chat's
 Conversation/Terminal mode on that phone. Reloading or reopening restores the
 saved chat and mode; Conversation remembers whether you were following the
-latest reply or reading history. Chats returns to the selected chat after
-Workspace; Back to chats opens the list. Missing chats return to the list without
+latest reply or reading history. Chatspace returns to the selected chat after
+Vaultspace; Back to chats opens the list. Missing chats return to the list without
 selecting a different agent. Drafts remain per-chat, and desktop selection stays
-independent. Disconnect clears the saved mobile navigation state. Workspace independently remembers its selected card, each card's report tab,
+independent. Disconnect clears the saved mobile navigation state. Vaultspace independently remembers its selected board, each board's report tab,
 and reading position. Switching sections keeps both views mounted. HTML readers
 restore their saved route, window and nested scroll positions after reopening
 through an origin-checked, scroll-only sandbox message bridge. Terminal mode
-also remembers its scrollback line and fit setting. Use All workspaces to return
-to the card list; tapping Workspace itself never closes the selected report.
+also remembers its scrollback line and fit setting. Use the phone's back gesture to return
+to the card list; tapping Vaultspace itself never closes the selected report.
 
 Each mobile message to an agent includes a small reference to the selected
-Workspace card and report tab. It includes the viewer page and section anchor
+board and report tab. It includes the viewer page and section anchor
 when the report bridge has reported them; older services supply only the report
 entry page. These are viewer references, not filesystem paths. Report content is
-not copied or read to build this note. The note says this is the current Workspace
+not copied or read to build this note. The note says this is the current Vaultspace
 where you are working and tells the agent to read, open or investigate it only
-when your request asks for it. Clearing the Workspace selection sends a null
+when your request asks for it. Clearing the Vaultspace selection sends a null
 reference so an earlier card is no longer treated as current.
 
-Delivery retries retain the original Workspace reference, even after switching
+Delivery retries retain the original Vaultspace reference, even after switching
 pages or reloading. The automatic note stays in the native agent transcript,
 while mobile displays and reads aloud your original message. Shell input and
 native slash commands are sent unchanged. Desktop messages remain independent.

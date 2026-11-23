@@ -51,7 +51,7 @@ export default function FolderDropdown({ cwd, onChange }: { cwd: string; onChang
     </button>
     <div className="folder-menu" ref={list} hidden={!open}>
       {(projects?.length || 0) > 6 && <div className="folder-search"><Icon name="search" size={13} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Find a project…" aria-label="Find a project" /></div>}
-      <div className="folder-list" role="listbox" aria-label="Working folder">
+      <div className="folder-list" role="listbox" aria-label="Workspace">
         {groups.map(group => <div className="menu-group" role="group" aria-label={group.label} key={group.label}>
           <div className="group-label">{group.label}</div>
           {group.items.map(item => { const selected = sameFolder(item.path, cwd); return <div role="presentation" key={item.path} className={`folder-row ${selected ? 'selected' : ''}`}>
@@ -68,8 +68,8 @@ export default function FolderDropdown({ cwd, onChange }: { cwd: string; onChang
         {projects && !groups.length && <p className="desk-muted">{needle ? 'No matching projects.' : 'Folders you open in Claude Code or here will be listed.'}</p>}
       </div>
       <div className="folder-foot">
-        <span>Working folder</span>
-        <input value={cwd} onChange={event => onChange(event.target.value)} spellCheck={false} aria-label="Working folder path" />
+        <span>Workspace</span>
+        <input value={cwd} onChange={event => onChange(event.target.value)} spellCheck={false} aria-label="Workspace path" />
       </div>
     </div>
   </div>

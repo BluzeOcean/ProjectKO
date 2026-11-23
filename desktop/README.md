@@ -2,12 +2,15 @@
 
 The desktop app is a Tauri 2 shell around two webviews. It starts one local Node
 service, binds it to loopback and gives each window the authenticated local URL.
-Workspace renders the React UI and report files. Chats renders real PTYs through
+Vaultspace renders the React UI and report files. Its folder is chosen in
+Settings and kept in `.mrmak/settings.json` (`vaultPath`); `desktop/service/vault.mjs`
+is the one place that resolves it, and the default is `workspace/` in the
+repository. Chatspace renders real PTYs through
 xterm.js. The windows share sessions and settings but minimize independently.
 
 | Path | Responsibility |
 | --- | --- |
-| `src/` | React Workspace, document previews, files, chat and voice UI |
+| `src/` | React Vaultspace, document previews, files, chat and voice UI |
 | `desktop/service/` | HTTP/WebSocket service, PTYs, session history, tools, voice connection |
 | `src-tauri/src/` | Cross-platform shell integration plus Windows taskbar identities, macOS login-shell PATH and key handling, native drag and optional system shortcut |
 | `workspace/workspace.json` | Card registry |
@@ -43,7 +46,7 @@ current app view stays open.
 
 ## Projects and the Conversation view
 
-New chat lists recent projects from `recent-projects.mjs`: the Workspace, pinned
+New chat lists recent projects from `recent-projects.mjs`: the Project KO folder, pinned
 favorites, folders recorded in Claude Code's `.claude.json` (`CLAUDE_CONFIG_DIR`
 is respected), Codex session metadata from the latest 60 day folders (`CODEX_HOME`
 is respected) and the folders of earlier Project KO chats. Only folder names are read
@@ -63,7 +66,7 @@ the default for other chats.
 the bottom of the terminal screen. Conversation shows it as buttons. An answer
 names the menu it saw; the service re-reads the screen, rejects a changed menu,
 then sends arrow keys and Enter one key at a time. Local links in messages open a
-Workspace preview, resolved against the chat folder. Desktop Read aloud uses the
+A preview opens in Vaultspace, resolved against the chat's workspace. Desktop Read aloud uses the
 same local voices as the phone.
 
 ## Fresh-chat handoff and project tabs
@@ -80,7 +83,7 @@ receives one first-message argument naming that file. Claude also receives
 
 
 **Group tabs by project** in the Chat header organises open tabs into named
-groups by working folder. Existing project grouping and its saved order migrate
+groups by workspace. Existing project grouping and its saved order migrate
 automatically to the 0.5.2 group model. Drag a group or use Alt+Left/Right on its
 header to reorder it; right-click offers the native group controls.
 
@@ -97,9 +100,9 @@ The local engine is the default. Choose Free/Paid/Off in the top-right phone
 button (**Phone settings**) or **Settings → Speech-to-text**. The choice is saved
 and shared with paired phones. Paid providers require an API key on the computer.
 
-## Workspace and Chat themes
+## Vaultspace and Chatspace themes
 
-Settings → Appearance offers independent **Workspace theme** and **Chat theme**
+Settings → Appearance offers independent **Vaultspace theme** and **Chatspace theme**
 choices. Chat also has an Appearance button in its header. Thirteen named palettes
 are available, alongside Dark, Light and System. **Codex / ChatGPT**,
 **Antigravity** and **Claude Code** take visual inspiration from those tools;
@@ -116,7 +119,7 @@ they are not exact copies. The other five families each offer a light and dark o
 Existing family preferences select Fjord, Moss & Brass, Clay, Harbor and Velvet
 respectively. Both approved variants are selectable by their family and name.
 
-Selections are saved and synchronised across open windows. Workspace also themes
+Selections are saved and synchronised across open windows. Vaultspace also themes
 standard reports; custom artwork and games retain their colours. Chat themes apply
 to Conversation and Terminal without restarting a CLI or losing a draft. Terminal
 text has a minimum contrast ratio of 4.5; Original and Focus remain separate choices.
@@ -200,8 +203,10 @@ ad-hoc signed (not notarised) and Apple Silicon only; build steps and limits are
 Speech to text and read aloud both go through the **Toxic** app on this
 computer. Toxic runs Hex for transcription and Pocket TTS for speech, and
 publishes a loopback MCP endpoint that the service discovers from
-`%APPDATA%\app.toxic.desktop\mcp.json`. Open Toxic before dictating or reading
-aloud; no speech model, Python environment or cloud key belongs to Project KO.
+`%APPDATA%\app.toxic.desktop\mcp.json`. A chat's microphone only starts and stops
+Toxic's listening mode: Project KO keeps no recording, and pressing the button
+opens Toxic when it is closed. Reading aloud still needs Toxic open. No speech
+model, Python environment or cloud key belongs to Project KO.
 The voice and language are chosen in Toxic. Phone settings still lists one read
 aloud voice, **Toxic · Pocket TTS**. Updating service files requires
 a user-approved application restart.
