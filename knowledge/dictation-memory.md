@@ -79,6 +79,28 @@ means no dictation in Project KO at all, so the owner should keep Toxic in
 **chord mode** (`sttMode: "chord"`), where the hook swallows the key
 machine-wide.
 
+## The delivery: where the words land
+
+Toxic types the transcript into **the window that has the focus when the
+typing starts**, and the typing starts only after the speech engine has
+finished. Measured on 2026-11-24:
+
+| Moment | Clock |
+| --- | --- |
+| the chord is pressed in a Project KO terminal | 15:46:47 |
+| the take is finished with a key | 15:46:48 |
+| the transcript is ready | 15:47:08 |
+| the words are typed (after a 1.5 s wait for the modifiers) | ~15:47:09.5 |
+
+**Twenty-one seconds** between the chord and the words. A user who moves on in
+that time gets the words in the wrong window. In that measurement the Project
+KO windows received **nothing** - no packet, no inserted text - while the take
+itself was recorded normally.
+
+That is written up as [a request](request-toxic-typing-target.md): a take
+should be typed into the window that started it. Until that is fixed the
+practical rule is to stay in the window until the HUD clears.
+
 ## The bridge: how the terminal receives typed words
 
 Toxic types its transcript with `SendInput` and `KEYEVENTF_UNICODE`. Windows
