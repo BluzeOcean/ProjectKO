@@ -511,3 +511,52 @@ working chord ever seen came from the *previous* process (pid 43196, 18:34-18:56
 the trace at 18:50:01). **The owner's "it works in every other window" was
 therefore measured on a different Toxic process**, and cannot be carried over to
 this one.
+
+### 2026-11-24 20:43 - the decisive test: the chain is cut for the Project KO window only
+
+Two instruments, one keypress each, same minute.
+
+| Window | Foreground sampler | Stand-alone probe (`WH_KEYBOARD_LL`, installed 20:22:23) | Toxic's log | Project KO web-view probe |
+| --- | --- | --- | --- | --- |
+| **Project KO terminal** | `18776:projectko:Project KO — Chats` from 20:43:01.987 to 20:43:26.499 | **nothing at all** | **nothing** | two complete Ctrl+T presses: 20:43:14.828→15.451 and 20:43:18.159→18.273 (`ctrl=1 shift=0 alt=0`, `defaultPrevented=1`) |
+| **Chrome** | `11028:chrome` from 20:43:26.499 | `down vk=162` 20:43:29.178, `down vk=84` 20:43:29.180, ups 29.363/29.369 | `hotkeys: T pressed · chord Ctrl+T · tracked ctrl=1 alt=0 shift=0 win=0 · Windows ctrl=1 alt=0 shift=0 win=0 · matched · starting a take · front chrome.exe "YouTube - Google Chrome" · 19382 keys seen` and `dictation: typed into chrome.exe` | - |
+
+Toxic's own injected typing is visible in the probe too: `down vk=231 (0xE7) …
+flags=0x10 extra=0x70C1C01` at 20:43:33.314-33.319. `0x70C1C01` is Toxic's own
+MARKER (`inject.rs:27`), so both the hook and the typing path are live.
+
+Counted over the whole probe lifetime (2445 rows at 21:05): **42** `vk=84` (T)
+events, **14** `vk=162` (LCtrl) events, and **0 rows whose foreground is `18776`
+(Project KO)**.
+
+**What this proves:**
+
+1. **Toxic's hook is alive and healthy in the current process.** It matched the
+   chord, opened a take, and had seen 19382 keys. "Toxic's hook is dead" and
+   "Toxic's hook is not installed" are dead.
+2. **The chord works in Chrome with the current process** - the owner's "works
+   everywhere else" now holds for pid 36488, not only for the earlier process.
+3. **The chain is cut for the Project KO window specifically.** The probe never
+   swallows anything (it always ends in `CallNextHookEx`) and it saw every key
+   that entered the chain, including the Chrome chord that Toxic swallowed. Over
+   the Project KO window it saw nothing, while the web view received the same
+   keys as ordinary keydowns.
+
+**The paradox, in its sharpest form:** a physical Ctrl+T typed into the Project
+KO terminal arrives at the web view as a normal keydown (`keyCode 84`, `ctrlKey
+1`, `defaultPrevented=1`), yet **no low-level keyboard hook on the machine is
+called for it** - neither Toxic's nor an independent stand-alone probe. Eleven
+seconds later the same chord in Chrome reaches both hooks and Toxic opens a
+take.
+
+**Therefore the key reached the Project KO window by a path that does not go
+through the `WH_KEYBOARD_LL` chain.** The candidates are a raw-input / `WM_INPUT`
+path, an input-sink registration, a posted `WM_KEYDOWN`, or a synthesised DOM
+event. No code path in Project KO was found that dispatches keyboard events, so
+the newest suspect is the `hex.exe` pile (Toxic's STT engine): per the Hex-era
+record, Hex reads the foreground application for per-application modes, refuses
+windows it does not accept, and with `share_dictation_shortcut` off it consumes
+the chord instead of passing it on.
+
+**The hook probe is the instrument that settled this and must not be disposed
+until the fault is found.** It is the only witness to the cut.

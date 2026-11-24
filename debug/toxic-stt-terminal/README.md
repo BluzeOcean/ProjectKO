@@ -1,6 +1,8 @@
 # Bug: the dictation chord never opens a take over a Project KO window
 
-**Status:** open, narrowed to two candidate mechanisms, one decisive test outstanding.
+**Status:** open. **The decisive test has been run (2026-11-24 20:43) and it
+moved the fault out of Toxic.** The `WH_KEYBOARD_LL` chain does not run for keys
+that reach the Project KO window; the one open question is what delivers them.
 **Owner:** Kudavi. **Repo:** `V:\06_App\ProjectKO`. **Other app:** Toxic at
 `V:\04_Projects\Toxic` (read-only from here — changes there become tickets).
 
@@ -71,3 +73,23 @@ four-way match. The single test that tells them apart is in
 **A live take has never delivered a packet into the Project KO terminal**, so the
 terminal bridge (`src/desktop/terminalUnicode.ts`) has still never been exercised
 by a real take.
+
+**Update, 2026-11-24 20:43 - the decisive test has been run and it moved the
+fault out of Toxic.** With a stand-alone `WH_KEYBOARD_LL` probe and Toxic's own
+log watching the same chain: **Toxic's hook is alive and healthy** - in the very
+process that refuses to act over Project KO it matched the chord in Chrome and
+opened a take (`19382 keys seen`) - and the chord works in every other window.
+But **over the Project KO window the chain does not run at all**: the probe
+logged **zero** rows with Project KO in front across 2445 rows, while the PKO
+web view received the same Ctrl+T presses as ordinary keydowns (`keyCode 84`,
+`ctrlKey 1`, `defaultPrevented=1`).
+
+**So the fault is not in Toxic's chord decision, its modifier mask, its refusal
+logic or its hook lifetime - the key reaches the Project KO window by a path
+that does not go through the `WH_KEYBOARD_LL` chain.** The candidates are a
+raw-input / `WM_INPUT` path, an input-sink registration, a posted `WM_KEYDOWN`,
+or a synthesised DOM event. The newest suspect is the pile of 17 `hex.exe`
+processes (Toxic's STT engine), whose per-application modes consume the chord.
+The live hypothesis and the next test are in
+[`open-questions.md`](open-questions.md); the full handoff for the next agent
+is `knowledge/handoff-toxic-stt-terminal.md`.

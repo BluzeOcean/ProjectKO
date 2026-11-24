@@ -156,15 +156,48 @@ not spend time on them again. The full record is
 attempt that failed - including the injection experiments whose conclusions
 were invalid - is `knowledge/dictation-failed-attempts.md`.
 
-- **The key reaches the operating system.** A stand-alone `WH_KEYBOARD_LL`
-  probe logs `Ctrl+T` while a Project KO window is in front, exactly as it does
-  over Notepad.
-- **The hook chain is healthy.** Project KO installs its own low-level hook
+> **Update, 2026-11-24 20:43 - the first bullet below is no longer true, and
+> the correction is the whole diagnosis.** A stand-alone probe installed at
+> 20:22:23 logged **zero** rows with a Project KO window in front, across 2445
+> rows, while the same probe logged the Chrome chord that Toxic matched *and
+> swallowed*. The Project KO web view received the same Ctrl+T presses as
+> ordinary keydowns (`keyCode 84`, `ctrlKey 1`, `defaultPrevented=1`).
+>
+> **So the key does *not* reach the operating system by the ordinary path over
+> a Project KO window.** The `WH_KEYBOARD_LL` chain does not run for it. That
+> bullet was true in the Hex era - which is exactly why the same symptom recurred
+> - and it is false now.
+>
+> **Toxic is not the broken link.** In the very process that refuses to act
+> over Project KO (pid 36488), Toxic's hook matched the chord in Chrome and
+> opened a take with `19382 keys seen` behind it, and its injected transcript
+> typing is visible in the probe as `vk=231 … extra=0x70C1C01` at 20:43:33.314.
+> The fault is the delivery path into the Project KO window, not Toxic's chord
+> decision.
+>
+> The live hypothesis (a raw-input / `WM_INPUT` path, an input-sink
+> registration, a posted `WM_KEYDOWN`, a synthesised DOM event, or the `hex.exe`
+> pile) and the next test are in
+> `debug/toxic-stt-terminal/open-questions.md`. The full handoff for the next
+> agent is `knowledge/handoff-toxic-stt-terminal.md`.
+
+- **The key reaches the operating system.** *(Superseded 2026-11-24 20:43 -
+  see the update above.)* A stand-alone `WH_KEYBOARD_LL` probe logs `Ctrl+T`
+  while a Project KO window is in front, exactly as it does over Notepad.
+- **The hook chain is healthy.** *(Superseded 2026-11-24 20:43 - see the update
+  above.)* Project KO installs its own low-level hook
   (`src-tauri/src/win_key.rs`, for the bare Windows-key recall). A two-hook test
   confirmed that its `CallNextHookEx(NULL, ...)` still reaches hooks installed
   earlier, and that hook never swallows anything.
 - **No privilege mismatch.** `projectko.exe`, `toxic.exe` and Explorer are all
-  medium integrity, `TokenElevation=0`. UIPI is not hiding anything.
+  medium integrity, `TokenElevation=0`. UIPI is not hiding anything. Re-measured
+  at 20:10 with `OpenProcess(PROCESS_ALL_ACCESS)` against `projectko.exe`
+  (18776), `toxic.exe` (36488), `chrome.exe` (11028) and `Overwatch.exe`
+  (28828) - all four open, same integrity level, no `EnableLUA` key, no
+  `requireAdministrator` in either manifest.
+- **The foreground window is not the cause.** Measured at 20:04: the foreground
+  sampler shows `18776:projectko:Project KO — Chats` in front during three
+  physical Ctrl+T presses that the web-view probe recorded.
 - **The HUD would have been visible.** Toxic's HUD window is
   `always_on_top(true)`, `focusable(false)` and `skip_taskbar(true)`, so a take
   that had opened would have been drawn over the Project KO window. It was not

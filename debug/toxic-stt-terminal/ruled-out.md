@@ -74,26 +74,55 @@ typing it, which is not what happened.
 
 ### "Toxic's hook was never called for the Project KO presses"
 
-**REOPENED 2026-11-24 20:04 - the ruling was based on faulty logic.** It argued:
-"a matched chord swallows the key, the probe received the key-down, so no hook
-swallowed it, and since the hook is global it must have been called and must have
-declined to act."
+**CONFIRMED BY DIRECT MEASUREMENT, 2026-11-24 20:43.** The entry below explains
+why the old ruling was faulty logic; the stand-alone probe has now replaced the
+inference with a measurement.
+
+The old reasoning was: "a matched chord swallows the key, the probe received the
+key-down, so no hook swallowed it, and since the hook is global it must have been
+called and must have declined to act."
 
 That last step does not follow. **A hook that is called and declines to act also
 lets the key through** - the key reaching the application proves only that *no
 hook swallowed it*, not that Toxic's hook was called.
 
-The second half of the old argument is the part that holds, and it is decisive:
-a refusal always writes a line when a modifier is held
-(`check.tracked.any() || check.live.any()`), and `live` is `GetAsyncKeyState`,
-which cannot read "up" while Ctrl is physically down for 3.9 seconds. So the
-absence of any line means **neither mask was ever consulted**.
+The stand-alone `WH_KEYBOARD_LL` probe (installed 20:22:23) settles it: at
+20:43 the owner pressed Ctrl+T twice in the Project KO terminal (the web-view
+probe recorded both presses) and the stand-alone probe logged **nothing** for
+that window, while the same probe logged the Chrome chord 11 seconds later. A
+hook that is called and declines to act is still *seen* by a later hook in the
+chain - the probe is not swallowing anything. So no hook was called at all for
+the Project KO presses.
 
-**This is now the live hypothesis** (see [`evidence.md`](evidence.md),
-2026-11-24 20:04). It is being tested against a stand-alone `WH_KEYBOARD_LL`
-probe installed on this machine at 20:22:23: if the probe sees the chord over
-the Project KO window while Toxic's log stays empty, the chain is healthy and
-**Toxic's hook is the broken link**.
+**Proves:** the fault is not in Toxic's chord decision, its modifier mask or its
+refusal logic. The `WH_KEYBOARD_LL` chain does not run for keys that reach the
+Project KO window.
+
+### "Toxic's hook is dead, or was never installed in the current process"
+
+**Dead.** Measured 2026-11-24 20:43: Toxic matched the chord in Chrome and
+opened a take, with `19382 keys seen` behind the hook, in the very process that
+refuses to act over Project KO (pid 36488, started 19:18:41). Its injected
+transcript typing is visible in the stand-alone probe as `vk=231 … flags=0x10
+extra=0x70C1C01` (Toxic's MARKER) at 20:43:33.314. The hook is alive and
+healthy; it is simply not called for the Project KO window.
+
+The earlier version of this suspect (H3 in `open-questions.md`) said the owner's
+"it works in every other window" had been measured on an *earlier* Toxic
+process. That gap is closed - it was measured on pid 36488 too.
+
+### "The chain is cut for the Project KO window specifically"
+
+**This is the live hypothesis, and it is now measured, not assumed.** The
+stand-alone probe saw every key that entered the chain (including a chord that
+Toxic swallowed) and logged **zero** rows with `front=18776` across 2445 rows.
+The foreground sampler independently confirms Project KO was in front
+(20:43:01.987 → 20:43:26.499) during two physical Ctrl+T presses that the
+web-view probe recorded as ordinary keydowns.
+
+**Proves:** the cut is real, it is window-specific, and it is not caused by
+Toxic's hook being dead. The open question is *what* delivers a key to a
+window without running the `WH_KEYBOARD_LL` chain.
 
 ### "The Project KO window is elevated, so UIPI hides its input from other hooks"
 

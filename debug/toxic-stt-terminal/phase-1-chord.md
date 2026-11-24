@@ -58,13 +58,25 @@ Get-Content .cache\phase1-watch.log
   recently 16:49:55 and 16:49:56, with **no partner take open**.
 - Toxic's own hook ignores only Toxic's *own* marked events, so an injected
   chord is observed exactly like a physical one: injection is not the variable.
-- Toxic's hook installs once at startup and is never reinstalled.
+- Toxic's hook is installed at startup **and reinstalled every 10 seconds** by
+  the keepalive, which logs `Windows had removed the keyboard hook` whenever an
+  unhook fails (`hotkeys.rs:632-638`). **That line is absent from the log.**
 - Toxic's chord branch needs an exact four-way match against its own tracked
   modifier mask, so one stale bit fails every `Ctrl+T` silently, everywhere.
 - The partner-take rule (`hotkeys.rs:654-699`): while a partner app owns the
   microphone, Toxic passes **every** key, including the chord, to that app.
   The agent app is such a partner, because the owner's dictation to the agent
   goes through Toxic's MCP `dictation` tool.
+- **Measured 2026-11-24 20:43 - the whole `WH_KEYBOARD_LL` chain does not run
+  over the Project KO window.** A stand-alone probe (never swallows, always
+  `CallNextHookEx`) logged the Chrome chord that Toxic matched *and swallowed*,
+  and **zero** rows with `front=18776` across 2445 rows - while the web view
+  received the same Ctrl+T presses as ordinary keydowns. Toxic's own log was
+  empty for those presses and full for the Chrome ones (`19382 keys seen`).
+
+  **So the chord does not "fail" over the chatspace - it is never seen.** Any
+  test that expects a chord decision, a trace or a refusal over the chatspace
+  will find nothing, and that is the measurement, not a missing log line.
 
 See [`evidence.md`](evidence.md) for the dated measurements and
 [`ruled-out.md`](ruled-out.md) for the theories that are already dead.
