@@ -138,6 +138,19 @@ export class ToxicClient {
     return text;
   }
 
+  // A partner take: Toxic opens the microphone, records, and hands the
+  // transcript back to the app that asked for it instead of typing it into the
+  // focused window. `start` answers "listening", `stop` answers with the
+  // transcript, `status` answers with the state.
+  async dictation(action, { hint, timeout = 120_000 } = {}) {
+    const content = await this.callTool('dictation', { action, ...(hint ? { hint } : {}) }, timeout);
+    const text = content.find(block => block?.type === 'text' && typeof block.text === 'string')?.text ?? '';
+    if (action === 'status') {
+      try { return JSON.parse(text); } catch { return { listening: false }; }
+    }
+    return text;
+  }
+
   // speed 1 keeps Toxic's configured speed out of the result: Project KO
   // stretches playback itself, and applying both would speak too fast.
   async speak(text, speed = 1) {

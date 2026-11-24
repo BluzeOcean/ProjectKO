@@ -17,7 +17,16 @@ await mkdir(path.join(repo, 'workspace'));
 await writeFile(path.join(repo, 'workspace/workspace.json'), '{"entities":[]}');
 await cp(path.join(root, 'dist'), path.join(repo, 'ui'), { recursive: true });
 await cp(path.join(root, 'public/assets'), path.join(repo, 'ui/assets'), { recursive: true });
-const service = await createService({ repo, uiDir: path.join(repo, 'ui'), mcpOptions: { home: repo, env: {} } });
+// Toxic is not running in a test, so the take is answered by a stand-in.
+// What is checked is the shape of the exchange and where the words land.
+const takes = [];
+const toxicDictation = {
+  async take({ hint } = {}) { takes.push({ action: 'start', hint }); return { listening: true }; },
+  async stop() { takes.push({ action: 'stop' }); return { transcript: 'the spoken words' }; },
+  async cancel() { takes.push({ action: 'cancel' }); return { listening: false }; },
+  async status() { return { listening: false, last: null }; },
+};
+const service = await createService({ repo, uiDir: path.join(repo, 'ui'), mcpOptions: { home: repo, env: {} }, toxicOptions: { dictation: toxicDictation } });
 const session = service.sessions.make({ id: 'dictation-test', createdAt: new Date().toISOString(), cols: 90, rows: 32, name: 'Dictation test', agent: 'claude', cwd: repo, open: true });
 const writes = [];
 session.status = 'running'; session.process = { write: data => writes.push(data), resize() {}, kill() {} };
@@ -94,21 +103,32 @@ try {
   await page.waitForTimeout(600);
   assert.equal(writes.slice(before).join(''), '', 'a composition is left to the terminal');
 
-  // The chord is Toxic's. It may still reach the window when Toxic is in its
-  // double tap mode, and the CLI must never see it.
+  // The chord opens a take. Over a Chromium web view Toxic's own system-wide
+  // hook never fires - the host takes the keyboard as raw input, so no
+  // keyboard message and no low-level hook are ever generated for it - so the
+  // terminal asks for the take itself. Toxic still owns the microphone, the
+  // recording and the transcription.
   before = writes.length;
   await page.keyboard.press('Control+t');
-  await page.waitForTimeout(400);
+  await expect.poll(() => takes.filter(call => call.action === 'start').length, { timeout: 5000 }).toBe(1);
+  assert.ok(!writes.slice(before).some(chunk => chunk.includes('\x14')), 'the CLI never receives the chord');
+
+  // The next key ends the take, and the words land in the terminal that asked
+  // for them. Nothing is typed into any other window.
+  await page.keyboard.press('Space');
+  await expect.poll(() => writes.slice(before).join(''), { timeout: 5000 }).toContain('the spoken words');
+  assert.equal(takes.filter(call => call.action === 'stop').length, 1, 'the take is finished once');
   assert.ok(!writes.slice(before).some(chunk => chunk.includes('\x14')), 'the CLI never receives the chord');
 
   const clipboardCalls = await page.evaluate(() => window.__clipboardCalls);
   assert.equal(clipboardCalls, 0, 'the clipboard is never touched');
 
-  // This app asks Toxic for no take: no microphone, no transcript, no watcher.
-  // The dictation provider status is a different thing - it says which engine
-  // transcribes the phone - and it is asked once, not polled.
-  const takeCalls = requests.filter(url => /listen|transcript|take/.test(url));
-  assert.deepEqual(takeCalls, [], 'the app asks for no take');
+  // The app asks Toxic for a take - and only when the chord is pressed in a
+  // terminal. It never polls, and the route that used to carry the microphone
+  // is gone. The dictation provider status is a different thing - it says
+  // which engine transcribes the phone - and it is asked once, not polled.
+  assert.equal(takes.filter(call => call.action === 'start').length, 1, 'one take was asked for');
+  assert.deepEqual(requests.filter(url => /api\/dictation\/listen|transcript/.test(url)), [], 'the old microphone route is not used');
   const providerCalls = requests.filter(url => url.includes('/api/dictation')).length;
   await page.waitForTimeout(3000);
   assert.equal(requests.filter(url => url.includes('/api/dictation')).length, providerCalls, 'Toxic is not polled');
@@ -132,5 +152,5 @@ try {
   await expect(page.locator('#pko-dictation-probe')).toHaveCount(0, { timeout: 5000 });
 
   await page.screenshot({ path: path.join(repo, 'desktop-dictation.png') });
-  console.log(JSON.stringify({ ok: true, screenshot: path.join(repo, 'desktop-dictation.png'), checks: ['ordinary key typed once', 'packet arrives once', 'packets in a row', 'composition left alone', 'chord swallowed', 'clipboard untouched', 'no take requested', 'Toxic is not polled', 'no microphone switch', 'probe records and can be shown and hidden'] }));
+  console.log(JSON.stringify({ ok: true, screenshot: path.join(repo, 'desktop-dictation.png'), checks: ['ordinary key typed once', 'packet arrives once', 'packets in a row', 'composition left alone', 'chord opens a take', 'the words land in the terminal', 'the CLI never receives the chord', 'clipboard untouched', 'one take asked for', 'Toxic is not polled', 'no microphone switch', 'probe records and can be shown and hidden'] }));
 } finally { await browser?.close(); session.process = null; await service.close(); }

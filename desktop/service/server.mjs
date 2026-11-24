@@ -33,6 +33,7 @@ import { projectKey, recentProjects } from './recent-projects.mjs';
 import { answerPrompt, readPrompt } from './terminal-prompt.mjs';
 import { rewindToMessage } from './message-edit.mjs';
 import { ToxicReadAloud } from './toxic-read-aloud.mjs';
+import { ToxicDictation } from './toxic-dictation.mjs';
 import { toxicShortcut } from './toxic-launch.mjs';
 import { Vault } from './vault.mjs';
 import { Handoffs } from './handoff.mjs';
@@ -43,7 +44,7 @@ import { permissionModes } from './dsh.mjs';
 
 const listen = server => new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`)); });
 
-export async function createService({ repo, uiDir, stateDir, token = secret(), native = () => {}, restoreSessions = false, mcpOptions, mobileOptions, quotaOptions, dev = false }) {
+export async function createService({ repo, uiDir, stateDir, token = secret(), native = () => {}, restoreSessions = false, mcpOptions, mobileOptions, quotaOptions, toxicOptions, dev = false }) {
   repo = await realpath(repo);
   stateDir ||= path.join(repo, '.mrmak');
   const environment = parseEnv(await readFile(path.join(repo, '.env'), 'utf8').catch(() => ''));
@@ -71,6 +72,10 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const transcripts = new ConversationTranscripts();
   const conversationMedia = new ConversationMedia();
   const readAloud = mobileOptions?.readAloud || new ToxicReadAloud();
+  // A partner take for Project KO's own terminals: the chord never reaches
+  // Toxic's system-wide hook over a Chromium web view, so the terminal asks
+  // for the take itself.
+  const toxicDictation = toxicOptions?.dictation || new ToxicDictation();
   const quota = new Quota(quotaOptions);
   if (settings.groupTabsByProject === true) {
     await sessions.groupByProject(settings.projectOrder);
@@ -271,6 +276,16 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         if (method === 'POST' && url.pathname === '/api/transcribe') return json(response, 200, await dictation.transcribe(request, 'desktop', () => !closing));
         const data = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) ? await body(request, url.pathname === '/api/files/markdown' ? 12 * 1024 * 1024 : url.pathname.startsWith('/api/workspace/cards') ? 2 * 1024 * 1024 : 256 * 1024) : {};
         if (method === 'POST' && url.pathname === '/api/dictation') return json(response, 200, await chooseDictation(data.provider));
+        // A partner take: Toxic opens the microphone and hands the transcript
+        // back to this app, so the words land in the terminal that asked for
+        // them and nothing is typed into any other window.
+        if (method === 'POST' && url.pathname === '/api/dictation/take') {
+          const action = data.action === 'stop' || data.action === 'cancel' || data.action === 'status' ? data.action : 'start';
+          if (action === 'stop') return json(response, 200, await toxicDictation.stop());
+          if (action === 'cancel') return json(response, 200, await toxicDictation.cancel());
+          if (action === 'status') return json(response, 200, await toxicDictation.status());
+          return json(response, 200, await toxicDictation.take({ hint: typeof data.hint === 'string' ? data.hint : undefined }));
+        }
         // The dictation probe: a diagnostic that records what a window receives
         // when another process types into it. An agent switches it on and off
         // over this route; it is a tool, not part of the product's behaviour.

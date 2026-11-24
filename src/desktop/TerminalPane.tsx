@@ -28,6 +28,49 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
   const chord = useMemo(() => parseChord(state.dictationShortcut) || fallbackChord, [state.dictationShortcut])
   const chordRef = useRef(chord)
   useEffect(() => { chordRef.current = chord }, [chord])
+  // A partner take in this terminal. The chord arrives here and nowhere else:
+  // over a Chromium web view the WebView2 host takes the keyboard as raw
+  // input, so no keyboard message - and no low-level hook - is ever generated
+  // for it, and Toxic's own chord hook never fires. The terminal therefore
+  // asks Toxic for the take, and Toxic still owns the microphone, the
+  // recording and the transcription.
+  const takeState = useRef<'idle' | 'listening' | 'finishing'>('idle')
+  const takeStatusTimer = useRef(0)
+  async function startTake() {
+    if (takeState.current !== 'idle') return
+    takeState.current = 'listening'
+    onAttachmentStatus(id, 'Listening — press any key to finish')
+    try {
+      await api('/dictation/take', { action: 'start', hint: 'Press any key in the terminal to finish' })
+    } catch (error) {
+      takeState.current = 'idle'
+      onAttachmentStatus(id, '')
+      reportError(error)
+    }
+  }
+  async function finishTake() {
+    if (takeState.current !== 'listening') return
+    takeState.current = 'finishing'
+    try {
+      const result = await api<{ transcript: string }>('/dictation/take', { action: 'stop' })
+      const words = (result?.transcript || '').trim()
+      if (words) {
+        // An agent terminal submits the words. A shell terminal only shows
+        // them: a spoken sentence must never run itself as a command.
+        sendEvent({ type: 'input', id, data: agent === 'shell' ? words : `${words}\r` })
+        onAttachmentStatus(id, 'Dictation received')
+      } else onAttachmentStatus(id, 'Nothing was heard')
+    } catch (error) {
+      onAttachmentStatus(id, '')
+      reportError(error)
+    } finally {
+      takeState.current = 'idle'
+      clearTimeout(takeStatusTimer.current)
+      takeStatusTimer.current = window.setTimeout(() => onAttachmentStatus(id, ''), 1600)
+    }
+  }
+  const startTakeRef = useRef(startTake), finishTakeRef = useRef(finishTake)
+  useEffect(() => { startTakeRef.current = startTake; finishTakeRef.current = finishTake })
   const uploading = useRef(false)
   const choosing = useRef(false)
   async function pasteImages(files: File[]) {
@@ -186,11 +229,22 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
       if (ready && !deviceReply) sendEvent({ type: 'input', id, data })
     })
     terminal.attachCustomKeyEventHandler(event => {
+      // While a take is open, the next key ends it. It never reaches the CLI.
+      if (takeState.current === 'listening') {
+        event.preventDefault(); event.stopPropagation()
+        if (event.type === 'keydown') void finishTakeRef.current()
+        return false
+      }
       // The dictation chord belongs to Toxic. Its system-wide hook is the
       // first to see it and swallows it. When Toxic is in its double tap mode
       // the key can still reach the window, and the CLI must never see it.
+      // Over a Chromium web view that hook never fires at all, so the chord
+      // arrives here and Project KO opens the take itself.
       if (matchesChord(event, chordRef.current)) {
         event.preventDefault(); event.stopPropagation()
+        // A take that is being transcribed must not be started again by the
+        // rest of the chord that ended it.
+        if (event.type === 'keydown' && takeState.current === 'idle') void startTakeRef.current()
         return false
       }
       // Windows/Linux: agent chats use Ctrl+C exclusively for copy. Even an empty
