@@ -3,10 +3,27 @@
 **Written:** 2026-11-24 21:10 (Asia/Shanghai).
 **For:** the next agent who continues this hunt. You are picking up a
 half-finished diagnosis, not a fresh feature.
-**Status:** Phase 1 **open**. Phase 2 **untestable**. Root cause **not yet
-proven** - but it is now measured, not guessed, and the measurement narrows the
-fault to a single class of mechanism.
+**Status:** **Phase 1 FIXED** (2026-11-24 23:30, owner-verified live). Phase 2
+exercised for the first time. Root cause **proven**.
 
+> **CLOSED, 2026-11-24 23:30.** The root cause is that **a global chord
+> shortcut cannot reach a Chromium web view**: the WebView2 host takes the
+> keyboard as raw input, so no keyboard message - and no low-level hook - is
+> generated for a key that goes to the Project KO window. Toxic's hook was never
+> called; the page got the key instead, as a trusted DOM keydown.
+>
+> The owner approved the fix: the terminal opens the take itself (Route B) and
+> Toxic still owns the microphone, the recording and the transcription. The
+> chord now opens a take in a Project KO terminal and the words land there.
+> Implementation: `3cd8a7d`. The record:
+> [`.debuglog/m-2026-11-24-2308-pko-press-measured.md`](../.debuglog/m-2026-11-24-2308-pko-press-measured.md),
+> [`.debuglog/m-2026-11-24-2330-route-b-working.md`](../.debuglog/m-2026-11-24-2330-route-b-working.md).
+> The design of record is `knowledge/dictation-memory.md`.
+>
+> **What is still open** is Toxic's typing-target defect: a take made in
+> another application is typed into whatever has the focus ~21 s later
+> (`knowledge/request-toxic-typing-target.md`).
+>
 > **Read `.debuglog/README.md` first.** That folder is the working
 > log for this bug only. This document is the map; that folder is the terrain.
 

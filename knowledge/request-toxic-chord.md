@@ -1,6 +1,8 @@
 # Request: Toxic's global dictation chord does not open a take while a Project KO window is in front
 
-**Status:** open. **Raised:** 2026-11-24 by Project KO (this repository).
+**Status:** open on Toxic's side, but **the cause is now known and it is not
+Toxic's hook**. Project KO stopped waiting for it (see the note below).
+**Raised:** 2026-11-24 by Project KO (this repository).
 **Addressed to:** whoever owns the **Toxic** repository at `V:\04_Projects\Toxic`.
 **Filed as a ticket there:** `V:\04_Projects\Toxic\ticket\2026-11-24-dictation-chord-and-typing-target.md`
 (2026-11-24), which carries the same evidence and adds the typing-target
@@ -9,6 +11,49 @@ defect of `request-toxic-typing-target.md`.
 This is a ticket, not a change. Project KO cannot edit Toxic; it can only report
 what was measured and what has to change. Everything below is measured on this
 machine, on the running build.
+
+> **UPDATE, 2026-11-24 23:30 - the cause, and what Project KO does now.**
+>
+> **Toxic's hook is never called for a key that goes to a Project KO window,
+> and it cannot be.** The WebView2 host takes the keyboard as **raw input**
+> (`WM_INPUT`), so the keyboard message that the low-level hook chain
+> (`WH_KEYBOARD_LL`) runs on is never generated for that window. The page
+> receives the key instead, as a trusted DOM keydown.
+>
+> Measured on 2026-11-24, the same physical chord in two windows:
+>
+> | | Project KO | Notepad |
+> | --- | --- | --- |
+> | the chord happens | yes | yes |
+> | the low-level hook chain | **never called** | called, matched, a take opened |
+> | the app | a trusted `keydown` (`TRUSTED=1`, `composing=0`) | n/a |
+> | the words | never typed | typed ("hello hello") |
+>
+> Nothing else was involved: not elevation (every process at Medium integrity),
+> not Toxic's code (binary mtime 18:29, `hotkeys.rs` 18:24, config intact), not
+> the `hex.exe` pile (16 orphans of dead sessions), and not Project KO's code
+> (no raw-input registration, no posted message, no synthesised key event, no
+> injected DLL in the WebView2 processes).
+>
+> **What this means for Toxic:** there is nothing to fix in the chord decision,
+> the modifier mask, the refusal logic or the hook lifetime - the hook is never
+> asked. The defect that remains is a **general** one: a global shortcut cannot
+> reach a Chromium web view. If Toxic wants dictation to work inside such an
+> application without the application asking, it needs a mechanism that does not
+> depend on the low-level hook chain.
+>
+> **What Project KO does now:** the owner approved (2026-11-24) the terminal
+> opening the take itself - the chord arrives there, and the terminal asks
+> Toxic for a **partner take** through the MCP `dictation` tool. Toxic still
+> owns the microphone, the recording and the transcription; a partner take
+> returns the transcript to the app that asked, so the words land in that
+> terminal and are never typed into any other window. The measurements are in
+> [`.debuglog/m-2026-11-24-2308-pko-press-measured.md`](../.debuglog/m-2026-11-24-2308-pko-press-measured.md)
+> and [`.debuglog/m-2026-11-24-2330-route-b-working.md`](../.debuglog/m-2026-11-24-2330-route-b-working.md).
+>
+> **The typing-target defect below is untouched by this** and is still Toxic's
+> to fix: a take made in another application is still typed into whatever has
+> the focus, ~21 s later.
 
 ## The defect
 

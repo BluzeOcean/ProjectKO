@@ -55,7 +55,22 @@ stand-alone probe logged **zero** rows with `front=18776` across 2445 rows, and
 
 ## H4 - What produces a key event inside the Project KO web view?
 
-**OPEN - this is the crux, and it was re-worded on 2026-11-24 21:15.** The
+**ANSWERED - 2026-11-24 23:30.** The key enters the Project KO window as
+**raw input** (`WM_INPUT`), which the WebView2 host registers for. Chromium
+builds the DOM keydown from it - a **trusted** event - and the keyboard
+message that the low-level hook chain runs on is never generated, so **no
+`WH_KEYBOARD_LL` hook is ever called for that window**, including Toxic's.
+
+The consequence is the whole shape of the bug: **a global chord shortcut
+cannot reach a Chromium web view on this machine.** The chord *is* delivered to
+the page, so the terminal - which already caught it to keep `^T` from the CLI -
+now opens the take itself (Route B, owner-approved). See
+[m-2026-11-24-2308-pko-press-measured.md](m-2026-11-24-2308-pko-press-measured.md)
+and [m-2026-11-24-2330-route-b-working.md](m-2026-11-24-2330-route-b-working.md).
+
+<details><summary>The wording before it was answered</summary>
+
+The
 earlier wording ("what delivers a key to the Project KO window without running
 the hook chain") assumed the key came from the keyboard. It did not.
 
@@ -106,6 +121,8 @@ refusal would normally still be *seen* by a lower hook in the chain, so it
 only fits if Hex consumes the chord *before* the chain runs. Test it, do not
 conclude it.
 
+</details>
+
 ---
 
 ## The next test (owner)
@@ -136,12 +153,12 @@ opens in Chrome, press **Escape** to cancel it. Report the clock time.
 
 ## Also open
 
-- **Has a real take ever delivered a packet into a Project KO terminal?** No.
-  The bridge has never been exercised by a real take, so it is unproven in the
-  live direction. The first successful chord in a Project KO terminal answers
-  this.
+- **Has a real take ever delivered words into a Project KO terminal?** **Yes**
+  - 2026-11-24 23:30, owner-verified: the chord opens the take and the words
+  land in that terminal. See
+  [m-2026-11-24-2330-route-b-working.md](m-2026-11-24-2330-route-b-working.md).
 - **Toxic types into the window that has the focus ~21 s later.** Separate
   Toxic-side defect, ticketed in `knowledge/request-toxic-typing-target.md`.
-  It will show up in the first successful test as words landing in the wrong
-  place.
+  It applies to a take made in **another** application; a take Project KO
+  opened itself lands in the terminal that asked.
 

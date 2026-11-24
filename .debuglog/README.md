@@ -94,6 +94,29 @@ The live hypothesis and the next test are in
 [`open-questions.md`](open-questions.md); the full handoff for the next agent
 is `knowledge/handoff-toxic-stt-terminal.md`.
 
+**RESOLVED, 2026-11-24 23:30 - the chord works in a Project KO terminal.**
+
+The cause, measured: **the WebView2 host takes the keyboard as raw input**, so
+the keyboard message that the low-level hook chain runs on is never generated
+for a key that goes to the Project KO window. Toxic's chord hook was never
+called; the **page** received the key instead, as a trusted DOM keydown
+(`TRUSTED=1`). The same physical chord in Notepad was matched by Toxic and
+typed.
+
+The owner approved the fix (Route B): the terminal, which already caught the
+chord to keep `^T` from the CLI, now asks Toxic for a **partner take**.
+Toxic still owns the microphone, the recording and the transcription; a partner
+take hands the transcript back to the app that asked, so the words land in that
+terminal and are never typed into any other window.
+
+- Implementation: `3cd8a7d` (`desktop/service/toxic-dictation.mjs`,
+  `POST /api/dictation/take`, `src/desktop/TerminalPane.tsx`).
+- Owner-verified live: [m-2026-11-24-2330-route-b-working.md](m-2026-11-24-2330-route-b-working.md).
+- The measurements behind it: [m-2026-11-24-2308-pko-press-measured.md](m-2026-11-24-2308-pko-press-measured.md).
+- The design of record: `knowledge/dictation-memory.md`.
+- Still Toxic's: a take made in another application is typed into whatever has
+  the focus ~21 s later.
+
 **Update, 2026-11-24 21:20 - the 20:43 reading was mis-stated, and the truth
 is stronger.** Re-read against the raw `hook-probe.log`: there is **not one row
 of any kind** between 20:43:01.914 and 20:43:29.178 - 27.3 seconds with no
