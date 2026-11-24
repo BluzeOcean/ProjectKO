@@ -56,10 +56,44 @@ With a 40-byte struct the injected chord *did* fire the HUD.
 
 ### "A stale modifier bit is stuck right now"
 
-**Not measured.** `inject::PHYSICAL` is Toxic's own mask, not the OS state, and
-there is no way to read it from outside Toxic. The physical key-ups were seen by
-the app, but that says nothing about Toxic's mask. Still open - see
-[`open-questions.md`](open-questions.md), H2.
+**Answered, and it was the bug in the *old* build - not in this one.** The
+stale-bit theory explains the old build's intermittency: `fbbd015` matched on
+Toxic's own tracked mask, so one modifier bit left set (a key-up another
+application swallowed) refused every `Ctrl+T`, silently, on every application.
+That is what the ticket's item 3 is about, and `4e57aa3` fixed it - by
+ANDing the mask with `GetAsyncKeyState`, which broke fast presses instead.
+The current failure is the asynchronous lag, not a stale bit.
+
+### "A partner take was refusing the chord"
+
+**Dead.** The MCP `dictation status` action reports `partner_listening`
+(`mcp.rs:366`), so `listening: false` says nothing about a chord take - but it
+does prove there was no partner take. The one press that *was* traced matched
+and started a take, and the partner branch returns the transcript instead of
+typing it, which is not what happened.
+
+### "Toxic's hook was never called for the Project KO presses"
+
+**Dead.** A matched chord **swallows** the key (`hook_proc` returns 1, so the
+key is never posted to the application). The probe received the key-down, so no
+hook swallowed it - and since the hook is global, it must have been called and
+must have declined to act. The refusal line is written only when a mask is not
+empty, so the refusal left no trace.
+
+### "Project KO's own keyboard hook breaks Toxic's chain"
+
+**Dead.** Project KO installs a `WH_KEYBOARD_LL` hook of its own
+(`src-tauri/src/win_key.rs:42`) and reinstalls it every 10 seconds, like
+Toxic. But its callback never swallows: it always ends in `CallNextHookEx`
+(`win_key.rs:139`). Both hooks were installed when the press in another
+window was traced at 18:50:01, so the chain was working at that moment.
+
+### "Windows removed Toxic's hook"
+
+**Dead for the current build.** The keepalive reinstalls the hook every 10
+seconds and logs `Windows had removed the keyboard hook` when an unhook fails
+(`hotkeys.rs:632-638`). That line is not in the log, and the trace at 18:50:01
+shows the hook alive with 5440 events behind it.
 
 ### "A partner take left open disables the chord forever"
 

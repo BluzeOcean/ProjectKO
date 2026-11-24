@@ -169,3 +169,137 @@ It also corrects an earlier assumption: a partner take with speech **does**
 land in `history.json` (`push_history` runs before the partner branch); the
 empty take above did not, because `finish()` returns early when there is no
 speech.
+
+### 2026-11-24 18:34:56 - the Toxic-side fix is deployed, the press is armed
+
+The Toxic agent's status report (18:34) landed with all five ticket items
+implemented and `cargo test` green (53 passed). The binary it built is the
+one now running:
+
+```
+process  toxic.exe pid 43196, started 18:34:56
+binary   V:\04_Projects\Toxic\src-tauri\target\release\toxic.exe
+         14,450,688 bytes, built 18:29:17
+```
+
+Toxic was started with
+`WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333` so the new
+per-press trace lines (`hotkeys: T pressed - chord Ctrl+T - ... - matched -
+starting a take`) can be read over CDP.
+
+**State at the moment of writing:** the trace holds 1 log line and **0**
+`hotkeys:` lines - correct, because no key has been pressed since the restart.
+The phase-1 watcher (`bg_64fcc19e`) has been running since 18:35:30 and has
+logged only its start line, i.e. `listening` has not flipped to True even once.
+
+**The one missing input is still a human keypress.** The owner is asked to
+press plain `Ctrl+T` once in a PKO chatspace terminal with nothing dictating.
+The new trace line will then state either `matched - starting a take` or the
+exact reason the chord was refused - which is what Phase 1 needs.
+
+> **Correction, 19:10.** The two sentences above are wrong about the log, and
+> the mistake was mine. The "1 log line" was not a log line at all: the reader
+> called `window.__TAURI__.core.invoke`, and `withGlobalTauri` is off in this
+> web view, so the call never happened and the reader returned the error
+> string `<no __TAURI__ core>`. **Toxic's log had never been read** up to that
+> moment. The working call is `window.__TAURI_INTERNALS__.invoke` - the Tauri
+> IPC the app's own frontend uses, which is always injected. The watcher is
+> blind to hotkey takes for a second reason: the MCP `dictation status` action
+> reports `partner_listening`, so `listening` is `false` for a chord take even
+> while the microphone is open. Only the HUD's visibility shows a chord take.
+
+### 2026-11-24 18:49:29 - the owner's press, and the refusal that leaves no trace
+
+The owner pressed plain `Ctrl+T` in the PKO chatspace terminal. The probe's
+own log (persisted in the web view store, with timestamps):
+
+```
+18:49:28.272 | focus textarea.xterm-helper-textarea
+18:49:29.115 | keydown code=17 key=Control ctrl=1 shift=0 alt=0 composing=0 target=textarea.xterm-helper-textarea
+18:49:29.115 | keydown code=84 key=t ctrl=1 shift=0 alt=0 composing=0 target=textarea.xterm-helper-textarea
+18:49:29.122 |   ^ after: defaultPrevented=0
+18:49:29.122 |   ^ after: defaultPrevented=1
+18:49:29.213 | keyup   code=17 key=Control ctrl=0 target=textarea.xterm-helper-textarea
+18:49:29.214 | keyup   code=84 key=t ctrl=0 target=textarea.xterm-helper-textarea
+```
+
+**Ctrl and T arrive in the same millisecond** - one input batch, the way a
+chord is typed in a terminal.
+
+Toxic's log, read properly this time, holds **two lines in total** since the
+process started:
+
+```
+hotkeys: keyboard hook installed (pid 43196)
+hotkeys: T pressed · chord Ctrl+T · tracked ctrl=1 alt=0 shift=0 win=0 · Windows ctrl=1 alt=0 shift=0 win=0 · matched · starting a take · front MiniMax Code.exe "MiniMax Code" · 5440 keys seen
+```
+
+**The 18:49:29 press produced no line.** The one trace that exists belongs to a
+different press: the HUD became visible at 18:50:01.345 and hid again at
+18:50:04.639, 32 seconds later, in a different window - a *slow, deliberate*
+press, where `tracked ctrl=1` and `Windows ctrl=1` agree. The owner's PKO
+presses at 18:24:16.075, 18:24:16.589, 18:28:47.438 and 18:49:29.115 all
+left nothing.
+
+**The absence of a line is the evidence.** In `hotkeys.rs` the refusal line
+is written only when a mask is not empty:
+
+```rust
+if !repeated && (check.tracked.any() || check.live.any()) { ... }
+```
+
+If the hook had tracked Ctrl, `live.any()` would have been true and a refusal
+line would exist. If the hook had not been called at all, the key could not
+have reached the application either - a matched chord *swallows* the key, and
+the probe received it. The only way to get "no line, and the key still
+arrived" is `tracked` and `live` both empty.
+
+### 2026-11-24 19:05 - the root cause, and it is a regression in `4e57aa3`
+
+`4e57aa3` (the Toxic agent's build) changed the chord decision from the hook's
+own tracked mask to the mask **AND** `GetAsyncKeyState`:
+
+| build | decision |
+| --- | --- |
+| `fbbd015` (worked at 16:31:31) | `Chord::modifiers_held()` - the modifiers the hook tracked |
+| `4e57aa3` (fails) | `check()` -> `tracked.both(live)`, `live` = `GetAsyncKeyState` |
+
+**Inside a low-level hook callback the asynchronous key state is one input
+batch behind the event being processed**: it changes when the foreground
+thread removes the message from its input queue, which is after the hook
+chain has run. When Ctrl and T arrive together, `GetAsyncKeyState(VK_CONTROL)`
+still reads *up* while the T key-down is handled.
+
+So for a fast press:
+
+1. `tracked = {ctrl:1}` (the hook saw the Ctrl key-down), `live = {}` (Windows
+   has not published it yet).
+2. `tracked.both(live) = {}` -> `matched` is false.
+3. `tracked != live` -> `reconcile_modifiers()` runs and **clears the Ctrl bit
+   the hook has just seen** (`inject.rs:369`).
+4. The second `check_now()` reads `tracked = {}`, `live = {}`.
+5. `matched` is false and `check.tracked.any() || check.live.any()` is false ->
+   **nothing is written to the Logs view**.
+
+The chord is refused, the key passes through untouched (which is why the
+terminal still received it), and the refusal leaves no trace - the exact
+failure the ticket's item 1 was written to end.
+
+**This is why the slow press works and the fast press does not**, and why the
+old build worked at 16:31:31: it decided from the hook's own mask.
+
+**Written up as `ticket/(open) 2026-11-24-dictation-chord-and-typing-target.md`
+in the Toxic repo, committed `32229ce`.**
+
+### 2026-11-24 19:10 - the test that confirms it
+
+**Ask the owner for two presses in the PKO terminal:**
+
+1. **Slow:** hold `Ctrl`, wait about half a second, then press `T`. The
+   listening bar should appear (the asynchronous state has caught up).
+2. **Fast:** press `Ctrl+T` as one quick movement. The bar should **not**
+   appear.
+
+Slow works and fast does not -> the asynchronous lag is the cause, and the
+ticket is right. If the slow press also fails, the root cause is elsewhere and
+the ticket must be corrected before the Toxic agent works on it.
