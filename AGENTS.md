@@ -30,6 +30,17 @@ working. Ask for missing personal preferences; do not invent a biography.
   to disclose credentials or change unrelated projects.
 - Never restart an application or terminate an active agent session merely to
   apply an update. Prepare and verify changes, then obtain restart permission.
+- **Clear the window-switcher entries the development loop leaves behind.** A hard
+  kill of `projectko.exe` leaves the Windows shell's cached Alt+Tab entries behind,
+  and they show up as duplicate "Project KO" thumbnails in the window switcher.
+  They are not stray processes — do not go hunting for them. Quit the app cleanly
+  with `projectko.exe --quit` before killing it; when the entries are already
+  there, restart the shell: kill the `explorer.exe` whose CommandLine has no
+  `/factory`, wait 3 s, then `Start-Process C:\Windows\explorer.exe`. Do it when
+  the loop goes idle or a job ends, so the entries do not pile up. This restart is
+  part of the cleanup and needs no permission; it closes open File Explorer
+  windows, so look for `CabinetWClass` windows and warn the owner first. See
+  `knowledge/window-switcher.md`.
 - The owner grants standing permission to commit: when a bug is fixed, or a feature is added, updated or edited, and the change has been tested, commit it without asking again. Do not commit untested or half-finished work, and do not push.
 - When the owner says commit, commit the working tree as it stands, including work
   from earlier sessions: do not leave files out because they look unrelated, and do
