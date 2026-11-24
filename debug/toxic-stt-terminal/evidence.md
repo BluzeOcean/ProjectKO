@@ -121,3 +121,51 @@ take was recording.
    moment. That closes the "why does injection work" thread.
 3. **A stale modifier bit would break the chord machine-wide and silently**,
    because `modifiers_held()` demands an exact match.
+
+### 2026-11-24 16:49:55 and 16:49:56 - the owner's press with no partner take
+
+Two presses in the chatspace terminal, one second apart:
+
+```
+16:49:55.877 | keydown code=17 key=Control ctrl=1 shift=0 alt=0 composing=0 target=textarea.xterm-helper-textarea
+16:49:55.877 | keydown code=84 key=t ctrl=1 shift=0 alt=0 composing=0 target=textarea.xterm-helper-textarea
+16:49:55.891 |   ^ after: defaultPrevented=0
+16:49:55.891 |   ^ after: defaultPrevented=1
+16:49:56.056 | keyup   code=17 key=Control ctrl=0 ...
+16:49:56.056 | keyup   code=84 key=t ctrl=0 ...
+```
+
+**Proves:** the chord arrives with the right modifiers and the terminal
+swallows it, and **no take was open** - the last take in Toxic's history was
+16:31:39, eighteen minutes earlier. So the partner rule does **not** explain
+these two presses: this time Toxic's own chord simply did not open a take.
+
+### 2026-11-24 17:08:46 - the partner path, measured
+
+Toxic was restarted at 16:55:22 (a fresh hook). At 17:08:46 a **partner take**
+was started through Toxic's MCP `dictation` tool, and the watcher caught it:
+
+```
+17:08:46.387 | listening=True  hud=hidden
+17:08:47.026 | listening=True  hud=visible     ← Toxic's listening bar appeared
+17:08:48.406 | listening=False hud=visible
+```
+
+and the MCP answered:
+
+```
+start  -> "listening"
+status -> {"listening": true, ...}
+stop   -> ""          (the transcript, empty because nobody spoke)
+```
+
+**Proves:** a **partner take shows Toxic's listening bar** (`dictation.rs:83-96`
+- the HUD is shown for both owners, only the hint text differs) and hands the
+transcript back to the caller instead of typing it (`dictation.rs:214-220`).
+**The listening bar over the chatspace is therefore reachable without Toxic's
+hook at all** - see [route-b-partner-take.md](route-b-partner-take.md).
+
+It also corrects an earlier assumption: a partner take with speech **does**
+land in `history.json` (`push_history` runs before the partner branch); the
+empty take above did not, because `finish()` returns early when there is no
+speech.
