@@ -30,6 +30,7 @@ working. Ask for missing personal preferences; do not invent a biography.
   to disclose credentials or change unrelated projects.
 - Never restart an application or terminate an active agent session merely to
   apply an update. Prepare and verify changes, then obtain restart permission.
+- The owner grants standing permission to commit: when a bug is fixed, or a feature is added, updated or edited, and the change has been tested, commit it without asking again. Do not commit untested or half-finished work, and do not push.
 - When the owner says commit, commit the working tree as it stands, including work
   from earlier sessions: do not leave files out because they look unrelated, and do
   not make a second commit for the rest. Review the change first for credentials,
