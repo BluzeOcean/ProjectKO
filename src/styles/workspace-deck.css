@@ -157,7 +157,14 @@
 /* The deck fills the content area: the banner above, the boards below. */
 .content.deck-content { display: flex; flex-direction: column; }
 .deck { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.deck-page { flex: 1; min-height: 0; display: flex; }
+.deck-page {
+  flex: 1; min-height: 0; display: flex;
+  /* The inspector answers to the room the deck actually has, so the deck
+     is its own container. The Files panel takes its share from the deck
+     whatever the window is wide, and a narrow window has little to give. */
+  container-type: inline-size;
+  container-name: deck;
+}
 .deck-stage {
   flex: 1;
   min-width: 0;
@@ -193,10 +200,12 @@
 .deck-status b { color: var(--text-dim); font-weight: 500; }
 
 /* ── The inspector: a thin column that holds facts, not cards ─── */
+/* The column takes a share of the deck rather than a fixed 400px, so the
+   boards keep the room the facts do not need. A narrow deck still shows it,
+   down to the width below that it leaves and the boards keep everything. */
 .deck-inspector {
-  flex: 0 0 400px;
-  width: 400px;
-  flex-shrink: 0;
+  flex: 0 1 clamp(260px, 36%, 420px);
+  width: auto;
   border-left: 1px solid var(--hairline);
   background: var(--surface-1);
   overflow-y: auto;
@@ -411,8 +420,7 @@
 .deck-delete button:disabled { opacity: .55; cursor: wait; }
 
 /* ── Narrow windows ──────────────────────────────────────────── */
-/* The inspector drops under the deck when there is no room for a
-   column beside it. */
+/* The banner keeps its shape in a narrow window. */
 @media (max-width: 760px) {
   .deck-banner { padding-left: 60px; padding-right: 18px; }
   .deck-banner-title { font-size: 1.1rem; }
@@ -420,14 +428,16 @@
   .deck-banner-bottom { overflow-x: auto; scrollbar-width: none; }
   .deck-banner-bottom::-webkit-scrollbar { display: none; }
   .deck-genres { width: max-content; }
-  .deck-page { flex-direction: column; overflow-y: auto; }
-  .deck-stage { overflow: visible; padding: 20px 16px 84px; }
-  .deck-inspector {
-    flex: 0 0 auto;
-    width: 100%;
-    border-left: 0;
-    border-top: 1px solid var(--hairline);
-    padding: 22px 18px 32px;
-  }
-  .deck-insp-foot { margin-top: 26px; }
+}
+
+/* The deck measures itself, not the window: the Files panel and the rail
+   take their room from the deck whatever the window is wide. */
+@container deck (max-width: 700px) {
+  .deck-stage { padding: 20px 16px 84px; }
+  .deck-inspector { padding: 22px 18px 34px; }
+}
+/* Below the room a column and a deck of boards both need, the column
+   goes and the boards keep the whole deck. */
+@container deck (max-width: 540px) {
+  .deck-inspector { display: none; }
 }

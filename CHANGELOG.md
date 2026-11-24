@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- The Vaultspace inspector follows the window instead of standing still. The facts column used to be a fixed 400px, which squeezed the board list beside it until the list scrolled sideways. The column now takes a share of the deck and gives it back as the window narrows, and it leaves once the deck is too narrow to carry both, so the boards keep the room.
+- The Files tree calls the project folder **PROJECT-KO**. It said MR-MAK, the name of the project this app was forked from; the app's own name is what the folder reads now. The code, the mark and the `pKO` abbreviations stay as they are.
+
 - The context strip is a hover readout. The line under the chat row reports how much of the context the agent has used; it now stays out of the way until the pointer is on the chat row above it, and it hangs over the top of the pane instead of taking a row of its own, so revealing it never resizes the terminal and never disturbs the running agent.
 
 - The Chatspace header loses its pink fist. The fist started the microphone and the bubble beside it opened the conversation that microphone produces, so the two said the same thing twice. The nose now lives in Vaultspace alone, where the voice conversation is started, and the button that opens Vaultspace carries the pink mark instead.

@@ -31,9 +31,11 @@ The grid it replaced is gone: `src/components/HomeGrid.tsx` and
 - **Stage** — a "Boards" label with a count, the thumbnail gallery
   (`repeat(auto-fill, 92px)`; 92px is the narrowest cell that still breaks every
   board name into two lines), and a bottom band.
-- **Inspector** — a 400px column on the right: title, date, description, the current
+- **Inspector** — a column on the right: title, date, description, the current
   tag with its assign pills, the facts (status, updated, created, folder) and an
-  action row: "Open board" with a bin on its right.
+  action row: "Open board" with a bin on its right. Its width is a share of the
+  deck (`clamp(260px, 36%, 420px)`), not a fixed 400px, so the board list keeps
+  the room the facts do not need.
 
 The bottom band carries workspace-level facts only (`4 boards · 18 steps · last
 change 2026-10-20`). The inspector carries facts, not cards.
@@ -108,8 +110,19 @@ the files are already correct at that point — only the list is behind.
   the UI tests hover the tile first.
 - **The genre list holds the categories present among the visible boards,** in deck
   order. The filter narrows the tiles; the band still describes the whole set.
-- **Under 760px the page becomes one column** and the genre row scrolls sideways
-  instead of clipping under the files rail.
+- **The inspector follows the deck, not the window.** `.deck-page` is a size
+  container (`container-type: inline-size`), and the column is sized and hidden by
+  `@container deck`. The Files panel and the rail take their room from the deck
+  whatever the window is wide, so a window query would answer the wrong question:
+  the same 970px window leaves a 631px deck with the panel open and a 922px deck
+  with it shut. Below a 540px deck the column leaves and the boards keep
+  everything.
+- **Under 760px the page stays one row.** It used to become one column with the
+  inspector dropped under the deck. The genre row still scrolls sideways, and the
+  deck measures itself; the inspector leaves instead of stacking.
+- **The fallback is the fluid width, not the hiding.** A webview without container
+  queries (WebKit before Safari 16, so macOS 11 and 12) keeps `clamp(260px, 36%,
+  420px)` and never hides the column — narrow, but readable.
 
 ## Verification
 
@@ -124,6 +137,13 @@ whose folder is a path being refused), and
 `desktop/service/test/board-delete-ui.mjs` drives the real UI — the bin shares
 the row of "Open board", the confirmation carries the board's facts, Cancel
 keeps everything, and Delete board removes the board and leaves the note.
+
+The column's own behaviour has a test:
+`desktop/service/test/deck-layout-ui.mjs` drives the real UI at three window
+widths with the Files panel open and checks that the inspector gives room back
+as the deck narrows, leaves when the deck cannot carry it, that the board list
+never scrolls sideways, and that the files tree calls the project folder
+**PROJECT-KO**.
 
 The port was also looked at in the shipping build, served by an isolated service
 against a throwaway Workspace: the bin sits 8px to the right of "Open board" on

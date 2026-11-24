@@ -40,7 +40,7 @@ export function nativeActivity(record, agent) {
 }
 
 // Only read records appended after this managed session starts. These files belong
-// to the native CLI; MR-MAK never modifies them or replaces the user's hooks.
+// to the native CLI; Project KO never modifies them or replaces the user's hooks.
 export function tailNativeFile(file, agent, onEvent, from = 0) {
   let offset = from, partial = '', closed = false, reading = false, decoder = new StringDecoder('utf8');
   let hydrate = from > 0, unavailable = false;
