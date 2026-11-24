@@ -2,7 +2,7 @@
 
 **Taken:** 2026-11-25 00:20-00:25 (Asia/Shanghai).
 **By:** the agent that took over the handoff.
-**Status:** implemented, tested, live.
+**Status:** implemented, tested, **owner-verified live** ("its working").
 
 ## What the owner asked for
 
