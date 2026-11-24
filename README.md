@@ -178,6 +178,8 @@ the optional Live voice coordinator still uses OpenAI API billing.
   knowledge, workflows, MCP connections, Settings and Help. See which MCP
   connections come from the project and which come from your agent's global setup.
 
+![The Vaultspace overview: the board deck, the facts of the board you point at, and the file tree](docs/assets/workspace-overview.png)
+
 ![Vaultspace with the My Dream Game project open and the Files tree showing project knowledge and workflows](docs/assets/workspace-files.png)
 
 ## Before you start
