@@ -55,10 +55,11 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
       const result = await api<{ transcript: string }>('/dictation/take', { action: 'stop' })
       const words = (result?.transcript || '').trim()
       if (words) {
-        // An agent terminal submits the words. A shell terminal only shows
-        // them: a spoken sentence must never run itself as a command.
-        sendEvent({ type: 'input', id, data: agent === 'shell' ? words : `${words}\r` })
-        onAttachmentStatus(id, 'Dictation received')
+        // The words are typed into the terminal and never submitted: the
+        // person reads them, edits them if they want to, and presses Enter.
+        // A newline would submit the line, so it becomes a space.
+        sendEvent({ type: 'input', id, data: words.replace(/[\r\n]+/g, ' ') })
+        onAttachmentStatus(id, 'Dictation received — edit and press Enter to send')
       } else onAttachmentStatus(id, 'Nothing was heard')
     } catch (error) {
       onAttachmentStatus(id, '')

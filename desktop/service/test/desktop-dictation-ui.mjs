@@ -119,6 +119,9 @@ try {
   await expect.poll(() => writes.slice(before).join(''), { timeout: 5000 }).toContain('the spoken words');
   assert.equal(takes.filter(call => call.action === 'stop').length, 1, 'the take is finished once');
   assert.ok(!writes.slice(before).some(chunk => chunk.includes('\x14')), 'the CLI never receives the chord');
+  // The words are inserted, never submitted: the person edits them and
+  // presses Enter.
+  assert.ok(!writes.slice(before).join('').includes('\r'), 'the words are not submitted');
 
   const clipboardCalls = await page.evaluate(() => window.__clipboardCalls);
   assert.equal(clipboardCalls, 0, 'the clipboard is never touched');
@@ -152,5 +155,5 @@ try {
   await expect(page.locator('#pko-dictation-probe')).toHaveCount(0, { timeout: 5000 });
 
   await page.screenshot({ path: path.join(repo, 'desktop-dictation.png') });
-  console.log(JSON.stringify({ ok: true, screenshot: path.join(repo, 'desktop-dictation.png'), checks: ['ordinary key typed once', 'packet arrives once', 'packets in a row', 'composition left alone', 'chord opens a take', 'the words land in the terminal', 'the CLI never receives the chord', 'clipboard untouched', 'one take asked for', 'Toxic is not polled', 'no microphone switch', 'probe records and can be shown and hidden'] }));
+  console.log(JSON.stringify({ ok: true, screenshot: path.join(repo, 'desktop-dictation.png'), checks: ['ordinary key typed once', 'packet arrives once', 'packets in a row', 'composition left alone', 'chord opens a take', 'the words land in the terminal', 'the words are not submitted', 'the CLI never receives the chord', 'clipboard untouched', 'one take asked for', 'Toxic is not polled', 'no microphone switch', 'probe records and can be shown and hidden'] }));
 } finally { await browser?.close(); session.process = null; await service.close(); }
