@@ -41,6 +41,16 @@ working. Ask for missing personal preferences; do not invent a biography.
   part of the cleanup and needs no permission; it closes open File Explorer
   windows, so look for `CabinetWClass` windows and warn the owner first. See
   `knowledge/window-switcher.md`.
+- **Work on a bug from its log, never from scratch.** A bug that is still open has
+  a folder under `debug/` holding its symptom, the dated evidence, every attempt,
+  what is ruled out and the open questions. Read it before measuring anything,
+  write every measurement into it as you take it, and move a hypothesis to the
+  ruled-out list only when a measurement kills it. The dictation chord defect has
+  one: `debug/toxic-stt-terminal/`.
+- **The dictation probe is a tool, not product behaviour.** It records what a
+  window receives when another process types into it. Switch it over
+  `POST /api/dictation/probe` (`recording`, `badge`): it records by default and
+  shows its badge only when it is asked to. See `knowledge/dictation-probe.md`.
 - The owner grants standing permission to commit: when a bug is fixed, or a feature is added, updated or edited, and the change has been tested, commit it without asking again. Do not commit untested or half-finished work, and do not push.
 - When the owner says commit, commit the working tree as it stands, including work
   from earlier sessions: do not leave files out because they look unrelated, and do
@@ -62,5 +72,7 @@ read the sample cards.
 `projects/`: project specifications.
 `processes/`: repeatable work.
 `knowledge/`: lessons.
+`debug/`: the working log of an open bug - symptom, evidence, attempts, ruled-out
+hypotheses, open questions.
 `context/`: the owner's optional preferences and goals.
 `inbox/`: incoming references.

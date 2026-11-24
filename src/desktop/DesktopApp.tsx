@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import App from '../App'
 import { dismissError, sendEvent, startDesktop, surface, useDesktop } from './client'
+import { installDictationProbe, setDictationProbeBadge, uninstallDictationProbe } from './dictationProbe'
 import FilesRail, { FilePreview } from './FilesRail'
 import VoiceDock from './VoiceDock'
 import { Icon, PkoMark } from './Icons'
@@ -11,6 +12,15 @@ const Chats = lazy(() => import('./Chats'))
 export default function DesktopApp() {
   const state = useDesktop()
   useEffect(() => { startDesktop() }, [])
+  // The dictation probe records what this window receives from another process.
+  // It is a diagnostic an agent switches on and off over the service, so it
+  // follows the saved setting rather than living here.
+  const probe = state.settings?.dictationProbe
+  useEffect(() => {
+    if (probe?.recording === false) { uninstallDictationProbe(); return }
+    return installDictationProbe()
+  }, [probe?.recording])
+  useEffect(() => { setDictationProbeBadge(probe?.badge === true) }, [probe?.badge])
   useEffect(() => {
     if (surface !== 'workspace') return
     const route = () => sendEvent({ type: 'workspace-route', route: location.hash })

@@ -298,19 +298,23 @@ should be opened in another application.
 
 ### What Project KO can log for you now
 
-While this ticket is open, Project KO carries a temporary probe in every
-desktop window (`src/desktop/dictationProbe.ts`). It records, with a
-timestamp, every key-down and key-up of the chord and its modifiers, every
-packet (`keyCode 229`) and every `beforeinput` of inserted text, and writes
-the lines to the window's own web view storage under `mrmak.dictationProbe`.
-It reads nothing, sends nothing and is not part of the product - it will be
-removed when the cause is known.
+While this ticket is open, Project KO carries a probe in every desktop window
+(`src/desktop/dictationProbe.ts`). It records, with a timestamp, every key-down
+and key-up of the chord and its modifiers, every packet (`keyCode 229`) and
+every `beforeinput` of inserted text, and writes the lines to the window's own
+web view storage under `mrmak.dictationProbe`. It reads nothing, sends nothing
+and is not part of the product's behaviour - it is kept as a diagnostic and an
+agent switches its badge on and off over `POST /api/dictation/probe`.
 
 That answers the "a refused chord leaves no trace" requirement on Project KO's
 side of the boundary: **if the key reaches a Project KO window, it is on
 record**, and the record says whether the chord was seen, swallowed or
 replaced by injected text. What Project KO cannot see is whether Toxic's hook
 saw it - that is the part only Toxic can log.
+
+The working log for this defect is `debug/toxic-stt-terminal/`: the symptom, the
+dated evidence, every attempt, what is ruled out and the open questions. Read it
+before measuring anything again.
 
 ## Rules
 

@@ -50,6 +50,9 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const settingsPath = path.join(stateDir, 'settings.json');
   const savedSettings = await readJson(settingsPath, null);
   let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, dshPermissionMode: 'workspace-write', readAloudSpeed: 1, readAloudVoice: '', terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', ...savedSettings };
+  // The dictation probe records by default - a measurement that is never taken
+  // cannot be read - but it stays off the screen until somebody asks for it.
+  settings.dictationProbe = { recording: settings.dictationProbe?.recording !== false, badge: settings.dictationProbe?.badge === true };
   // The boards can live outside the app. `workspace/` stays the default, so an
   // existing repository opens exactly as before.
   const vault = await new Vault(repo, settings.vaultPath).open();
@@ -268,6 +271,20 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         if (method === 'POST' && url.pathname === '/api/transcribe') return json(response, 200, await dictation.transcribe(request, 'desktop', () => !closing));
         const data = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) ? await body(request, url.pathname === '/api/files/markdown' ? 12 * 1024 * 1024 : url.pathname.startsWith('/api/workspace/cards') ? 2 * 1024 * 1024 : 256 * 1024) : {};
         if (method === 'POST' && url.pathname === '/api/dictation') return json(response, 200, await chooseDictation(data.provider));
+        // The dictation probe: a diagnostic that records what a window receives
+        // when another process types into it. An agent switches it on and off
+        // over this route; it is a tool, not part of the product's behaviour.
+        if (method === 'GET' && url.pathname === '/api/dictation/probe') return json(response, 200, { probe: settings.dictationProbe });
+        if (method === 'POST' && url.pathname === '/api/dictation/probe') {
+          const current = settings.dictationProbe || { recording: true, badge: false };
+          const next = {
+            recording: typeof data.recording === 'boolean' ? data.recording : current.recording,
+            badge: typeof data.badge === 'boolean' ? data.badge : current.badge,
+          };
+          settings.dictationProbe = next; await saveSettings();
+          broadcast('settings', { settings });
+          return json(response, 200, { probe: next });
+        }
         if (method === 'GET' && url.pathname === '/api/quota') return json(response, 200, await quota.status());
         if (method === 'GET' && url.pathname === '/api/mobile') return json(response, 200, mobile.status());
         if (method === 'GET' && url.pathname === '/api/mobile/check') return json(response, 200, await mobile.transport.probe());

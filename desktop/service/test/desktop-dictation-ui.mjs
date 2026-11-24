@@ -118,6 +118,19 @@ try {
   const answer = await fetch(service.origin + '/api/dictation/listen', { method: 'POST', headers: { Authorization: 'Bearer ' + service.token, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status' }) });
   assert.ok(!(await answer.text()).includes('"listening"'), 'the listen endpoint is gone');
 
+  // The probe is a tool, not part of the behaviour: it records by default and
+  // stays off the screen until it is asked for. An agent switches it over the
+  // service, and the lines it writes are read from the window's own storage.
+  const probe = (body) => fetch(service.origin + '/api/dictation/probe', { method: body ? 'POST' : 'GET', headers: { Authorization: 'Bearer ' + service.token, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  assert.deepEqual((await (await probe()).json()).probe, { recording: true, badge: false });
+  assert.equal(await page.locator('#pko-dictation-probe').count(), 0, 'the badge waits to be asked for');
+  await probe({ badge: true });
+  await expect(page.locator('#pko-dictation-probe')).toHaveCount(1, { timeout: 5000 });
+  await page.keyboard.press('Control+t');
+  await expect.poll(async () => (await page.evaluate(() => window.localStorage.getItem('mrmak.dictationProbe')) || '').includes('keydown'), { timeout: 5000 }).toBe(true);
+  await probe({ badge: false });
+  await expect(page.locator('#pko-dictation-probe')).toHaveCount(0, { timeout: 5000 });
+
   await page.screenshot({ path: path.join(repo, 'desktop-dictation.png') });
-  console.log(JSON.stringify({ ok: true, screenshot: path.join(repo, 'desktop-dictation.png'), checks: ['ordinary key typed once', 'packet arrives once', 'packets in a row', 'composition left alone', 'chord swallowed', 'clipboard untouched', 'no take requested', 'Toxic is not polled', 'no microphone switch'] }));
+  console.log(JSON.stringify({ ok: true, screenshot: path.join(repo, 'desktop-dictation.png'), checks: ['ordinary key typed once', 'packet arrives once', 'packets in a row', 'composition left alone', 'chord swallowed', 'clipboard untouched', 'no take requested', 'Toxic is not polled', 'no microphone switch', 'probe records and can be shown and hidden'] }));
 } finally { await browser?.close(); session.process = null; await service.close(); }
