@@ -1,5 +1,21 @@
 # The symptom, exactly
 
+## The one fact that localises the bug
+
+**The chord works in every window on this machine except the Project KO
+terminal.** The owner has tested and confirmed it repeatedly: a native
+**PowerShell** console brings Toxic's listening bar up, and so does every
+other application. **Only the Project KO terminal refuses it.**
+
+So Toxic's hook is alive, installed, and doing its job. The fault is in the
+**Project KO window's input path** - the way the key events reach that web
+view - not in Toxic's chord handling, not in its hook, and not in its
+configuration. Anything that blames Toxic's side for this is chasing the
+wrong end of the chain.
+
+*(Owner, 2026-11-24 19:30: "all other windows even the powershell terminal can
+bring up the listening bar, only pKO terminal can't".)*
+
 ## What the owner sees
 
 1. The owner is in a Project KO terminal (the Chatspace chat terminal, or any
@@ -9,6 +25,12 @@
 4. Toxic's microphone is not taken; nothing is recorded; nothing is typed.
 5. The terminal itself shows nothing: no `^T` reaches the CLI, because Project KO
    swallows the chord so the agent does not receive a stray control character.
+
+**And Toxic's own trace says nothing either** - no line at all for these
+presses, while the same chord in another window produces
+`T pressed · chord Ctrl+T · ... · matched · starting a take`. A chord press
+that the hook sees always leaves a line, so **the hook is not being called for
+the keys that go into the Project KO window.**
 
 ## What "working" looks like
 

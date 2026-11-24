@@ -357,3 +357,59 @@ workspace session has been idle since 18:12.
 
 **Nothing was lost**: both files were restored from commit `32229ce` with
 `git checkout -- ticket/`. The working tree is clean again.
+
+### 2026-11-24 19:30 - the owner's measurement: every other window works
+
+*(owner: "all other windows even the powershell terminal can bring up the
+listening bar, only pKO terminal can't")*
+
+**This is the fact that moves the fault to the Project KO side.** Toxic's hook
+is alive, installed and working: the chord opens a take in a native
+PowerShell console and in the MiniMax Code window (the trace at 18:50:01
+proves the second one). So the hook, the chord decision and Toxic's
+configuration are **not** the cause. Only the Project KO terminal refuses it.
+
+### 2026-11-24 19:38 - what the Project KO terminal really receives
+
+- The probe's `code=` field is **`event.keyCode`**, not `event.code`
+  (`dictationProbe.ts:139`). The terminal receives a **normal**
+  `keydown`: `keyCode 84`, `key 't'`, `ctrlKey 1`, `isComposing 0`, and
+  `defaultPrevented 1` afterwards (xterm.js cancels it, so the CLI never
+  sees `^T`).
+- **No unicode packets at all**: not one `keyCode 229` in 187 stored probe
+  lines. The IME path is not involved.
+- **Nothing in Project KO dispatches synthetic keyboard events**: not in
+  `src/`, not in the built `dist/`, not in `desktop/service/`, not in xterm.
+- A `Ctrl+T` pressed into a **Chromium page** by this project's own UI test
+  (`desktop/service/test/desktop-dictation-ui.mjs`) leaves **no trace line**
+  in Toxic's log either - a renderer-injected key never enters the operating
+  system's input pipeline, so it never reaches a low-level hook.
+
+### 2026-11-24 19:46 - the foreground window, measured
+
+A sampler (`.cache/fg-watch.ps1`) records the foreground window every 150 ms.
+Its first minute:
+
+```
+19:46:25.904 | 41368:MiniMax Code:MiniMax Code
+19:46:28.905 | 28828:Overwatch:Overwatch
+19:46:34.082 | 41368:MiniMax Code:MiniMax Code
+19:46:35.034 | 28828:Overwatch:Overwatch
+```
+
+**The foreground window flips between Overwatch and MiniMax Code, and
+Project KO never appears in it.** The owner types to me in MiniMax Code, and
+that press is the one Toxic traced at 18:50:01.
+
+**The suspect:** a window that has keyboard **focus** but is **not** the
+**foreground** window receives the keystrokes without the operating system
+running the low-level keyboard hook chain. The owner clicks into the Project
+KO terminal while a full-screen game owns the foreground; the terminal has
+focus (the probe sees the key), the hook is never called (no trace line), and
+the chord does nothing. **Every other window works because it is the
+foreground window when the key is pressed.**
+
+**The test:** alt-tab to Project KO so it is really in front, click into the
+terminal, press plain `Ctrl+T` - with nothing else allowed to steal the
+foreground back. The sampler records whether Project KO was the foreground
+window at that moment, so the answer and the reason arrive together.
