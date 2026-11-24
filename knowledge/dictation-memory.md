@@ -89,10 +89,17 @@ turns it into:
 2. a `beforeinput` with `inputType === "insertText"` carrying the text.
 
 An ordinary field takes that text without trouble. **xterm v6 does not**: its
-keydown handler does not know the key code 229, cancels the keydown, and the
-browser is then never allowed to insert the text - so no text event is fired
-and the terminal sees nothing at all. That is why the words of a take Toxic
-typed never reached a Project KO terminal, and why the watcher existed.
+keydown handler does not know the key code 229, so it cancels the keydown, and
+a cancelled keydown stops Chromium from inserting the text into the terminal's
+own field - no text event is fired and the terminal sees nothing at all.
+
+That is **xterm's doing, not the browser's**. The packet does reach a web view.
+Measured on 2026-11-24: a take typed by Toxic landed in another Electron app's
+composer **character by character** (the stored draft grew from
+`"I checked it and it doesn't work."` to the full sentence), so Windows
+delivers the packet and Chromium inserts it wherever the focused field is an
+ordinary one. Only xterm's cancellation stands between the packet and the
+terminal - and removing that cancellation is what the bridge is for.
 
 `src/desktop/terminalUnicode.ts` is the bridge. It does two things:
 

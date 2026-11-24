@@ -22,6 +22,65 @@ Measured live on 2026-11-24:
 | `Ctrl+T` over a Project KO chatspace terminal | **nothing happens** |
 | `dictation status` over MCP afterwards | `{"listening": false, ...}` - no take was ever opened |
 
+## A second reproduction on 2026-11-24, with a control case
+
+The owner tested dictation in a Project KO terminal between **14:45:45** and
+**14:53:25** and reported that nothing happened. The record on disk is
+unambiguous: Toxic's `history.json` holds **no take at all** in that window.
+The takes that bracket it are `13:56:35` and `14:53:25`, and the 14:53 one is
+the owner's own words - *"I checked it and it doesn't work. And also the
+compiling time"* - typed into another application.
+
+The failure is therefore **upstream of the terminal**: Toxic never opened a
+take, the HUD never appeared, the microphone was never taken and not a single
+character was injected anywhere. Nothing in Project KO could have dropped the
+words, because there were no words. The terminal bridge was never exercised.
+
+### The control case: the chord works over another web view
+
+The same chord, **over a different Chromium application**, opened a take at
+14:53:25 and again at 15:01:19 and 15:01:22. The words landed in that app's
+composer **character by character** - its stored draft grew from
+`"I checked it and it doesn't work."` to the full sentence - which is the
+signature of Toxic's `SendInput` + `KEYEVENTF_UNICODE` typing path rather
+than of a partner take.
+
+Two things follow, and both narrow this ticket:
+
+1. **A web view does not eat the chord.** A Chromium application was in front
+   and the chord worked. What fails is specific to a Project KO window, not to
+   web views, Chromium, or injected text in general.
+2. **Injected text does reach a web view.** The packet is delivered and
+   Chromium inserts it into an ordinary field. Project KO's terminal needs a
+   bridge for xterm's own reasons; the browser is not the obstacle.
+
+### Two details in Toxic's code that matter for the next step
+
+- `fire_stt` calls `dictation::toggle`, so a chord press **while a take is
+  already open stops it** instead of starting one. A take that is stuck open
+  would make the next chord press look like a no-op.
+- The branch that ends a take (*while listening, any ordinary key finishes the
+  dictation*) runs **before** the chord branch and swallows the key. While a
+  recording is live, `Ctrl+T` never reaches the chord test at all.
+
+### The configuration changed right after the test
+
+`%APPDATA%\app.toxic.desktop\config.json` was rewritten at **14:56:43** - one
+minute after the failing test. The settings in force during the test were
+therefore not necessarily the ones now on disk, and the hook matches against
+the **in-memory** `SHARED.config`, not the file. Ask the owner what they
+changed at 14:56 before assuming the current chord is the one that failed.
+
+### The log has no file to read
+
+Toxic's hotkey log (`engines::log`, called from `log_hotkey`) goes to the
+**Logs view of the Toxic window** and to a Tauri event. It is never written to
+disk - `src-tauri` has no log file at all, and `%APPDATA%\app.toxic.desktop`
+holds only `history.json`, `config.json`, `state.json`, `mcp.json` and
+`api.json`. So a dropped chord leaves no trace anywhere on disk. The only
+persisted trace of a take is one row in `history.json`, and it has no target
+field: it records *that* a take happened, never *where* it was typed.
+
 Runtime configuration on the machine that showed it
 (`%APPDATA%\app.toxic.desktop\config.json`):
 
@@ -134,6 +193,13 @@ window has to come from the hook's own state, not from a window test.
    list, a "foreground app" rule, or a settings key that is off - that is the
    most likely single explanation, and it should be visible in the settings
    pane.
+
+5. **A take that is stuck open makes every chord look like a no-op.**
+   `fire_stt` is a `toggle`, and the branch that ends a take runs before the
+   chord branch and swallows the key while a recording is live. When the chord
+   does nothing, check `AppState::recording` and `AppState::partner` first:
+   they explain "nothing happened" without any error, exactly like the two
+   cases above.
 
 ## What has to change
 
