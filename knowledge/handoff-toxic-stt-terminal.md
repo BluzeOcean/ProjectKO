@@ -71,33 +71,49 @@ reaches both hooks and opens a take.
 **That is the whole problem.** A key is arriving at the Project KO window by a
 path that does not go through the `WH_KEYBOARD_LL` chain.
 
-> **CORRECTION, 2026-11-24 21:20 - the sentence above is wrong, and the truth
-> is stronger.** Re-read against the raw log: there is **not one row of any
-> kind** between `20:43:01.914` and `20:43:29.178` - 27.3 seconds with **no
-> keyboard event at all**, not merely "no row with Project KO in front". The
-> probe was alive on both sides of the hole (one session, one
+> **CORRECTION, 2026-11-24 23:10 - the sentence above is wrong, and the
+> truth is stronger.** Re-read against the raw log: there is **not one row of
+> any kind** between `20:43:01.914` and `20:43:29.178` - 27.3 seconds with
+> **no keyboard event at all**, not merely "no row with Project KO in front".
+> The probe was alive on both sides of the hole (one session, one
 > `SetWindowsHookExW`, no re-arm; the log continues to 21:01:45).
 >
 > Every process in the chain is at **Medium** integrity - measured properly
-> this time with `GetTokenInformation(TokenIntegrityLevel)`; the 20:10 test
-> used `OpenProcess(PROCESS_ALL_ACCESS)`, which only proves the shell could
-> open each target, not that the levels matched. With equal levels, a
-> physical keystroke *must* produce a low-level hook callback.
+> with `GetTokenInformation(TokenIntegrityLevel)`; the 20:10 test used
+> `OpenProcess(PROCESS_ALL_ACCESS)`, which only proves the shell could open
+> each target, not that the levels matched. With equal levels, a physical
+> keystroke *must* produce a low-level hook callback.
 >
-> **So the Ctrl+T the web view saw did not come from the keyboard at all.**
-> Project KO itself is clean: no raw-input registration, no posted
-> `WM_KEYDOWN`, no synthesised `KeyboardEvent`, no debugging door on its
-> WebView2, no third-party DLL injected into the WebView2 processes.
+> **And the chord is delivered to the page anyway.** Measured 2026-11-24
+> 23:08, with the owner pressing `Ctrl+T` in the Project KO terminal and the
+> same chord in Notepad 40 seconds later:
 >
-> The live question is no longer *"what delivers a key to Project KO without
-> the chain"* but **"what produces a key event inside the Project KO web
-> view?"** - a posted `WM_KEYDOWN`, a protocol-driven input, or a DOM event
-> synthesised in the page. `event.isTrusted` separates them.
+> - the physical key really happened (a hookless `GetAsyncKeyState` poller
+>   saw `Ctrl`+`T` with `front=37884:Project KO - Chats`,
+>   `focus=7980:Project KO - Chatspace`);
+> - the page received it as a **trusted** `keydown` (`TRUSTED=1`,
+>   `composing=0`, on the terminal's own `textarea.xterm-helper-textarea`) -
+>   a real key event, not a fabricated one;
+> - and **no low-level hook is called for it**, while the identical chord in
+>   Notepad is matched by Toxic and typed into Notepad.
 >
-> The measurements: [`.debuglog/m-2026-11-24-2115-chain-gap.md`](../.debuglog/m-2026-11-24-2115-chain-gap.md),
+> The only route that gives an application a trusted key event while no
+> low-level hook fires is the **raw input path**: the WebView2 host takes the
+> keyboard as `WM_INPUT`, Chromium builds the DOM keydown from it, and the
+> keyboard message that would have run the hook chain is never generated.
+>
+> **So no global chord shortcut can reach Toxic from inside a Project KO
+> terminal.** The chord *is* delivered to the page - and Project KO already
+> catches it there, to keep `^T` away from the CLI
+> (`src/desktop/TerminalPane.tsx:190`). That handler is where the fix
+> belongs.
+>
+> The measurements:
+> [`.debuglog/m-2026-11-24-2308-pko-press-measured.md`](../.debuglog/m-2026-11-24-2308-pko-press-measured.md),
+> [`.debuglog/m-2026-11-24-2115-chain-gap.md`](../.debuglog/m-2026-11-24-2115-chain-gap.md),
 > [`.debuglog/m-2026-11-24-2113-token-integrity-levels.md`](../.debuglog/m-2026-11-24-2113-token-integrity-levels.md),
 > [`.debuglog/m-2026-11-24-2118-pko-side-is-clean.md`](../.debuglog/m-2026-11-24-2118-pko-side-is-clean.md),
-> [`.debuglog/m-2026-11-24-2120-focus-vs-foreground.md`](../.debuglog/m-2026-11-24-2120-focus-vs-foreground.md).
+> [`.debuglog/m-2026-11-24-2259-chain-alive-again.md`](../.debuglog/m-2026-11-24-2259-chain-alive-again.md).
 
 ---
 
