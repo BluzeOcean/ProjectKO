@@ -9,6 +9,12 @@ chord, the microphone, the recording and the typing. Project KO places nothing.
 The only thing Project KO had to build was a way for its own terminal to receive
 the text Windows injects from another process.**
 
+The attempts that **did not** work are in
+[dictation-failed-attempts.md](dictation-failed-attempts.md). Read it before
+changing this path: it lists the removed designs, the experiments whose
+conclusions were invalid and the theories that were disproved, so a dead patch
+is not tried a second time.
+
 ## The shape now
 
 | Step | Whose work |

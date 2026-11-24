@@ -149,7 +149,9 @@ Toxic 1.2.0, Windows, release build at
 
 Project KO measured these before reporting it; they are not the cause, so do
 not spend time on them again. The full record is
-`knowledge/hex-dictation-shortcut.md` in Project KO.
+`knowledge/hex-dictation-shortcut.md` in Project KO, and the ledger of every
+attempt that failed - including the injection experiments whose conclusions
+were invalid - is `knowledge/dictation-failed-attempts.md`.
 
 - **The key reaches the operating system.** A stand-alone `WH_KEYBOARD_LL`
   probe logs `Ctrl+T` while a Project KO window is in front, exactly as it does
