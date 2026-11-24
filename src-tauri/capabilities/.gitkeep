@@ -1,0 +1,10 @@
+# This directory is watched by cargo through the build script's
+# `rerun-if-changed` directive (tauri-build emits it for the capabilities
+# path). Cargo re-runs a build script on every build when a watched path is
+# missing, and the rewritten build output then marks the app crate stale, so
+# the shell was recompiled - twelve seconds - on every single launch.
+#
+# The file itself only has to exist: Project KO's interface talks to its own
+# service over HTTP and never uses the Tauri JavaScript API, so it needs no
+# capabilities. Keeping the directory means cargo has something stable to
+# watch, and the build script stays fresh.

@@ -16,7 +16,7 @@ a headless Edge loading the chat window (no window, no focus taken):
 | Stage | Before | After |
 | --- | --- | --- |
 | npm + `tauri dev` CLI | 0.9 s | 0.9 s |
-| cargo freshness check | 1-2 s, no recompile | 1-2 s, no recompile |
+| cargo compile of the shell | 12.2 s, every launch | 0.3 s, once |
 | Node service → `ready` | 0.68 s | 0.57 s |
 | **first page load** | **12.2 s** | **0.20 s** |
 | service spawn → rendered | 13.5 s | **1.56 s** |
@@ -79,17 +79,57 @@ reload the running window. A launcher that only opens the app would use the
 built one - the debug binary always asks for development mode
 (`MRMAK_DEV=1` in `src-tauri/src/main.rs`), so that is the piece to change.
 
+## The shell recompiled itself on every launch
+
+The console told the second half of the story:
+
+```
+Compiling projectko v0.6.4 (V:\06_App\ProjectKO\src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.24s
+```
+
+Twelve seconds, every time, on a crate whose sources had not changed. The
+cause is cargo's rule for a **missing** watched path: `tauri_build::build()`
+emits
+
+```
+cargo:rerun-if-changed=..\src-tauri\capabilities
+```
+
+and `src-tauri/capabilities` **does not exist** (the configuration lists no
+capability files, and the interface talks to its own service over HTTP rather
+than the Tauri JavaScript API, so it needs none). Cargo re-runs a build script
+on every build when a watched path is missing. The rewritten build output is
+then newer than the crate's fingerprint, so the crate itself is dirty, and the
+shell is compiled again - forever.
+
+Measured with the directory present:
+
+| Build | Before | After |
+| --- | --- | --- |
+| first | 11.8 s, "Compiling projectko" | 11.3 s, "Compiling projectko" |
+| second | 11.8 s, "Compiling projectko" | **0.28 s, "Finished"** |
+
+`src-tauri/capabilities/.gitkeep` now holds the directory. An empty
+directory cannot be committed to git, and the file has to exist for cargo to
+have something stable to watch.
+
+One more compile is expected on the next launch, and only that one: cargo also
+watches `TAURI_CONFIG`, which the Tauri CLI sets and a plain `cargo build`
+does not, so the two environments take turns invalidating each other. Within
+the launcher's own environment every launch after the first is clean.
+
 ## Not the cause
 
-- **Cargo does not rebuild on launch.** The fingerprint stamp of the binary
-  target is untouched since 2026-11-23, so a launch re-links the executable and
-  runs. A `cargo build` from an agent shell can *look* like a rebuild because
-  plain `cargo build` and `tauri dev` use different profile fingerprints, so
+- **The Rust shell was not slow to start.** It spawns the service and waits for
+  its `ready` line before it builds the windows. It was slow to *compile*, for
+  the reason above.
+- **Cargo's fingerprint stamp is not the whole story.** A plain `cargo build`
+  from an agent shell can also *look* like a rebuild because plain `cargo build`
+  and `tauri dev` use different environment fingerprints (`TAURI_CONFIG`), so
   each one invalidates the other. While the app is running, cargo also cannot
   replace `target/debug/projectko.exe` ("Access is denied"), which makes it
   compile again on the next attempt.
-- **The Rust shell is not slow to start.** It spawns the service and waits for
-  its `ready` line before it builds the windows.
 
 ## Reproducing the measurement
 
