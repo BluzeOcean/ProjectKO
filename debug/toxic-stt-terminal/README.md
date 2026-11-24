@@ -35,6 +35,17 @@ recorded presses at 16:04:02 and 16:31:31 were most likely.
 So: the test window has to be quiet. Nothing recording, nothing dictating, the
 agent idle.
 
+## The two phases
+
+| Phase | Question | Where |
+| --- | --- | --- |
+| **1** | Does `Ctrl+T` in a Project KO chatspace terminal open a take in Toxic at all? | [phase-1-chord.md](phase-1-chord.md) |
+| **2** | Do the words of that take arrive in the terminal? | [phase-2-delivery.md](phase-2-delivery.md) |
+
+Phase 1 is finished before Phase 2 starts. A take that never opens cannot
+deliver anything, and every Phase 2 question is meaningless until Phase 1
+answers yes.
+
 ## Where the permanent records live
 
 | What | Where |
