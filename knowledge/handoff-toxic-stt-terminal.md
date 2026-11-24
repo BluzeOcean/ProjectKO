@@ -171,9 +171,11 @@ that killed it. The short list:
 2. **PKO web-view probe** - `src/desktop/dictationProbe.ts`, installed in the
    app, recording to the web view's LevelDB. Read it with the FileShare trick
    (LevelDB is locked).
-3. **Foreground sampler** - `.cache/fg-watch.ps1` → `.cache/fg-watch.log`
-   (writes `pid:process:title` on every foreground change). The 60-minute run
-   expired at 20:44:30; **restart it before the next owner test**.
+3. **Foreground sampler** - `.cache/fg-watch.ps1` → `.cache/fg-watch.log`.
+   **Upgraded at 21:10** to log the **focused** window as well as the
+   foreground one (via `GetGUIThreadInfo`), because a key is delivered to the
+   focused window and the 20:43 run only captured the foreground. Writes a line
+   on every change. **Restarted at 21:10, running for 4 hours.**
 4. **Toxic's own log** - read over CDP (port 9333). Note: `window.__TAURI__`
    does **not** exist in the web view - use `__TAURI_INTERNALS__.invoke`.
 
@@ -308,6 +310,14 @@ Candidate mechanisms, in the order to try them:
    **bypasses the `WH_KEYBOARD_LL` chain entirely**. This is the best single
    explanation: the web view still gets a normal keydown, but no hook ever sees
    the key.
+
+   **The WebView2 host is the most likely registrant.** The key arrives as a
+   *DOM* event in a Chromium web view, so something turned a Windows input
+   message into a DOM keydown. If the PKO window (or the WebView2 host)
+   registers a raw input device, Chromium receives `WM_INPUT` and synthesises
+   the DOM keydown itself - and the `WH_KEYBOARD_LL` chain never runs at all.
+   Chrome itself does not behave this way (the same chord reached both hooks
+   there), which fits a WebView2-host-specific registration.
 2. **An input-sink registration** for the Project KO window.
 3. **A posted `WM_KEYDOWN`** (`PostMessage`/`SendMessage`) into the Project KO
    window - also outside the chain.
@@ -319,6 +329,22 @@ Candidate mechanisms, in the order to try them:
 `src-tauri/src/win_key.rs` is **not** a delivery candidate - it only *reads*
 keys and never posts any - but check whether it, or another module,
 *registers* a raw-input device.
+
+### The second variant that is still open: focus vs foreground
+
+A key is delivered to the **focused** window, not to the foreground one. The
+20:43 sampler recorded only `GetForegroundWindow()` - the **focused** HWND was
+never captured. The sampler has been upgraded (21:10) to log both, via
+`GetGUIThreadInfo`, and it is running again.
+
+This variant was the sampler's own original hypothesis (see the header comment
+in `.cache/fg-watch.ps1`): *a window that only has keyboard focus, because the
+owner clicked inside it while another application owns the foreground, receives
+keys without the operating system running the low-level hook chain*. The 20:43
+foreground readings point away from it, but the focused HWND was never actually
+measured - so it is **not** eliminated, only weakened. If the next test shows
+the focused window is ever something other than the PKO window, that is a
+delivery path of its own and must be eliminated before anything else.
 
 ### The secondary hypothesis (the newest suspect)
 
@@ -350,7 +376,9 @@ chord decision yet."*
 ### Step 1 - the cheapest next test (owner's, ~1 minute)
 
 **One plain character in each window, then Ctrl+T in each window.** Nothing
-dictating, the agent idle, the foreground sampler restarted first.
+dictating, the agent idle. The foreground sampler is running (restarted 21:10)
+and now logs the focused window as well as the foreground one - **check both
+columns** in the result.
 
 | Probe log for the PKO window | What it means |
 | --- | --- |
@@ -364,7 +392,12 @@ This is a **one-question test**, and it is the owner's to run - ask, then wait.
 ### Step 2 - the search that needs no owner
 
 Grep the PKO dependency tree and the WebView2 host for raw-input and posted
-message APIs (§5). This needs nobody but the machine.
+message APIs (§5) - `RegisterRawInputDevices`, `RIDEV_INPUTSINK`, `RAWINPUT`,
+`WM_INPUT`, `PostMessage`, `SendMessage`. **The WebView2 host is the leading
+candidate** (§5, candidate 1): the key arrives as a DOM event, so something
+turned a Windows message into a DOM keydown, and a raw-input registration would
+do exactly that while bypassing the hook chain. This needs nobody but the
+machine.
 
 ### Step 3 - the cheap kill test
 
@@ -387,7 +420,7 @@ but **not built**. It waits on the owner's B1/B2 decision (§9).
 | PKO service | 35724 | - | `http://127.0.0.1:57581` |
 | `hex.exe` | 17 procs | oldest 11/23 | Toxic's STT engine. The newest suspect (§5) |
 | Hook probe | bg task | installed 20:22:23 | `.cache/hook-probe.ps1` → `.cache/hook-probe.log`. **The witness - keep it** |
-| Foreground sampler | bg task | expired 20:44:30 | **Restart it before the next owner test** |
+| Foreground sampler | bg task `bg_b09e1bd2` | restarted 21:10 | `.cache/fg-watch.ps1` → `.cache/fg-watch.log`, 4-hour run. **Upgraded to log the focused window too** |
 
 ---
 

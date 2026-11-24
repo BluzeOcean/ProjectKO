@@ -68,6 +68,14 @@ order they should be tried:
    **bypasses the `WH_KEYBOARD_LL` chain entirely**. This is the single best
    explanation of the symptom: the web view still receives a normal keydown,
    but no hook ever sees the key.
+
+   **The WebView2 host is the most likely registrant.** The key arrives as a
+   *DOM* event in a Chromium web view, which means something turned a Windows
+   input message into a DOM keydown. If the PKO window (or the WebView2 host)
+   registers a raw input device, Chromium receives `WM_INPUT` and synthesises
+   the DOM keydown itself - and the whole `WH_KEYBOARD_LL` chain never runs.
+   Chrome itself does not behave this way (the same chord reached both hooks
+   there), which fits a WebView2-host-specific registration.
 2. **An input-sink registration** for the Project KO window.
 3. **A posted `WM_KEYDOWN`** (`PostMessage`/`SendMessage`) into the Project KO
    window, which also bypasses the chain.
@@ -79,6 +87,14 @@ order they should be tried:
 `src-tauri/src/win_key.rs` is **not** a candidate for the *delivery* - it only
 reads keys, it never posts any - but check whether it or another module
 *registers* a raw-input device.
+
+**The focus-vs-foreground variant (still open, now instrumented).** A key is
+delivered to the **focused** window, not to the foreground one, and the
+foreground sampler at 20:43 only recorded `GetForegroundWindow()` - the
+**focused** HWND was never captured. The sampler has been upgraded (21:10) to
+log both, via `GetGUIThreadInfo`, and it is running again. If the focused
+window is ever *not* the PKO window while PKO appears to be in front, that is
+a delivery path of its own and it must be eliminated before anything else.
 
 **The newest suspect is the `hex.exe` pile** (Toxic's STT engine; 17 processes
 running, one started 19:18:42 with the current Toxic). Per the Hex-era record
