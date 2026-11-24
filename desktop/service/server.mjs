@@ -33,7 +33,7 @@ import { projectKey, recentProjects } from './recent-projects.mjs';
 import { answerPrompt, readPrompt } from './terminal-prompt.mjs';
 import { rewindToMessage } from './message-edit.mjs';
 import { ToxicReadAloud } from './toxic-read-aloud.mjs';
-import { ensureToxic, toxicShortcut } from './toxic-launch.mjs';
+import { toxicShortcut } from './toxic-launch.mjs';
 import { Vault } from './vault.mjs';
 import { Handoffs } from './handoff.mjs';
 import { chatCommands } from './chat-commands.mjs';
@@ -83,58 +83,6 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
     broadcast('settings', { settings }); broadcast('dictation', { dictation: info });
     mobile?.broadcast({ type: 'dictation', dictation: info });
     return info;
-  };
-  // Desktop dictation is a switch: Project KO draws the microphone, Toxic does
-  // the listening. Starting it wakes Toxic when it is closed, so one press is
-  // enough from a cold machine.
-  // Whether the open take belongs to Project KO. Toxic's own shortcut opens
-  // takes too, and those are Toxic's to finish and type.
-  let pkoTake = false;
-  const dictationListen = async action => {
-    if (!['start', 'stop', 'cancel', 'status'].includes(action)) throw Object.assign(new Error('Choose start, stop, cancel or status.'), { status: 400 });
-    // Chat dictation always runs in Toxic, but "Off" still means off.
-    if (action === 'start' && settings.transcribeProvider === 'off') throw Object.assign(new Error('Dictation is off. Turn it on in Settings > Speech-to-text.'), { status: 409 });
-    const client = dictation.toxicClient();
-    // A Toxic built before this tool existed answers "unknown tool: dictation".
-    const ask = (name, timeout) => client.dictation(name, timeout).catch(error => {
-      if (/unknown tool:?\s*dictation/i.test(error?.message || '')) throw Object.assign(new Error('The Toxic running on this machine has no dictation tool for Project KO. Update Toxic, then press the microphone again.'), { status: 503 });
-      throw error;
-    });
-    if (action === 'status') {
-      // An older Toxic answers nothing here; the button simply reads as idle.
-      const answer = await client.dictation('status', 8_000).catch(() => '');
-      let state = {};
-      try { state = JSON.parse(answer) } catch { state = {} }
-      // Toxic reports the microphone, not who opened it. The switch needs to
-      // know whether the take is this app's, so it can end it and keep the words.
-      return { listening: state.listening === true, owner: pkoTake ? 'project-ko' : null, last: state.last && typeof state.last === 'object' ? state.last : null };
-    }
-    if (action === 'start') {
-      await (mobileOptions?.ensureToxic || ensureToxic)(client);
-      try {
-        await ask('start', 90_000);
-        pkoTake = true;
-        return { listening: true, owner: 'project-ko' };
-      } catch (error) {
-        // Toxic's own shortcut usually reaches the microphone first: the system
-        // hook sees the key before the web view does. That take is already
-        // running and Toxic will type the words itself, so this side backs off
-        // rather than asking twice or reporting a failure.
-        if (/already listening/i.test(error?.message || '')) { pkoTake = false; return { listening: true, owner: 'toxic' }; }
-        throw error;
-      }
-    }
-    if (action === 'cancel') {
-      pkoTake = false;
-      await ask('cancel', 90_000);
-      return { listening: false };
-    }
-    const mine = pkoTake;
-    pkoTake = false;
-    const text = (await ask('stop')).trim();
-    // A take Toxic started types the words where the caret is; handing them
-    // back as well would insert the same sentence twice.
-    return { listening: false, text: mine ? text : '', owner: mine ? 'project-ko' : 'toxic' };
   };
   const projectList = () => recentProjects({ repo, sessions: sessions.list(), pinned: settings.pinnedProjects || [] });
   let selectedId = sessions.active().some(item => item.id === settings.selectedId) ? settings.selectedId : sessions.active()[0]?.id || null;
@@ -320,7 +268,6 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         if (method === 'POST' && url.pathname === '/api/transcribe') return json(response, 200, await dictation.transcribe(request, 'desktop', () => !closing));
         const data = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) ? await body(request, url.pathname === '/api/files/markdown' ? 12 * 1024 * 1024 : url.pathname.startsWith('/api/workspace/cards') ? 2 * 1024 * 1024 : 256 * 1024) : {};
         if (method === 'POST' && url.pathname === '/api/dictation') return json(response, 200, await chooseDictation(data.provider));
-        if (method === 'POST' && url.pathname === '/api/dictation/listen') return json(response, 200, await dictationListen(data.action));
         if (method === 'GET' && url.pathname === '/api/quota') return json(response, 200, await quota.status());
         if (method === 'GET' && url.pathname === '/api/mobile') return json(response, 200, mobile.status());
         if (method === 'GET' && url.pathname === '/api/mobile/check') return json(response, 200, await mobile.transport.probe());

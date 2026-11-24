@@ -8,7 +8,6 @@ import BackgroundWork, { type BackgroundCommand, type WorkingAgent } from '../mo
 import { AgentLogo, Icon } from './Icons'
 import ConversationImages from '../mobile/ConversationImages'
 import type { ConversationImage } from '../mobile/ImageViewer'
-import DictationButton from './DictationButton'
 import { visibleUserMessage } from '../mobile/workspace-context'
 import { spokenText, useReadAloud } from '../mobile/useReadAloud'
 import { lastReplyIndex } from '../mobile/replySpeech'
@@ -304,9 +303,6 @@ export default function Conversation({ session, connected, agentLabel, openTermi
             api('/settings', { dshPermissionMode: mode }).catch(() => { /* The chat already changed; the next one falls back. */ })
           }} />}
         <span className="conversation-status" role="status">{status || (uploading ? 'Saving images…' : session.agent === 'dsh' ? '' : 'Enter to send · Shift+Enter for a new line')}</span>
-        {/* Toxic listens, not Project KO: no recorder panel, no second hotkey.
-            The button only starts and stops Toxic's own listening mode. */}
-        <DictationButton connected={connected} disabled={sending} onNote={setStatus} onText={text => setDraft(current => ({ ...current, text: current.text ? `${current.text}${/\s$/.test(current.text) ? '' : '\n'}${text}` : text }))} />
         {working && <button type="button" className="conversation-stop" onClick={stop} title="Interrupt the agent (Esc)"><Icon name="stop" size={14} />Stop</button>}
         <button type="submit" className="conversation-send" aria-label={sending ? 'Sending…' : 'Send'} title="Send" disabled={!connected || !running || sending || uploading || (!draft.text.trim() && !draft.paths.length)}><Icon name="send" size={16} /></button>
       </div>

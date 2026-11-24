@@ -1,142 +1,148 @@
 # Dictation: the memory of this feature
 
-Status: written 2026-11-24, after the chord was given back to Project KO and
-before the cross-application leak was closed.
+Status: rewritten 2026-11-24, after Project KO stopped asking Toxic for
+anything at all.
 
 This note is the record of how dictation came to work the way it does, so the
 next change does not have to rediscover it. The short version: **Toxic owns the
-microphone, Project KO owns the words, and a take belongs to the window that had
-the focus when it ended.**
+chord, the microphone, the recording and the typing. Project KO places nothing.
+The only thing Project KO had to build was a way for its own terminal to receive
+the text Windows injects from another process.**
 
-## The three paths into a take
+## The shape now
 
-| Path | Who opens the take | Who types the words |
-| --- | --- | --- |
-| The microphone in the composer | Project KO, through the `dictation` MCP tool | Project KO, from the transcript the tool returns |
-| The chord inside a Project KO window | Project KO, when the chord reaches the window | Project KO, the same way |
-| The chord in another application | Toxic's own system-wide hook | Toxic, with `SendInput` into the focused control |
+| Step | Whose work |
+| --- | --- |
+| The chord | Toxic's system-wide hook, which swallows the key before any window sees it |
+| The recording | Toxic's microphone, its HUD and its cues |
+| The words | Toxic types them into whichever window has the focus |
+| The terminal | Project KO's bridge receives what Windows injected |
 
-The first two are one path: the microphone and the chord both call
-`POST /api/dictation/listen` with `start`, and the words come back with `stop`.
-The third is the one that keeps the text out of the wrong window, and the one
-this note is mostly about.
+There is no take that Project KO opens, no transcript it fetches, no history it
+watches, no focus it infers and no microphone switch in the chat. The desktop
+dictation path talks to nobody.
 
-## Why the window answers the chord itself
+## What was removed, and why
 
-Toxic's hook swallows its chord before any window sees it - but only outside a
-Project KO window. Measured on 2026-11-24: the same chord opens a take over
-Notepad and does nothing at all with a Project KO window in front, no HUD and no
-history entry. The measurements and the earlier Hex findings are in
-[hex-dictation-shortcut.md](hex-dictation-shortcut.md); the defect on Toxic's
-side is written up as [a request](request-toxic-chord.md).
+Until 2026-11-24 the desktop path worked like this:
 
-The sweep was taken out once on the premise that Toxic's hook always wins, and
-that left the chord belonging to nobody: the terminal swallowed it and nothing
-answered. It is back, in `src/desktop/DictationButton.tsx`:
+- a microphone button in the composer called `POST /api/dictation/listen`, which
+  asked Toxic's `dictation` MCP tool to open a **partner take** - a take Toxic
+  records but does not type, because the caller was supposed to place the words;
+- a watcher (`src/desktop/useToxicTranscripts.ts`) polled the same route every
+  900 ms, read Toxic's transcript history and typed the newest sentence into the
+  focused field;
+- a focus tracker (`src/desktop/windowFocus.ts`) decided whether a transcript
+  belonged to this window, because Toxic's history holds **every take on the
+  machine**, including takes made in Chrome.
 
-- the chord is **parsed once, from Toxic's own configuration**
-  (`toxicShortcut()` in `desktop/service/toxic-launch.mjs`), so a rebind in Toxic
-  is followed without a second hardcoded Ctrl+T;
-- `src/desktop/dictationChord.ts` holds the parser and the matcher, and both the
-  window and the terminal use them;
-- the terminal swallows the chord, so the CLI never receives `^T`.
+That arrangement was a workaround for a missing API, and it had a real defect:
+a take made in another application was typed into Project KO as well. The fix
+was three guards (focus now, focus period, freshness) - see the git history of
+this file for the details. The real answer is that **Project KO should not read
+Toxic's history at all**: Toxic knows which window the words went into, and
+Project KO does not need to know, because Toxic types them there.
 
-## Who owns the take
+So on 2026-11-24 the whole watcher went away:
 
-The service keeps one flag, `pkoTake`, in `desktop/service/server.mjs`:
+| Removed | Where it was |
+| --- | --- |
+| The microphone switch | `src/desktop/DictationButton.tsx`, `src/desktop/DictationComposer.tsx` |
+| The transcript watcher | `src/desktop/useToxicTranscripts.ts` |
+| The focus tracker | `src/desktop/windowFocus.ts` |
+| The take route | `POST /api/dictation/listen` in `desktop/service/server.mjs` |
+| The partner-take flag | `pkoTake` in the same file |
+| The MCP call | `ToxicClient.dictation()` in `desktop/service/toxic.mjs` |
 
-- `start` sets it, unless Toxic answers *already listening* - then the take
-  belongs to Toxic and the service says so (`owner: 'toxic'`);
-- `stop` hands the transcript back **only** when the take is ours. A take Toxic
-  owns has already been typed by Toxic, so handing it back as well would insert
-  the same sentence twice.
+What is left is the chord guard in the terminal and the bridge below.
 
-Project KO therefore owns only the take its own press opens: the same press
-closes it, Escape throws it away, any other key finishes it, and a reload takes
-an open take back over.
+## The chord belongs to Toxic
 
-## The path for a take Toxic opened
+Toxic's chord is read from Toxic's own configuration
+(`toxicShortcut()` in `desktop/service/toxic-launch.mjs`), so a rebind in Toxic
+is followed without a second hardcoded `Ctrl+T`.
+`src/desktop/dictationChord.ts` holds the parser and the matcher.
 
-Keys injected by another process never reach a web view, so the words of a take
-Toxic typed cannot be read back from the window. They are collected from Toxic's
-transcript history instead, by `src/desktop/useToxicTranscripts.ts`, which polls
-`/api/dictation/listen` with `status` and takes the newest transcript.
+The terminal **swallows** the chord, so the CLI never receives `^T`. That is
+all that is left of the chord in Project KO: no listener, no takeover, no
+request to Toxic. When Toxic is in its double tap mode the key can reach the
+window, and the terminal drops it rather than letting the CLI see it.
 
-Two guards keep that path honest:
+Toxic's hook is global, so the same chord opens a take in Chrome, Notepad or a
+code editor. Those words belong to that application and stay there - which is
+exactly what the watcher used to get wrong.
 
-- the service reports `owner: 'toxic'` for a take it did not open, and the
-  service refuses to hand that transcript back twice;
-- the watcher checks the field before it writes. `fieldHasWords` reads the
-  focused field, and the terminal view passes `alreadyThere`, which reads the
-  xterm rows - Toxic's typing is visible in the terminal, so it is not repeated.
+**The defect on Toxic's side is still open** and is written up as
+[a request](request-toxic-chord.md): the chord does not always reach Toxic
+while a Project KO window is in front. With the takeover gone, a dropped chord
+means no dictation in Project KO at all, so the owner should keep Toxic in
+**chord mode** (`sttMode: "chord"`), where the hook swallows the key
+machine-wide.
 
-**The leak that was found on 2026-11-24.** Toxic is a machine-wide tool: its
-chord opens a take in any application, and its words are typed into whichever
-window has the focus. The watcher read Toxic's history, which holds *every* take
-on the machine, so a take made in Chrome was delivered into the Project KO
-terminal as well. Two things let that happen:
+## The bridge: how the terminal receives typed words
 
-1. the watcher only advanced its watermark while the document had the focus, so
-   a transcript made elsewhere was still waiting when the window was focused
-   again, and was delivered then;
-2. the only focus test was `document.hasFocus()`, which is a statement about the
-   document and not about the window the person is working in.
+Toxic types its transcript with `SendInput` and `KEYEVENTF_UNICODE`. Windows
+delivers such a packet to the focused control as a `VK_PACKET`, and Chromium
+turns it into:
 
-The rule that replaces both: **a transcript belongs to this window only when the
-take ended while this window had the focus.** Three guards carry it, in
-`src/desktop/useToxicTranscripts.ts`:
+1. a `keydown` with `keyCode === 229` and `isComposing === false`, then
+2. a `beforeinput` with `inputType === "insertText"` carrying the text.
 
-- `src/desktop/windowFocus.ts` says whether the window has the focus now, and
-  since when it has held it without a break. It watches the window's own focus
-  and blur events, because a web view behind another window can still report a
-  focused document; the document's focus state answers only while no event has
-  arrived. The tracker is a module of its own, so each window of the app keeps
-  its own answer.
-- a transcript made before the current focus period began is not ours: the take
-  ended while another application had the focus, and Toxic typed the words there.
-- a transcript older than a few poll cycles was made while this app was not
-  watching, so it belongs to that application too. This guard holds even when
-  the window cannot say whether it has the focus.
+An ordinary field takes that text without trouble. **xterm v6 does not**: its
+keydown handler does not know the key code 229, cancels the keydown, and the
+browser is then never allowed to insert the text - so no text event is fired
+and the terminal sees nothing at all. That is why the words of a take Toxic
+typed never reached a Project KO terminal, and why the watcher existed.
 
-The watcher never writes while the window is unfocused, and it writes at most
-once per sentence.
+`src/desktop/terminalUnicode.ts` is the bridge. It does two things:
+
+- on the terminal's keydown, when the key code is 229 and it is not a
+  composition, it **stops the event before xterm sees it**. The browser keeps
+  its right to insert the text, so the text event arrives.
+- on the terminal's own field, a non-composing `insertText` is taken over:
+  `preventDefault()` and `terminal.paste(data)`. The text is written to the
+  terminal the way a keystroke is written, and it never sits in the field, so
+  the terminal cannot see it twice.
+
+The clipboard is never involved. `terminal.paste()` writes into xterm's input
+stream; no `navigator.clipboard` call exists on this path, and the UI test
+counts clipboard calls to keep it that way.
+
+An IME composition is left alone (`isComposing` is true, and xterm's own
+composition helper owns it), and an ordinary key is left alone as well - xterm
+cancels its keydown, so the browser never inserts it and there is nothing to
+take over.
 
 ## What is verified
 
-- `desktop/service/test/dictation-listen.test.mjs` - the service route: start,
-  stop, cancel, status, and a take Toxic owns.
-- `desktop/service/test/desktop-dictation-ui.mjs` - the real window: the switch
-  opens and closes a take, the chord opens a take and never reaches the CLI,
-  Escape cancels, a take Toxic ends alone is recovered, the conversation keeps
-  the words as a draft, a missing Toxic asks for an install, and a take made in
-  another application stays in that application.
-- `desktop/service/test/dictation-focus.test.mjs` - the focus tracker: the
-  window's events win over a document that still claims the focus, and a new
-  focus period is remembered.
+- `desktop/service/test/terminal-unicode.test.mjs` - the bridge on its own: the
+  packet is taken away from the terminal, the words arrive once, an ordinary key
+  and a composition are left alone, the clipboard is not used.
+- `desktop/service/test/desktop-dictation-ui.mjs` - the real window with a real
+  xterm: an ordinary key is typed once, a packet arrives once, two packets in a
+  row arrive in order, a composition is left to the terminal, the chord never
+  reaches the CLI, the clipboard is never touched, and the app asks Toxic for no
+  take and does not poll it.
 
-The cross-application case was checked against the code before the fix and
-failed there with the words of another window in the composer, so the test holds
-the behaviour rather than describing it.
+The UI test was run against the code without the bridge and failed there with
+an empty terminal, so it holds the behaviour rather than describing it.
+
+The live check with the real Toxic - the words typed by an actual take landing
+in the terminal - needs a person at the keyboard, because it takes the focus
+away from whatever is in front. It is on the owner's list, not in the test
+suite.
 
 ## Limits
 
-- Toxic's chord still does nothing when it is pressed with a Project KO window in
-  front; the window answers it itself instead. The real fix is Toxic's, and is
-  written up in [request-toxic-chord.md](request-toxic-chord.md).
-- Keys injected by another process never reach a web view - not even the
-  terminal in this app - so the words of a take Toxic typed are collected from
-  Toxic's history instead. That is why the terminal needs its own paste path,
-  and why its words are checked against the visible rows before they are added.
-  The conversation composer is a normal field and receives Toxic's typing
-  directly.
 - Project KO must stay engine-agnostic: it names Toxic and never an engine
   binary, a port or a process.
-- The window answers whether it has the focus through the web view's own focus
-  events, with the document's focus state as a fallback. If a platform ever
-  delivered neither, the freshness rule still keeps a take made elsewhere out
-  of this window - but only for the few seconds after it was made.
-- The watcher is a **workaround for a missing API**, and the workaround is what
-  had to be fixed on 2026-11-24. Toxic performs the typing itself, so it knows
-  the window the words went into; it does not say. The way out is a take that
-  names its window, which would make the rule a comparison instead of a guess -
-  written up as [a request](request-toxic-dictation-takes.md).
+- The dictation **provider status** still asks Toxic whether it is running.
+  That is the phone's transcription path (Toxic, Local Whisper, OpenAI,
+  OpenRouter, off), a separate feature from the desktop take, and it is a
+  single status read - not a watcher.
+- Toxic types with `KEYEVENTF_UNICODE`, which a terminal can only show as
+  characters a terminal font has. The bridge delivers the text; the terminal
+  decides what to draw.
+- The bridge is the only place where Project KO touches text from another
+  process. If a future terminal library changes how it treats the key code 229,
+  this is the file to look at first.

@@ -1,4 +1,8 @@
-// Isolated workspace; Toxic is stubbed at the service route, no real microphone.
+// Dictation in Project KO is Toxic's business: Toxic owns the chord, records
+// the take and types the words into the focused window. Two things are checked
+// here. The terminal has to receive the text that Windows typed as a unicode
+// packet, which xterm v6 drops on its own. And this app must not ask Toxic
+// for anything at all - no watcher, no transcript, no microphone switch.
 import { expect } from '@playwright/test';
 import { launchBrowser } from './browser.mjs';
 import { mkdtemp, mkdir, cp, writeFile } from 'node:fs/promises';
@@ -18,161 +22,102 @@ const session = service.sessions.make({ id: 'dictation-test', createdAt: new Dat
 const writes = [];
 session.status = 'running'; session.process = { write: data => writes.push(data), resize() {}, kill() {} };
 service.sessions.items.set(session.id, session);
-const transcript = 'Please review this draft.';
-const mic = page => page.getByRole('button', { name: 'Dictate a message', exact: true });
-const stop = page => page.getByRole('button', { name: 'Stop dictating' });
 let browser;
 try {
   browser = await launchBrowser();
   const page = await browser.newPage({ viewport: { width: 1000, height: 800 } });
-  const actions = [];
-  let unavailable = false, toxicOwned = false, listening = false, last = null;
-  // The service route is the only thing Project KO talks to: the switch never
-  // opens a microphone of its own.
-  await page.route('**/api/dictation', route => route.fulfill({ json: { available: true, provider: 'toxic', maxSeconds: 120, maxBytes: 8388608, shortcut: 'Ctrl+T' } }));
-  await page.route('**/api/dictation/listen', route => {
-    const action = route.request().postDataJSON()?.action;
-    actions.push(action);
-    if (action === 'status') return route.fulfill({ json: { listening, owner: listening ? 'project-ko' : null, last } });
-    if (action === 'start') {
-      if (unavailable) return route.fulfill({ status: 503, json: { error: 'Toxic is not installed on this computer. Install Toxic, then press the microphone again.' } });
-      // Toxic's own shortcut reached its keyboard hook a moment before this
-      // window asked, so the microphone already belongs to a Toxic take.
-      if (toxicOwned) return route.fulfill({ json: { listening: true, owner: 'toxic' } });
-      listening = true;
-      return route.fulfill({ json: { listening: true, owner: 'project-ko' } });
+  const requests = [];
+  page.on('request', request => requests.push(request.url()));
+  // Nothing may reach the clipboard: the words are typed, not pasted.
+  await page.addInitScript(() => {
+    window.__clipboardCalls = 0;
+    const clipboard = navigator.clipboard;
+    if (!clipboard) return;
+    for (const name of ['readText', 'writeText', 'read', 'write']) {
+      const original = clipboard[name];
+      if (typeof original !== 'function') continue;
+      clipboard[name] = (...args) => { window.__clipboardCalls++; return original.apply(clipboard, args); };
     }
-    if (action === 'stop') { listening = false; last = { text: transcript, at: Date.now() }; return route.fulfill({ json: { listening: false, text: transcript, owner: 'project-ko' } }); }
-    listening = false;
-    return route.fulfill({ json: { listening: false } });
   });
   await page.goto(service.urls.chats);
   await page.bringToFront();
-  // A window that reloads while a take is open takes the switch back over,
-  // instead of leaving the microphone lit with nothing to close it.
-  listening = true;
-  // The token lives in memory, so a reload has to go back through the URL that
-  // carries it (the desktop window gets it from Tauri, which is why a plain
-  // reload works there).
-  await page.goto(service.urls.chats);
-  await expect(stop(page)).toBeVisible({ timeout: 8000 });
-  await page.keyboard.press('Escape');
-  await expect(mic(page)).toBeEnabled();
-  listening = false;
-  // The switch opens the microphone, and the same switch closes it.
-  await expect(mic(page)).toBeEnabled();
-  await mic(page).click();
-  await expect(stop(page)).toBeVisible();
-  await expect(page.getByText(/Recording \d/)).toHaveCount(0);
-  await stop(page).click();
-  await expect(mic(page)).toBeEnabled();
-  const firstStart = actions.indexOf('start');
-  assert.deepEqual(actions.slice(firstStart, firstStart + 2), ['start', 'stop'], 'one press opens the take, the next closes it');
-  assert.ok(writes.includes('\x1b[200~' + transcript + '\x1b[201~'), 'the words are pasted into the CLI');
-  assert.ok(!writes.includes('\r'), 'nothing is submitted for the person');
-  // The chord is Toxic's, read from Toxic's config. Its system-wide hook does
-  // not always act on it while a Project KO window is in front, so this window
-  // answers the chord itself and asks Toxic to listen. The CLI must never
-  // receive the chord either way.
-  const starts = actions.filter(action => action === 'start').length;
-  await page.locator('.xterm-helper-textarea').focus();
-  await page.keyboard.press('Control+t');
-  await expect(stop(page)).toBeVisible();
-  assert.equal(actions.filter(action => action === 'start').length, starts + 1, 'the chord opens a take');
-  assert.ok(!writes.some(chunk => chunk.includes('\x14')), 'the CLI never receives the chord');
-  // The same chord closes the take, and the words are pasted into the CLI.
-  await page.keyboard.press('Control+t');
-  await expect(mic(page)).toBeEnabled();
-  assert.ok(writes.includes('\x1b[200~' + transcript + '\x1b[201~'), 'the words are pasted into the CLI');
-  assert.ok(!writes.some(chunk => chunk.includes('\x14')), 'the CLI never receives the chord');
-  // Escape throws the take away and the switch comes back on its own.
-  await mic(page).click();
-  await expect(stop(page)).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(mic(page)).toBeEnabled();
-  assert.ok(actions.includes('cancel'), 'Escape cancels the take');
-  // Toxic can end a take without this app asking - its maximum length, or a
-  // cancel from Toxic's own window. The words are still recovered.
-  await mic(page).click();
-  await expect(stop(page)).toBeVisible();
-  listening = false;
-  last = { text: 'Words Toxic finished alone.', at: Date.now() + 2000 };
-  await expect(mic(page)).toBeEnabled({ timeout: 6000 });
-  assert.ok(writes.some(chunk => chunk.includes('Words Toxic finished alone.')), 'the words are kept');
-  assert.ok(!writes.some(chunk => chunk.includes('\x14')));
-  // The conversation keeps the words as a draft instead.
-  await page.getByRole('button', { name: 'Conversation', exact: true }).click();
-  const textarea = page.locator('.conversation-composer textarea');
-  await expect(textarea).toBeVisible();
-  const conversationStarts = actions.filter(action => action === 'start').length;
-  await mic(page).click();
-  await expect(stop(page)).toBeVisible();
-  await stop(page).click();
-  await expect(textarea).toHaveValue(transcript);
-  assert.ok(actions.filter(action => action === 'start').length > conversationStarts);
-  // Toxic got there first: the switch steps aside and sends no stop that would
-  // hand the same sentence back twice.
-  toxicOwned = true;
-  const stops = actions.filter(action => action === 'stop').length;
-  await mic(page).click();
-  await expect(mic(page)).toBeEnabled();
-  await expect(stop(page)).toHaveCount(0);
-  assert.equal(actions.filter(action => action === 'stop').length, stops, 'a take Toxic owns is left alone');
-  toxicOwned = false;
-  // Toxic types its own takes where the caret is. A web view terminal never
-  // receives that typing, so the words arrive from Toxic's history instead -
-  // and only when the field does not already hold them.
-  await textarea.fill('');
+  await page.getByRole('button', { name: 'Terminal', exact: true }).click();
+  const textarea = page.locator('.xterm-helper-textarea');
+  await expect(textarea).toBeAttached();
   await textarea.focus();
-  last = { text: 'Typed by Toxic elsewhere.', at: Date.now() + 6000 };
-  await expect(textarea).toHaveValue('Typed by Toxic elsewhere.', { timeout: 8000 });
-  await textarea.fill('Already here: Typed by Toxic twice.');
-  last = { text: 'Typed by Toxic twice.', at: Date.now() + 12000 };
-  await page.waitForTimeout(2600);
-  assert.equal(await textarea.inputValue(), 'Already here: Typed by Toxic twice.', 'words already in the field are not repeated');
-  // A take made in another application belongs to that application. Toxic types
-  // the words where the caret is, so Project KO must not type them a second
-  // time. The view is opened again first, so the watcher starts with a clean
-  // slate and the transcript below is new to it.
-  await page.getByRole('button', { name: 'Terminal', exact: true }).click();
-  await expect(page.locator('.xterm-helper-textarea')).toBeAttached();
-  await page.getByRole('button', { name: 'Conversation', exact: true }).click();
-  await expect(textarea).toBeVisible();
-  await textarea.fill('');
-  const base = Date.now();
-  last = { text: 'Words for this window.', at: base };
-  await expect(textarea).toHaveValue('Words for this window.', { timeout: 8000 });
-  // The person moves to another application, and the window says so.
-  await textarea.fill('');
-  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
-  await page.waitForTimeout(1200);
-  last = { text: 'Words for another window.', at: base + 1 };
-  await page.waitForTimeout(2600);
-  assert.equal(await textarea.inputValue(), '', 'a take made in another application is not typed here');
-  // The person comes back. The take was made before this window had the focus
-  // again, so its words still belong to the other application.
-  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
-  last = { text: 'Words from before the return.', at: base + 2 };
-  await page.waitForTimeout(2600);
-  assert.equal(await textarea.inputValue(), '', 'a transcript made before the return is not ours');
-  // A take in this window is placed again.
-  last = { text: 'Words for this window again.', at: Date.now() };
-  await expect(textarea).toHaveValue('Words for this window again.', { timeout: 8000 });
-  // A missing Toxic is a prompt to install it, in the composer's status line.
-  unavailable = true;
-  await textarea.fill('');
-  await mic(page).click();
-  await expect(page.locator('.conversation-status')).toContainText('Install Toxic');
-  await expect(mic(page)).toBeEnabled();
-  unavailable = false;
+
+  // An ordinary key is typed once, exactly as before the bridge.
+  let before = writes.length;
+  await page.keyboard.type('abc');
+  await expect.poll(() => writes.slice(before).join(''), { timeout: 5000 }).toContain('abc');
+  assert.equal(writes.slice(before).join(''), 'abc', 'an ordinary key is typed once');
+
+  // A unicode packet: the key Chromium reports as 229, then the text itself.
+  before = writes.length;
+  await page.evaluate(() => {
+    const field = document.querySelector('.xterm-helper-textarea');
+    field.focus();
+    const key = new KeyboardEvent('keydown', { key: 'Unidentified', bubbles: true, cancelable: true });
+    Object.defineProperty(key, 'keyCode', { get: () => 229 });
+    field.dispatchEvent(key);
+    field.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertText', data: 'Hello', bubbles: true, cancelable: true }));
+  });
+  await expect.poll(() => writes.slice(before).join(''), { timeout: 5000 }).toContain('Hello');
+  assert.equal(writes.slice(before).join(''), 'Hello', 'the words of the packet arrive once');
+
+  // Two packets in a row are two sentences, neither lost nor doubled.
+  before = writes.length;
+  await page.evaluate(() => {
+    const field = document.querySelector('.xterm-helper-textarea');
+    const packet = text => {
+      const key = new KeyboardEvent('keydown', { key: 'Unidentified', bubbles: true, cancelable: true });
+      Object.defineProperty(key, 'keyCode', { get: () => 229 });
+      field.dispatchEvent(key);
+      field.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertText', data: text, bubbles: true, cancelable: true }));
+    };
+    packet('One. ');
+    packet('Two.');
+  });
+  await expect.poll(() => writes.slice(before).join(''), { timeout: 5000 }).toContain('Two.');
+  assert.equal(writes.slice(before).join(''), 'One. Two.', 'every packet arrives once');
+
+  // A composition is the terminal's own business and stays there.
+  before = writes.length;
+  await page.evaluate(() => {
+    const field = document.querySelector('.xterm-helper-textarea');
+    const key = new KeyboardEvent('keydown', { key: 'Process', bubbles: true, cancelable: true });
+    Object.defineProperty(key, 'keyCode', { get: () => 229 });
+    Object.defineProperty(key, 'isComposing', { get: () => true });
+    field.dispatchEvent(key);
+    field.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertText', data: '中', bubbles: true, cancelable: true }));
+  });
+  await page.waitForTimeout(600);
+  assert.equal(writes.slice(before).join(''), '', 'a composition is left to the terminal');
+
+  // The chord is Toxic's. It may still reach the window when Toxic is in its
+  // double tap mode, and the CLI must never see it.
+  before = writes.length;
+  await page.keyboard.press('Control+t');
+  await page.waitForTimeout(400);
+  assert.ok(!writes.slice(before).some(chunk => chunk.includes('\x14')), 'the CLI never receives the chord');
+
+  const clipboardCalls = await page.evaluate(() => window.__clipboardCalls);
+  assert.equal(clipboardCalls, 0, 'the clipboard is never touched');
+
+  // This app asks Toxic for no take: no microphone, no transcript, no watcher.
+  // The dictation provider status is a different thing - it says which engine
+  // transcribes the phone - and it is asked once, not polled.
+  const takeCalls = requests.filter(url => /listen|transcript|take/.test(url));
+  assert.deepEqual(takeCalls, [], 'the app asks for no take');
+  const providerCalls = requests.filter(url => url.includes('/api/dictation')).length;
+  await page.waitForTimeout(3000);
+  assert.equal(requests.filter(url => url.includes('/api/dictation')).length, providerCalls, 'Toxic is not polled');
+  await expect(page.getByRole('button', { name: 'Dictate a message', exact: true })).toHaveCount(0);
+
+  // The route that used to carry the microphone is gone.
+  const answer = await fetch(service.origin + '/api/dictation/listen', { method: 'POST', headers: { Authorization: 'Bearer ' + service.token, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'status' }) });
+  assert.ok(!(await answer.text()).includes('"listening"'), 'the listen endpoint is gone');
+
   await page.screenshot({ path: path.join(repo, 'desktop-dictation.png') });
-  // The terminal cannot receive Toxic's typing at all, so the same words are
-  // pasted into the CLI from Toxic's history.
-  await page.getByRole('button', { name: 'Terminal', exact: true }).click();
-  await expect(page.locator('.xterm-helper-textarea')).toBeAttached();
-  const beforeTerminal = writes.length;
-  last = { text: 'Words for the terminal.', at: Date.now() + 9000 };
-  await expect.poll(() => writes.slice(beforeTerminal).some(chunk => chunk.includes('Words for the terminal.')), { timeout: 8000 }).toBe(true);
-  assert.ok(writes.slice(beforeTerminal).every(chunk => chunk.includes('\x1b[200~')), 'the words are pasted, not submitted');
-  console.log(JSON.stringify({ ok: true, screenshot: path.join(repo, 'desktop-dictation.png'), checks: ['switch only', 'open take adopted', 'chord opens a take', 'escape cancels', 'external end', 'draft insert', 'Toxic take left alone', 'Toxic words placed', 'take from another window left there', 'install prompt', 'terminal fallback'] }));
+  console.log(JSON.stringify({ ok: true, screenshot: path.join(repo, 'desktop-dictation.png'), checks: ['ordinary key typed once', 'packet arrives once', 'packets in a row', 'composition left alone', 'chord swallowed', 'clipboard untouched', 'no take requested', 'Toxic is not polled', 'no microphone switch'] }));
 } finally { await browser?.close(); session.process = null; await service.close(); }

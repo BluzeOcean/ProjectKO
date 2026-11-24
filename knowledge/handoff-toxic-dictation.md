@@ -3,8 +3,15 @@
 Status: **done**. Toxic shipped `fbbd015 feat(mcp): let a partner app drive
 dictation` (verified 2026-11-24 against `23b65df`); the tool, its partner rules
 and its README entry are in Toxic, and this brief stays as the record of what was
-asked for. The Project KO side was built against it and answers `start`,
-`status` and `stop` end to end.
+asked for.
+
+> **Project KO stopped using it on 2026-11-24.** The desktop dictation path now
+> asks Toxic for nothing: no microphone switch, no `POST /api/dictation/listen`,
+> no `ToxicClient.dictation()`, no transcript watcher. Toxic owns the chord, the
+> recording and the typing. The tool is harmless and still useful for a partner
+> that wants the transcript back instead of having it typed, but Project KO does
+> not call it - so the paths named in part 4 no longer exist. The record of what
+> Project KO does now is in [the dictation memory](dictation-memory.md).
 
 You are taking over one task in the **Toxic** repo at `V:\04_Projects\Toxic`
 (Tauri 2, Rust, branch `master` at `014f893`, working tree clean). Project KO

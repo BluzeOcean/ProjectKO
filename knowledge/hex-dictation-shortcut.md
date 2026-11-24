@@ -7,13 +7,13 @@
 >
 > **The same finding applies to Toxic** (measured 2026-11-24): its chord starts a
 > take over Notepad but not while a Project KO window is in front. Project KO
-> therefore sweeps the chord up in its own windows and calls Toxic itself, which
+> therefore swept the chord up in its own windows and called Toxic itself, which
 > is the conclusion this note reached for Hex and the reason the bridge existed.
-> That sweep was briefly taken out again - on the assumption that Toxic's hook
-> always wins - which left the chord belonging to nobody: the terminal swallowed
-> it and nothing answered. It is back, in `src/desktop/DictationButton.tsx`, and
-> the defect on Toxic's side is written up as
-> [a request](request-toxic-chord.md).
+> **That sweep was taken out for good on 2026-11-24**: the chord belongs to
+> Toxic, Project KO no longer asks Toxic to listen, and the terminal only
+> swallows the chord so the CLI never sees `^T`. The defect on Toxic's side is
+> still open and is written up as [a request](request-toxic-chord.md); with the
+> takeover gone, keep Toxic in chord mode.
 
 [Hex](https://anoma.ly) is a local dictation app for Windows with a Ctrl+T
 dictation shortcut. In a Project KO terminal that chord produced a `^T` control

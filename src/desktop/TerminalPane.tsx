@@ -11,6 +11,7 @@ import { useWorkspaceTheme } from '../lib/workspace-theme'
 import { fileManager, isMac, modKey, modLabel } from './platform'
 import { deferredClipboardWrite, terminalClipboardGate, terminalCopyWindow, type PendingCopy } from './terminalClipboard'
 import { fallbackChord, matchesChord, parseChord } from './dictationChord'
+import { createUnicodeTypingBridge } from './terminalUnicode'
 
 export default function TerminalPane({ id, agent, fontSize, appearance, optionMeta, onAttachmentStatus }: { id: string; agent: AgentId; fontSize: number; appearance: TerminalAppearance; optionMeta: boolean; onAttachmentStatus: (id: string, text: string) => void }) {
   const { resolved } = useWorkspaceTheme('chat')
@@ -112,6 +113,14 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
     let ready = false
     let queued: { sequence: number; data: string }[] = []
     const clipboardGate = terminalClipboardGate(), element = host.current
+    // Windows types text into the focused window as a unicode packet. xterm
+    // cancels that key, so the words never arrive; the bridge keeps the
+    // packet away from the terminal and hands the text over itself.
+    const unicode = createUnicodeTypingBridge(data => terminal.paste(data))
+    const unicodeKeyDown = (event: KeyboardEvent) => unicode.keydown(event)
+    const unicodeText = (event: InputEvent) => unicode.beforeinput(event)
+    element.addEventListener('keydown', unicodeKeyDown, true)
+    terminal.textarea?.addEventListener('beforeinput', unicodeText)
     // macOS only: the clipboard write must start inside the gesture (see deferredClipboardWrite).
     let pendingCopy: PendingCopy | null = null, pendingTimer = 0
     const dropCopy = () => { clearTimeout(pendingTimer); pendingCopy?.cancel(); pendingCopy = null }
@@ -178,10 +187,8 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
     })
     terminal.attachCustomKeyEventHandler(event => {
       // The dictation chord belongs to Toxic. Its system-wide hook is the
-      // first to see it, but it does not always act on it while a Project KO
-      // window is in front, and then the key arrives here. The chord opens
-      // Toxic's listening mode in this app too (see DictationButton), so the
-      // CLI must never receive it either way.
+      // first to see it and swallows it. When Toxic is in its double tap mode
+      // the key can still reach the window, and the CLI must never see it.
       if (matchesChord(event, chordRef.current)) {
         event.preventDefault(); event.stopPropagation()
         return false
@@ -233,6 +240,7 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
       element.removeEventListener('click', multipleClick, true)
       window.removeEventListener('blur', cancelCopy); document.removeEventListener('visibilitychange', cancelCopy)
       element.removeEventListener('paste', paste, true); window.removeEventListener('focus', focus); clearTimeout(statusTimer.current)
+      element.removeEventListener('keydown', unicodeKeyDown, true); terminal.textarea?.removeEventListener('beforeinput', unicodeText)
       onAttachmentStatus(id, ''); terminal.dispose(); terminalRef.current = null; fitRef.current = null
     }
   }, [id, agent, onAttachmentStatus])
@@ -249,11 +257,6 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
   useEffect(() => {
     if (terminalRef.current) { terminalRef.current.options.fontSize = fontSize; fitRef.current?.fit(); sendEvent({ type: 'resize', id, cols: terminalRef.current.cols, rows: terminalRef.current.rows }) }
   }, [fontSize, id])
-  useEffect(() => {
-    const focus = (event: Event) => { if ((event as CustomEvent<{ id: string }>).detail.id === id) terminalRef.current?.focus() }
-    window.addEventListener('mrmak-dictation-inserted', focus)
-    return () => window.removeEventListener('mrmak-dictation-inserted', focus)
-  }, [id])
   return <div ref={area} className={`terminal-area ${appearance === 'focus' ? 'terminal-focus' : ''}`} onDragOver={event => { event.preventDefault(); event.dataTransfer.dropEffect = 'none' }} onDrop={event => { event.preventDefault(); event.stopPropagation(); setDragging(false); reportError(`Drop original files or folders from ${fileManager} into Project KO Desktop. Paste clipboard images with ${modLabel}V.`) }}>
     <div ref={host} className="terminal-host" aria-label="Interactive agent terminal" />
     {dragging && <div className="terminal-drop"><Icon name="attach" size={30} /><strong>Drop to insert paths</strong><span>Files, folders and images</span></div>}

@@ -14,8 +14,6 @@ import { readFile } from 'node:fs/promises';
  * Tools used here:
  *   transcribe { audio_base64 } -> text (Hex, inside Toxic)
  *   speak      { text, speed }  -> a base64 WAV resource (Pocket TTS, inside Toxic)
- *   dictation  { action }       -> Toxic's own listening mode, for the chat's
- *                                  microphone; stop returns the transcript
  */
 
 const fail = (message, status = 502) => Object.assign(new Error(message), { status });
@@ -138,14 +136,6 @@ export class ToxicClient {
     const text = content.find(block => block?.type === 'text' && typeof block.text === 'string')?.text?.trim() || '';
     if (!text) throw fail('No speech was recognized. Try recording again.', 422);
     return text;
-  }
-
-  // Toxic's own listening mode, for a partner that draws the microphone. It
-  // records with Toxic's audio device and shows Toxic's HUD, and stop hands the
-  // transcript back instead of pasting it into whichever window has focus.
-  async dictation(action, timeout = 300_000) {
-    const content = await this.callTool('dictation', { action }, timeout);
-    return content.find(block => block?.type === 'text' && typeof block.text === 'string')?.text ?? '';
   }
 
   // speed 1 keeps Toxic's configured speed out of the result: Project KO

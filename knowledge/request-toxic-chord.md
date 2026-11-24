@@ -121,6 +121,11 @@ window has to come from the hook's own state, not from a window test.
    maximum recording length, or the partner dropping off) instead of blocking
    the shortcut forever.
 
+   **Since 2026-11-24 this can no longer come from Project KO**: it stopped
+   opening partner takes entirely, so `AppState::partner` is never set by this
+   app. A partner take left open can now only come from another partner app -
+   which is a reason to make the partner rule safe by itself.
+
 4. **A per-application suppression, like Hex 3.4.0 had.** Hex - the app
    Toxic's speech-to-text engine came from - had the same symptom and had a
    `share_dictation_shortcut` setting ("let other apps see the dictation
@@ -152,14 +157,22 @@ window has to come from the hook's own state, not from a window test.
 
 ## What Project KO does meanwhile
 
-Project KO answers the chord itself: a window that has the focus asks Toxic to
-listen through the `dictation` MCP tool (`action: "start"`), which opens
-Toxic's microphone, plays the cue and shows Toxic's HUD. The chord therefore
-works in Project KO whether or not Toxic's own hook acts on it, and the words
-are pasted into the terminal by Project KO rather than typed by Toxic.
+**Nothing, since 2026-11-24.** Project KO used to answer the chord itself: a
+window that had the focus asked Toxic to listen through the `dictation` MCP
+tool (`action: "start"`), which opened Toxic's microphone, played the cue and
+showed Toxic's HUD. That takeover is gone, together with the microphone switch
+and the transcript watcher. The chord is Toxic's alone now.
 
-That is a workaround for the symptom, not a fix for the cause. The two
-applications should not have to agree on who answers the chord.
+What Project KO still does is narrow and harmless: the terminal **swallows** the
+chord, so the CLI never receives `^T` and Toxic's key does not become noise in
+the agent. Nothing else listens for it, nothing answers it, and Project KO
+never asks Toxic to open a take.
+
+The consequence is the point of this ticket: **while the chord is not delivered
+over a Project KO window, dictation does not work in Project KO at all.** Until
+the hook is fixed, keep Toxic in **chord mode** (`sttMode: "chord"`), where the
+hook swallows the key machine-wide, and use Toxic's double tap where a take
+should be opened in another application.
 
 ## Rules
 

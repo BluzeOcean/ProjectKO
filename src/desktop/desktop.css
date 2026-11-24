@@ -310,15 +310,6 @@
 .mak-composer .recording .mobile-mic{background:var(--red);color:var(--text-bright)}
 .mak-composer .voice-compose{flex-wrap:wrap}
 
-/* The chat microphone is a switch for Toxic. Toxic draws the listening state, so
-   this is one icon: no recorder panel, no timer and no saved recording here. */
-.terminal-dictation{position:relative;flex-shrink:0;display:flex;align-items:center}
-.dictation-button{display:flex;align-items:center;justify-content:center;width:30px;height:30px;flex-shrink:0;border:0;border-radius:5px;background:transparent;color:var(--text);cursor:pointer}
-.dictation-button:hover{background:color-mix(in srgb,var(--text) 4%,transparent)}
-.dictation-button:disabled{opacity:.4;cursor:default}
-.dictation-button.listening{background:var(--red);color:var(--text-bright)}
-.dictation-button.starting,.dictation-button.stopping{opacity:.55}
-.terminal-dictation-note{position:absolute;right:0;top:34px;width:max-content;max-width:min(320px,80vw);padding:6px 9px;border:1px solid color-mix(in srgb,var(--text) 24%,transparent);border-radius:6px;background:var(--surface-solid);color:var(--text-bright);font-size:11px;z-index:30;white-space:normal}
 /* Tab groups: a header chip per group, collapse, and the right-click menu. */
 .chat-tab-group{display:flex;flex-wrap:wrap;align-items:stretch;gap:2px 0;margin-right:6px;padding-right:2px;border-radius:6px 6px 0 0;background:color-mix(in srgb,var(--tab-accent) 7%,transparent);box-shadow:inset 0 2px 0 color-mix(in srgb,var(--tab-accent) 45%,transparent)}
 .chat-tab-group.drop-into{box-shadow:inset 0 0 0 1px var(--pink),inset 0 2px 0 color-mix(in srgb,var(--tab-accent) 45%,transparent)}
