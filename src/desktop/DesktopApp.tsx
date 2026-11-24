@@ -14,10 +14,12 @@ export default function DesktopApp() {
   useEffect(() => { startDesktop() }, [])
   // The dictation probe records what this window receives from another process.
   // It is a diagnostic an agent switches on and off over the service, so it
-  // follows the saved setting rather than living here.
+  // follows the saved setting rather than living here. It installs only when
+  // the service says it is recording: a release build leaves it off, and the
+  // window must not record before the setting has arrived.
   const probe = state.settings?.dictationProbe
   useEffect(() => {
-    if (probe?.recording === false) { uninstallDictationProbe(); return }
+    if (probe?.recording !== true) { uninstallDictationProbe(); return }
     return installDictationProbe()
   }, [probe?.recording])
   useEffect(() => { setDictationProbeBadge(probe?.badge === true) }, [probe?.badge])

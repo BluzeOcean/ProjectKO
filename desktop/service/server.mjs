@@ -34,6 +34,7 @@ import { answerPrompt, readPrompt } from './terminal-prompt.mjs';
 import { rewindToMessage } from './message-edit.mjs';
 import { ToxicReadAloud } from './toxic-read-aloud.mjs';
 import { ToxicDictation } from './toxic-dictation.mjs';
+import { probeMode, probeState } from './dictation-probe.mjs';
 import { toxicShortcut } from './toxic-launch.mjs';
 import { Vault } from './vault.mjs';
 import { Handoffs } from './handoff.mjs';
@@ -51,9 +52,14 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const settingsPath = path.join(stateDir, 'settings.json');
   const savedSettings = await readJson(settingsPath, null);
   let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, dshPermissionMode: 'workspace-write', readAloudSpeed: 1, readAloudVoice: '', terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', ...savedSettings };
-  // The dictation probe records by default - a measurement that is never taken
-  // cannot be read - but it stays off the screen until somebody asks for it.
-  settings.dictationProbe = { recording: settings.dictationProbe?.recording !== false, badge: settings.dictationProbe?.badge === true };
+  // The dictation probe is a diagnostic, not product behaviour. A development
+  // build records by default - a measurement that is never taken cannot be read
+  // - but a release build records nothing until an agent asks for it, so the
+  // shipped app is not a silent recorder. The saved choice belongs to the build
+  // that made it, so a probe left on while developing never follows the owner
+  // into the release build.
+  const probeBuild = probeMode(dev);
+  settings.dictationProbe = probeState(settings.dictationProbe, probeBuild);
   // The boards can live outside the app. `workspace/` stays the default, so an
   // existing repository opens exactly as before.
   const vault = await new Vault(repo, settings.vaultPath).open();
@@ -289,12 +295,15 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         // The dictation probe: a diagnostic that records what a window receives
         // when another process types into it. An agent switches it on and off
         // over this route; it is a tool, not part of the product's behaviour.
+        // The choice is saved with the build that made it, so it does not leak
+        // between a development build and a release build.
         if (method === 'GET' && url.pathname === '/api/dictation/probe') return json(response, 200, { probe: settings.dictationProbe });
         if (method === 'POST' && url.pathname === '/api/dictation/probe') {
-          const current = settings.dictationProbe || { recording: true, badge: false };
+          const current = probeState(settings.dictationProbe, probeBuild);
           const next = {
             recording: typeof data.recording === 'boolean' ? data.recording : current.recording,
             badge: typeof data.badge === 'boolean' ? data.badge : current.badge,
+            mode: probeBuild,
           };
           settings.dictationProbe = next; await saveSettings();
           broadcast('settings', { settings });

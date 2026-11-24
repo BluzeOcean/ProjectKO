@@ -50,8 +50,10 @@ working. Ask for missing personal preferences; do not invent a biography.
   dictation chord defect has one: `.debuglog/`.
 - **The dictation probe is a tool, not product behaviour.** It records what a
   window receives when another process types into it. Switch it over
-  `POST /api/dictation/probe` (`recording`, `badge`): it records by default and
-  shows its badge only when it is asked to. See `knowledge/dictation-probe.md`.
+  `POST /api/dictation/probe` (`recording`, `badge`): a development build
+  records by default, a release build records nothing until an agent asks for
+  it, and the badge shows only when it is asked to. The saved choice belongs to
+  the build that made it. See `knowledge/dictation-probe.md`.
 - The owner grants standing permission to commit: when a bug is fixed, or a feature is added, updated or edited, and the change has been tested, commit it without asking again. Do not commit untested or half-finished work, and do not push.
 - When the owner says commit, commit the working tree as it stands, including work
   from earlier sessions: do not leave files out because they look unrelated, and do
