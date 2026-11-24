@@ -135,3 +135,8 @@ the behaviour rather than describing it.
   events, with the document's focus state as a fallback. If a platform ever
   delivered neither, the freshness rule still keeps a take made elsewhere out
   of this window - but only for the few seconds after it was made.
+- The watcher is a **workaround for a missing API**, and the workaround is what
+  had to be fixed on 2026-11-24. Toxic performs the typing itself, so it knows
+  the window the words went into; it does not say. The way out is a take that
+  names its window, which would make the rule a comparison instead of a guess -
+  written up as [a request](request-toxic-dictation-takes.md).
