@@ -7,7 +7,7 @@ half-finished diagnosis, not a fresh feature.
 proven** - but it is now measured, not guessed, and the measurement narrows the
 fault to a single class of mechanism.
 
-> **Read `debug/toxic-stt-terminal/README.md` first.** That folder is the working
+> **Read `.debuglog/README.md` first.** That folder is the working
 > log for this bug only. This document is the map; that folder is the terrain.
 
 ---
@@ -71,25 +71,53 @@ reaches both hooks and opens a take.
 **That is the whole problem.** A key is arriving at the Project KO window by a
 path that does not go through the `WH_KEYBOARD_LL` chain.
 
+> **CORRECTION, 2026-11-24 21:20 - the sentence above is wrong, and the truth
+> is stronger.** Re-read against the raw log: there is **not one row of any
+> kind** between `20:43:01.914` and `20:43:29.178` - 27.3 seconds with **no
+> keyboard event at all**, not merely "no row with Project KO in front". The
+> probe was alive on both sides of the hole (one session, one
+> `SetWindowsHookExW`, no re-arm; the log continues to 21:01:45).
+>
+> Every process in the chain is at **Medium** integrity - measured properly
+> this time with `GetTokenInformation(TokenIntegrityLevel)`; the 20:10 test
+> used `OpenProcess(PROCESS_ALL_ACCESS)`, which only proves the shell could
+> open each target, not that the levels matched. With equal levels, a
+> physical keystroke *must* produce a low-level hook callback.
+>
+> **So the Ctrl+T the web view saw did not come from the keyboard at all.**
+> Project KO itself is clean: no raw-input registration, no posted
+> `WM_KEYDOWN`, no synthesised `KeyboardEvent`, no debugging door on its
+> WebView2, no third-party DLL injected into the WebView2 processes.
+>
+> The live question is no longer *"what delivers a key to Project KO without
+> the chain"* but **"what produces a key event inside the Project KO web
+> view?"** - a posted `WM_KEYDOWN`, a protocol-driven input, or a DOM event
+> synthesised in the page. `event.isTrusted` separates them.
+>
+> The measurements: [`.debuglog/m-2026-11-24-2115-chain-gap.md`](../.debuglog/m-2026-11-24-2115-chain-gap.md),
+> [`.debuglog/m-2026-11-24-2113-token-integrity-levels.md`](../.debuglog/m-2026-11-24-2113-token-integrity-levels.md),
+> [`.debuglog/m-2026-11-24-2118-pko-side-is-clean.md`](../.debuglog/m-2026-11-24-2118-pko-side-is-clean.md),
+> [`.debuglog/m-2026-11-24-2120-focus-vs-foreground.md`](../.debuglog/m-2026-11-24-2120-focus-vs-foreground.md).
+
 ---
 
 ## 2. Memory pointers - read these, do not re-derive them
 
 ### The working log (the primary record)
 
-`V:\06_App\ProjectKO\debug\toxic-stt-terminal\`
+`V:\06_App\ProjectKO\.debuglog\`
 
 | File | What it holds |
 | --- | --- |
-| [`README.md`](../debug/toxic-stt-terminal/README.md) | The rules for the folder, the two phases, and the "do not dictate while testing" trap |
-| [`symptom.md`](../debug/toxic-stt-terminal/symptom.md) | The symptom as first stated |
-| [`evidence.md`](../debug/toxic-stt-terminal/evidence.md) | **Every measurement, dated, with its verdict.** 28 KB and chronological - read it last-to-first for the recent turns |
-| [`ruled-out.md`](../debug/toxic-stt-terminal/ruled-out.md) | **The dead ends. Read this before trying anything.** Each entry names the measurement that killed it |
-| [`open-questions.md`](../debug/toxic-stt-terminal/open-questions.md) | What is still unknown, and the next test |
-| [`attempts.md`](../debug/toxic-stt-terminal/attempts.md) | The chronological attempt log |
-| [`phase-1-chord.md`](../debug/toxic-stt-terminal/phase-1-chord.md) | Phase 1 in detail |
-| [`phase-2-delivery.md`](../debug/toxic-stt-terminal/phase-2-delivery.md) | Phase 2 in detail |
-| [`route-b-partner-take.md`](../debug/toxic-stt-terminal/route-b-partner-take.md) | The documented decoupling fallback (Route B), proven but **not built** |
+| [`README.md`](../.debuglog/README.md) | The rules for the folder, the two phases, and the "do not dictate while testing" trap |
+| [`symptom.md`](../.debuglog/symptom.md) | The symptom as first stated |
+| [`evidence.md`](../.debuglog/evidence.md) | **Every measurement, dated, with its verdict.** 28 KB and chronological - read it last-to-first for the recent turns |
+| [`ruled-out.md`](../.debuglog/ruled-out.md) | **The dead ends. Read this before trying anything.** Each entry names the measurement that killed it |
+| [`open-questions.md`](../.debuglog/open-questions.md) | What is still unknown, and the next test |
+| [`attempts.md`](../.debuglog/attempts.md) | The chronological attempt log |
+| [`phase-1-chord.md`](../.debuglog/phase-1-chord.md) | Phase 1 in detail |
+| [`phase-2-delivery.md`](../.debuglog/phase-2-delivery.md) | Phase 2 in detail |
+| [`route-b-partner-take.md`](../.debuglog/route-b-partner-take.md) | The documented decoupling fallback (Route B), proven but **not built** |
 
 ### The durable knowledge files
 
@@ -139,7 +167,7 @@ measurement is newer than that ticket - **add it there** (see §8).
 ### The dead ends - **do not repeat these**
 
 All of these were measured, not guessed. Each is in
-[`ruled-out.md`](../debug/toxic-stt-terminal/ruled-out.md) with the measurement
+[`ruled-out.md`](../.debuglog/ruled-out.md) with the measurement
 that killed it. The short list:
 
 | Attempted hypothesis | Verdict |
@@ -267,7 +295,7 @@ owner's machine.
    process in product code. Prose "Project KO"; code `pKO` / `PkoMark` /
    `PkoLogo`.
 8. **No IPC watchers or polling in the product path.**
-9. **Evidence lives in `debug/toxic-stt-terminal/`** (per `AGENTS.md`).
+9. **Evidence lives in `.debuglog/`** (per `AGENTS.md`).
    Cross-repo facts go in the Toxic ticket. **Every measurement is dated.**
 10. **Register deliverables in `workspace/workspace.json`.** Never commit
     `.env`, credentials or runtime state.
@@ -297,54 +325,53 @@ owner's machine.
 
 ### The primary hypothesis
 
-**The key reaches the Project KO window by a path that does not go through the
-`WH_KEYBOARD_LL` chain.** The evidence forces this: the stand-alone probe saw
-*every* key that entered the chain (including a chord that Toxic swallowed) and
-logged **zero** rows with Project KO in front, while the web view received the
-same keys as ordinary keydowns.
+**The Ctrl+T the web view received was never a keystroke.** The re-read of the
+raw log (see the correction in section 1) shows that **no keyboard event of
+any kind entered the system input path** during the 27 seconds Project KO was
+in front, while the web view recorded two *complete* Ctrl+T presses inside
+that hole. Every process is at Medium integrity, so a physical keystroke
+cannot produce this: it would have produced a hook callback.
+
+So the fault is **not** "the chain is cut for Project KO". It is: **something
+produced a key event inside the Project KO web view without the keyboard
+being involved.**
 
 Candidate mechanisms, in the order to try them:
 
-1. **A raw-input / `WM_INPUT` path.** `RegisterRawInputDevices` with
-   `RIDEV_INPUTSINK` delivers keyboard input as `WM_INPUT` messages and
-   **bypasses the `WH_KEYBOARD_LL` chain entirely**. This is the best single
-   explanation: the web view still gets a normal keydown, but no hook ever sees
-   the key.
+1. **A posted `WM_KEYDOWN` / `WM_SYSKEYDOWN`** into the WebView2 window
+   (`msedgewebview2.exe` pid 33424 - the focused window, a different process
+   from the foreground `projectko.exe` 18776) by another process on the
+   machine. The browser process turns a keyboard message into the DOM keydown
+   itself, and a posted message never touches the hook chain.
+2. **A protocol-driven input** into the web view - CDP-style dispatch. The
+   Project KO WebView2 has **no** `--remote-debugging-port`, so whoever would
+   drive it has to open one, or reach it another way.
+3. **A DOM event synthesised in the page** by code that is not in this
+   repository (an extension, an injected script, a runtime dependency).
 
-   **The WebView2 host is the most likely registrant.** The key arrives as a
-   *DOM* event in a Chromium web view, so something turned a Windows input
-   message into a DOM keydown. If the PKO window (or the WebView2 host)
-   registers a raw input device, Chromium receives `WM_INPUT` and synthesises
-   the DOM keydown itself - and the `WH_KEYBOARD_LL` chain never runs at all.
-   Chrome itself does not behave this way (the same chord reached both hooks
-   there), which fits a WebView2-host-specific registration.
-2. **An input-sink registration** for the Project KO window.
-3. **A posted `WM_KEYDOWN`** (`PostMessage`/`SendMessage`) into the Project KO
-   window - also outside the chain.
-4. **A synthesised DOM event** dispatched by the web view or the bridge.
+**What separates them: `event.isTrusted`.** `false` -> case 3. `true` -> case
+1 or 2. The in-app probe records `isComposing` but not `isTrusted`
+(`src/desktop/dictationProbe.ts:139`), so it is read live over CDP with the
+Project KO WebView2 debug door open.
 
-**How to look:** grep the PKO dependency tree and the WebView2 host for
-`RegisterRawInputDevices`, `RIDEV_INPUTSINK`, `RIDEV_EXCLUDEFROMCAPTURE`,
-`RAWINPUT`, `PostMessage`, `SendMessage`, `WM_INPUT`. Note that
-`src-tauri/src/win_key.rs` is **not** a delivery candidate - it only *reads*
-keys and never posts any - but check whether it, or another module,
-*registers* a raw-input device.
+**Already ruled out on the PKO side** (see
+`.debuglog/m-2026-11-24-2118-pko-side-is-clean.md`): no `RegisterRawInputDevices`,
+no posted `WM_KEYDOWN`, no synthesised `KeyboardEvent` in `src/`,
+`src-tauri/`, `desktop/`; no debugging door on the WebView2 host; and no
+third-party DLL injected into `msedgewebview2.exe` (121 modules), its
+renderers (21 each) or `projectko.exe` (55 modules). `win_key.rs` is not a
+delivery candidate - it only reads keys and its one `SendInput` (a Win-key
+mask) would have shown up in the probe log.
 
-### The second variant that is still open: focus vs foreground
+### The focus-vs-foreground variant: closed
 
-A key is delivered to the **focused** window, not to the foreground one. The
-20:43 sampler recorded only `GetForegroundWindow()` - the **focused** HWND was
-never captured. The sampler has been upgraded (21:10) to log both, via
-`GetGUIThreadInfo`, and it is running again.
-
-This variant was the sampler's own original hypothesis (see the header comment
-in `.cache/fg-watch.ps1`): *a window that only has keyboard focus, because the
-owner clicked inside it while another application owns the foreground, receives
-keys without the operating system running the low-level hook chain*. The 20:43
-foreground readings point away from it, but the focused HWND was never actually
-measured - so it is **not** eliminated, only weakened. If the next test shows
-the focused window is ever something other than the PKO window, that is a
-delivery path of its own and must be eliminated before anything else.
+A key is delivered to the **focused** window, not the foreground one, and the
+sampler now logs both. When Project KO is in front, the focused window is
+`msedgewebview2.exe` pid 33424 - the normal WebView2 arrangement. That
+identifies the real target of every keystroke, but it is **not** a
+delivery path: a key aimed at a focused window still travels the system input
+path and still runs the chain. See
+`.debuglog/m-2026-11-24-2120-focus-vs-foreground.md`.
 
 ### The secondary hypothesis (the newest suspect)
 
@@ -358,8 +385,8 @@ instead of passing it on.
 **Caution:** Hex's refusal would normally still be *seen* by a hook lower in the
 chain, so this only explains the symptom if Hex consumes the chord *before* the
 `WH_KEYBOARD_LL` chain runs - which is not how the chain is ordered. Treat it as
-a suspect to test, not a conclusion. Killing the `hex.exe` pile and re-running
-the two-press test is cheap.
+a suspect to test, not a conclusion. The owner has authorised killing the pile
+as a test; it is cheap and reversible.
 
 ### What is explicitly *not* the hypothesis any more
 
@@ -376,37 +403,39 @@ chord decision yet."*
 ### Step 1 - the cheapest next test (owner's, ~1 minute)
 
 **One plain character in each window, then Ctrl+T in each window.** Nothing
-dictating, the agent idle. The foreground sampler is running (restarted 21:10)
-and now logs the focused window as well as the foreground one - **check both
-columns** in the result.
+dictating, the agent idle. The rebuilt probe (`.cache/hook-probe2.ps1`) logs
+the foreground **and** the focused window, and the Project KO WebView2 runs
+with the CDP door open so the page can be read for `event.isTrusted`.
 
-| Probe log for the PKO window | What it means |
-| --- | --- |
-| the plain character is logged, `Ctrl+T` is not | only Ctrl+<key> bypasses the chain - look at modifier handling specifically |
-| neither is logged | **all** PKO input bypasses the chain - the raw-input / `WM_INPUT` path is the prime suspect |
-| both are logged and Toxic's log shows a `front projectko.exe` trace | the chain is fine over PKO and the earlier presses were the artefact - re-test |
-| nothing at all is logged for PKO while other windows still log | the probe itself is blind to that window |
+| Probe log for the PKO window | `isTrusted` | What it means |
+| --- | --- | --- |
+| the keys are logged, `focus=33424` | - | **the OS path is intact** - the 20:43 hole was an artefact of the dead probe; the fault is Toxic-side again |
+| nothing is logged | `false` | a **DOM event was synthesised in the page** - hunt the synthesiser |
+| nothing is logged | `true` | a **message was posted or dispatched** into the web view - hunt the driver |
+| the plain character is logged, `Ctrl+T` is not | `true` | only Ctrl+<key> takes the odd path - look at modifier/TSF handling |
 
 This is a **one-question test**, and it is the owner's to run - ask, then wait.
 
-### Step 2 - the search that needs no owner
+### Step 2 - the search that needs no owner - DONE
 
-Grep the PKO dependency tree and the WebView2 host for raw-input and posted
-message APIs (§5) - `RegisterRawInputDevices`, `RIDEV_INPUTSINK`, `RAWINPUT`,
-`WM_INPUT`, `PostMessage`, `SendMessage`. **The WebView2 host is the leading
-candidate** (§5, candidate 1): the key arrives as a DOM event, so something
-turned a Windows message into a DOM keydown, and a raw-input registration would
-do exactly that while bypassing the hook chain. This needs nobody but the
-machine.
+Grep the PKO tree and the WebView2 host for raw-input and posted-message APIs:
+**nothing**. `RegisterRawInputDevices`, `RIDEV_*`, `WM_INPUT`, `PostMessage`,
+`SendMessage`, `dispatchEvent`, `new KeyboardEvent` - no hit outside
+`window_identity.rs` (`SendMessageW(WM_SETICON)`) and the MCP SDK in
+`node_modules`. The WebView2 host has **no** `--remote-debugging-port`, and
+**no third-party DLL** is injected into `msedgewebview2.exe` (121 modules),
+its renderers (21 each) or `projectko.exe` (55 modules). Filed as
+`.debuglog/m-2026-11-24-2118-pko-side-is-clean.md`.
 
-### Step 3 - the cheap kill test
+### Step 3 - the cheap kill test - AUTHORISED
 
-Kill the `hex.exe` pile (17 processes) and re-run the two-press test.
+Kill the `hex.exe` pile (17 processes) and re-run the two-press test. The
+owner authorised this on 2026-11-24.
 
 ### Step 4 - only then, the design fallback
 
 Route B - PKO drives a partner take itself - is documented and proven in
-[`route-b-partner-take.md`](../debug/toxic-stt-terminal/route-b-partner-take.md)
+[`route-b-partner-take.md`](../.debuglog/route-b-partner-take.md)
 but **not built**. It waits on the owner's B1/B2 decision (§9).
 
 ---
@@ -418,8 +447,8 @@ but **not built**. It waits on the owner's B1/B2 decision (§9).
 | `toxic.exe` | 36488 | 2026-11-24 19:18:41 | Started **with** `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9333` - the CDP door is open and **must be closed later** by restarting without it |
 | `projectko.exe` | 18776 | 2026-11-24 16:47:14 | `V:\06_App\ProjectKO\src-tauri\target\debug\projectko.exe --repo V:\06_App\ProjectKO`. **Not restarted** - the PTY session is alive. Restarting PKO kills it |
 | PKO service | 35724 | - | `http://127.0.0.1:57581` |
-| `hex.exe` | 17 procs | oldest 11/23 | Toxic's STT engine. The newest suspect (§5) |
-| Hook probe | bg task | installed 20:22:23 | `.cache/hook-probe.ps1` → `.cache/hook-probe.log`. **The witness - keep it** |
+| `hex.exe` | 17 procs | oldest 11/23 | Toxic's STT engine. The newest suspect (§5). **Killing the pile is authorised as a test** |
+| Hook probe | **DEAD** | 20:22:23 → 21:01:45 | `.cache/hook-probe.log` stopped at 21:01:45 and no process survives. Replaced by `.cache/hook-probe2.ps1` → `.cache/hook-probe2.log`: no I/O in the callback, a heartbeat every second, a re-arm every 10 s, foreground **and** focused window per event |
 | Foreground sampler | bg task `bg_b09e1bd2` | restarted 21:10 | `.cache/fg-watch.ps1` → `.cache/fg-watch.log`, 4-hour run. **Upgraded to log the focused window too** |
 
 ---
@@ -439,7 +468,7 @@ Both trees are clean except Toxic's untracked `.codegraph/` directory, which is
 **PKO commits so far (unpushed):** `55f5108`, `870895a`, `10f5d64` + this one.
 
 **Ownership:** one agent owns this bug at a time. Do not work on it from two
-sessions. The `debug/toxic-stt-terminal/` folder is the shared state - **re-read
+sessions. The `.debuglog/` folder is the shared state - **re-read
 it before applying anything**, and reconcile rather than overwrite another
 agent's measurements.
 

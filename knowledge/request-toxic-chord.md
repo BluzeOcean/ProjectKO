@@ -178,7 +178,7 @@ were invalid - is `knowledge/dictation-failed-attempts.md`.
 > The live hypothesis (a raw-input / `WM_INPUT` path, an input-sink
 > registration, a posted `WM_KEYDOWN`, a synthesised DOM event, or the `hex.exe`
 > pile) and the next test are in
-> `debug/toxic-stt-terminal/open-questions.md`. The full handoff for the next
+> `.debuglog/open-questions.md`. The full handoff for the next
 > agent is `knowledge/handoff-toxic-stt-terminal.md`.
 
 - **The key reaches the operating system.** *(Superseded 2026-11-24 20:43 -
@@ -348,7 +348,7 @@ record**, and the record says whether the chord was seen, swallowed or
 replaced by injected text. What Project KO cannot see is whether Toxic's hook
 saw it - that is the part only Toxic can log.
 
-The working log for this defect is `debug/toxic-stt-terminal/`: the symptom, the
+The working log for this defect is `.debuglog/`: the symptom, the
 dated evidence, every attempt, what is ruled out and the open questions. Read it
 before measuring anything again.
 

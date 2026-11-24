@@ -113,25 +113,48 @@ process. That gap is closed - it was measured on pid 36488 too.
 
 ### "The chain is cut for the Project KO window specifically"
 
-**This is the live hypothesis, and it is now measured, not assumed.** The
-stand-alone probe saw every key that entered the chain (including a chord that
-Toxic swallowed) and logged **zero** rows with `front=18776` across 2445 rows.
-The foreground sampler independently confirms Project KO was in front
-(20:43:01.987 → 20:43:26.499) during two physical Ctrl+T presses that the
-web-view probe recorded as ordinary keydowns.
+**Superseded 2026-11-24 21:15 - the wording was wrong, and the truth is
+stronger.** The raw log has **no row of any kind** between 20:43:01.914 and
+20:43:29.178, not merely "no row with `front=18776`". The 27-second hole
+covers the whole Project KO foreground period. See
+[m-2026-11-24-2115-chain-gap.md](m-2026-11-24-2115-chain-gap.md).
 
-**Proves:** the cut is real, it is window-specific, and it is not caused by
-Toxic's hook being dead. The open question is *what* delivers a key to a
-window without running the `WH_KEYBOARD_LL` chain.
+What is still true: the hook was alive on both sides of the hole (one
+session, one `SetWindowsHookExW`, no re-arm, log continues to 21:01:45), so
+the hole is not a broken instrument. What is false: that the fault is
+*window-specific*. It is a hole in the chain that brackets the Project KO
+foreground period - and inside that hole the web view received two complete
+Ctrl+T presses.
+
+**Proves:** no keyboard event of any kind entered the system input path
+while Project KO was in front. With every process at Medium integrity
+([m-2026-11-24-2113-token-integrity-levels.md](m-2026-11-24-2113-token-integrity-levels.md)),
+a physical keystroke cannot produce this - so the Ctrl+T the web view saw was
+**not produced by the keyboard at all**. The live question is now *what
+produces a key event inside the web view*.
 
 ### "The Project KO window is elevated, so UIPI hides its input from other hooks"
 
-**Dead.** Measured 2026-11-24 20:10: `OpenProcess(PROCESS_ALL_ACCESS)` against
-`projectko.exe` (18776), `toxic.exe` (36488), `chrome.exe` (11028) and
-`Overwatch.exe` (28828) succeeds from this shell for **all four** - they run at
-the same integrity level. Neither binary carries `requireAdministrator`,
-`highestAvailable` or `asInvoker` in its manifest, and the machine has no
-`EnableLUA` policy key.
+**Dead - and now measured correctly.** The 20:10 ruling used
+`OpenProcess(PROCESS_ALL_ACCESS)`, which proves only that the *shell* could
+open each target; an elevated shell opens medium and high processes alike, so
+the test cannot compare levels. Re-measured with `OpenProcessToken` +
+`GetTokenInformation(TokenIntegrityLevel)`: **every** process is RID 8192
+(**Medium**) - `projectko.exe` 18776, the focused `msedgewebview2.exe` 33424,
+`chrome.exe` 11028, `toxic.exe` 36488, both probes, the shell. See
+[m-2026-11-24-2113-token-integrity-levels.md](m-2026-11-24-2113-token-integrity-levels.md).
+
+### "Project KO synthesises the key event"
+
+**Dead.** No `RegisterRawInputDevices`, `RIDEV_*`, `WM_INPUT`, `PostMessage`,
+`SendMessage`, `dispatchEvent` or `new KeyboardEvent` anywhere in `src/`,
+`src-tauri/`, `desktop/`. No `--remote-debugging-port` on the WebView2 host,
+so nothing drives the page over CDP. **No third-party DLL** is injected into
+`msedgewebview2.exe` (121 modules), its renderers (21 each) or
+`projectko.exe` (55 modules). PKO's only write to the input stack is a
+`SendInput` Win-key mask (`win_key.rs:58-63`), and `SendInput` *does* fire
+low-level hooks - and no `0xE8` row exists in the whole probe log. See
+[m-2026-11-24-2118-pko-side-is-clean.md](m-2026-11-24-2118-pko-side-is-clean.md).
 
 ### "Project KO's own keyboard hook breaks Toxic's chain"
 

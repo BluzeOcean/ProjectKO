@@ -62,7 +62,7 @@ The file is locked while the app runs, so it has to be opened with
 
 ## The bug it is used for
 
-`debug/toxic-stt-terminal/` is the working log for the chord defect. Its
+`.debuglog/` is the working log for the chord defect. Its
 `evidence.md` is written from these lines.
 
 ## Limits

@@ -560,3 +560,59 @@ the chord instead of passing it on.
 
 **The hook probe is the instrument that settled this and must not be disposed
 until the fault is found.** It is the only witness to the cut.
+
+### 2026-11-24 21:13-21:20 - the 20:43 evidence re-read: the chain saw nothing at all
+
+The raw `.cache/hook-probe.log` says something stronger than the summary
+above. There is **not one row of any kind** between `20:43:01.914` and
+`20:43:29.178` - 27.3 seconds with no key event, no `Ctrl`, no `T`, nothing.
+The hole opens exactly when Project KO took the foreground (20:43:01.987) and
+closes when Chrome took it (20:43:26.499) plus the first Chrome chord. The
+probe was one single session with one `SetWindowsHookExW` and no re-arm, so a
+Windows removal would have been permanent - it was not, the log continues to
+21:01:45. **The hook was alive on both sides of the hole.**
+
+**What this proves:**
+
+1. The fault is **not** "the chain is cut for the Project KO window". It is
+   "**no keyboard event of any kind entered the system input path** while the
+   Project KO window was in front" - while the web view recorded two
+   *complete* Ctrl+T presses (20:43:14.828->15.451, 20:43:18.159->18.273)
+   inside that hole.
+2. Integrity levels are equal. Measured with `OpenProcessToken` +
+   `GetTokenInformation(TokenIntegrityLevel)`: **every** process in the chain
+   is RID 8192 (**Medium**) - this shell, both probes, `projectko.exe` 18776,
+   the focused `msedgewebview2.exe` 33424, `chrome.exe` 11028, `toxic.exe`
+   36488. The 20:10 ruling used `OpenProcess(PROCESS_ALL_ACCESS)`, which only
+   proves the *shell* was privileged enough to open each target; it does not
+   compare the levels. The verdict (not elevated) is unchanged; the method is
+   now correct.
+3. Therefore **a physical keystroke aimed at the Project KO window must have
+   produced a low-level hook callback, and none was produced**. The Ctrl+T the
+   web view saw was not produced by the keyboard.
+4. The Project KO side is clean: no `RegisterRawInputDevices`, no posted
+   `WM_KEYDOWN`, no synthesised `KeyboardEvent` in `src/`, `src-tauri/`,
+   `desktop/`; no `--remote-debugging-port` on the WebView2 host; **no
+   third-party DLL** injected into `msedgewebview2.exe` (121 modules), its
+   renderers (21 each) or `projectko.exe` (55 modules).
+5. The focused window during Project KO foreground is
+   `msedgewebview2.exe` **pid 33424**, a different process from the
+   foreground `projectko.exe` 18776 - the normal WebView2 arrangement, and
+   the real target of every keystroke.
+
+**Full files:** [m-2026-11-24-2113-token-integrity-levels.md](m-2026-11-24-2113-token-integrity-levels.md),
+[m-2026-11-24-2115-chain-gap.md](m-2026-11-24-2115-chain-gap.md),
+[m-2026-11-24-2118-pko-side-is-clean.md](m-2026-11-24-2118-pko-side-is-clean.md),
+[m-2026-11-24-2120-focus-vs-foreground.md](m-2026-11-24-2120-focus-vs-foreground.md).
+
+**The instrument is dead.** `.cache/hook-probe.log` stops at 21:01:45 and no
+`hook-probe` process exists. It is replaced by `.cache/hook-probe2.ps1`:
+no I/O in the callback, a heartbeat every second, a re-arm every 10 s with
+its result logged, and both the foreground and the focused window per event.
+
+**The question has changed.** Not *what delivers a key to Project KO without
+running the chain* - the key never came from the keyboard. Now: **what
+produces a key event inside the Project KO web view?** Three candidates
+remain, all outside Project KO: a posted `WM_KEYDOWN` from another process, a
+protocol-driven input, or a DOM event synthesised in the page.
+`event.isTrusted` separates them.

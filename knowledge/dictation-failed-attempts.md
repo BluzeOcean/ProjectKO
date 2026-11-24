@@ -62,7 +62,7 @@ Project KO cannot fix either from its own side. Do not re-open the takeover to
 | What | Where |
 | --- | --- |
 | The probe (keys, packets, inserted text) | `src/desktop/dictationProbe.ts`, installed in every desktop window, writing to the web view's storage under `mrmak.dictationProbe`. It is kept on purpose and switched on and off over `POST /api/dictation/probe` - see `knowledge/dictation-probe.md`. |
-| The working log for the chord defect | `debug/toxic-stt-terminal/` - the symptom, the dated evidence, the attempts, what is ruled out and the open questions |
+| The working log for the chord defect | `.debuglog/` - the symptom, the dated evidence, the attempts, what is ruled out and the open questions |
 | What Toxic recorded | `%APPDATA%\app.toxic.desktop\history.json` (`{id, at, text, engine}` - no target field), `config.json`, `state.json`, `mcp.json`, `api.json` |
 | Toxic's own log | None on disk. `engines::log` goes to the Logs view of the Toxic window and to a Tauri event only. |
 | The service's stderr | `%LOCALAPPDATA%\com.projectko.workspace\logs\service.log` |

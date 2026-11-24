@@ -93,3 +93,37 @@ processes (Toxic's STT engine), whose per-application modes consume the chord.
 The live hypothesis and the next test are in
 [`open-questions.md`](open-questions.md); the full handoff for the next agent
 is `knowledge/handoff-toxic-stt-terminal.md`.
+
+**Update, 2026-11-24 21:20 - the 20:43 reading was mis-stated, and the truth
+is stronger.** Re-read against the raw `hook-probe.log`: there is **not one row
+of any kind** between 20:43:01.914 and 20:43:29.178 - 27.3 seconds with no
+keyboard event at all - not merely "no row with Project KO in front". The
+probe was alive on both sides of that hole (one session, one
+`SetWindowsHookExW`, no re-arm; the log continues to 21:01:45). Meanwhile the
+PKO web view recorded two **complete** Ctrl+T presses inside it.
+
+Every process in the chain is at **Medium** integrity, measured properly this
+time with `GetTokenInformation(TokenIntegrityLevel)` - the 20:10 test used
+`OpenProcess(PROCESS_ALL_ACCESS)`, which only proves the shell could open
+each target, not that the levels matched. With equal levels, a physical
+keystroke *must* produce a low-level hook callback. **None was produced, so
+the Ctrl+T the web view saw did not come from the keyboard at all.** Project KO
+itself is clean: no raw-input registration, no posted `WM_KEYDOWN`, no
+synthesised `KeyboardEvent`, no debugging door on its WebView2, and no
+third-party DLL injected into the WebView2 processes.
+
+So the live question is no longer "what delivers a key to Project KO without
+the chain" but **"what produces a key event inside the Project KO web view?"**
+- a posted `WM_KEYDOWN`, a protocol-driven input, or a DOM event synthesised
+in the page. `event.isTrusted` separates them.
+
+Each measurement now has its own file in this folder:
+[`m-2026-11-24-2113-token-integrity-levels.md`](m-2026-11-24-2113-token-integrity-levels.md),
+[`m-2026-11-24-2115-chain-gap.md`](m-2026-11-24-2115-chain-gap.md),
+[`m-2026-11-24-2118-pko-side-is-clean.md`](m-2026-11-24-2118-pko-side-is-clean.md),
+[`m-2026-11-24-2120-focus-vs-foreground.md`](m-2026-11-24-2120-focus-vs-foreground.md).
+
+**The witness instrument is dead.** `hook-probe.log` stops at 21:01:45 and no
+`hook-probe` process exists. `.cache/hook-probe2.ps1` replaces it: no I/O in
+the callback, a heartbeat every second, a re-arm every 10 s with the result
+logged, and the foreground **and** focused window on every event.
