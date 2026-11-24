@@ -413,3 +413,101 @@ foreground window when the key is pressed.**
 terminal, press plain `Ctrl+T` - with nothing else allowed to steal the
 foreground back. The sampler records whether Project KO was the foreground
 window at that moment, so the answer and the reason arrive together.
+
+### 2026-11-24 20:04:14 - the alt-tab test: Project KO **was** in front
+
+The sampler (`.cache/fg-watch.ps1`, every 150 ms) recorded:
+
+```
+20:04:03.553 | 41368:MiniMax Code:MiniMax Code
+20:04:13.488 | 3792:explorer:Task Switching
+20:04:14.765 | 18776:projectko:Project KO — Chats      ← Project KO in front
+20:04:20.893 | 41368:MiniMax Code:MiniMax Code
+```
+
+and the probe recorded **three physical `Ctrl+T` presses** in the terminal,
+inside exactly that window:
+
+```
+20:04:16.357 | keydown code=84 key=t ctrl=1 shift=0 alt=0 composing=0 target=textarea.xterm-helper-textarea
+20:04:16.361 |   ^ after: defaultPrevented=1
+20:04:16.565 | keyup   code=84 key=t ctrl=1
+20:04:16.709 | keyup   code=17 key=Control ctrl=0
+20:04:17.413 | keydown code=17 key=Control ctrl=1 ...
+20:04:17.549 | keydown code=84 key=t ctrl=1 ...
+20:04:17.821 | keydown code=84 key=t ctrl=1 ...
+20:04:18.469 | keydown code=17 key=Control ctrl=1 ...
+20:04:18.621 | keydown code=84 key=t ctrl=1 ...
+```
+
+Toxic's log after all of it (read over CDP with
+`__TAURI_INTERNALS__.invoke('logs_get', {engine})`):
+
+```
+=== engine=app :: 1 line(s) ===
+  hotkeys: keyboard hook installed (pid 36488)
+```
+
+**The foreground hypothesis is dead.** Project KO was the foreground window, the
+keys arrived in the terminal with Ctrl held, and Toxic's hook wrote nothing.
+
+**This is also the first measurement that proves what the hook did.** Three facts
+together:
+
+1. A **matched** chord *swallows* the key (`hook_proc` returns 1, so the key is
+   never posted to the application). The probe received the key-down, so no hook
+   swallowed it.
+2. A **refusal** always writes a line when a modifier is held:
+   `if !repeated && (check.tracked.any() || check.live.any())`. With Ctrl
+   physically down `live` (`GetAsyncKeyState`) is non-empty - the 3.9-second hold
+   at 19:15 makes that certain - so a refusal would have been written.
+3. `tracked` non-empty would have written a line as well.
+
+So neither mask was consulted: **Toxic's hook proc was never called for those
+keys.** (The old entry "Toxic's hook was never called" was ruled out with faulty
+logic - it assumed "the key reached the app" proves "the hook was called". It
+does not: a hook that declines to act also lets the key through. See
+[`ruled-out.md`](ruled-out.md).)
+
+### 2026-11-24 20:10 - elevation is ruled out
+
+`WH_KEYBOARD_LL` hooks of a lower-integrity process are bypassed by the kernel
+when a higher-integrity window has the focus (UIPI). That would look exactly like
+this - the fault would follow the *window*, not the application. Measured, not
+assumed:
+
+| Process | `OpenProcess(PROCESS_ALL_ACCESS)` from this shell |
+| --- | --- |
+| `projectko.exe` (pid 18776) | opened - same or lower integrity |
+| `toxic.exe` (pid 36488) | opened - same or lower integrity |
+| `chrome.exe` (pid 11028) | opened - same or lower integrity |
+| `Overwatch.exe` (pid 28828) | opened - same or lower integrity |
+
+**Proves:** all four run at the **same integrity level**, so UIPI cannot be the
+cause. Neither binary carries `requireAdministrator`, `highestAvailable` or
+`asInvoker` in its manifest (both scans came back empty), and the machine has
+no `EnableLUA` policy key.
+
+### 2026-11-24 20:12 - the remaining suspects, after everything above
+
+- **Toxic's hook is armed.** `lib.rs:105-110` loads the config from disk and
+  calls `hotkeys::install(&handle, config.hotkeys.clone())` during setup, and
+  `config.json` holds `hotkeys.enabled true`, `sttMode "chord"`,
+  `sttChord "Ctrl+T"`. `active()` is `config.enabled` (`hotkeys.rs:209-211`),
+  so the hook is not disabled.
+- **Toxic's hook is installed.** The keepalive reinstalls it every 10 s and logs
+  `Windows had removed the keyboard hook` whenever an unhook fails
+  (`hotkeys.rs:632-638`). That line is **not** in the log.
+- **Project KO does not inject the chord.** The only `SendInput` in the whole
+  Rust side is the Windows-key mask in `win_key.rs:61-63` (`wVk 0xE8`), and the
+  JS side has no synthetic keyboard dispatch at all. `terminalUnicode.ts` only
+  reacts to `keyCode 229` packets, and there are none.
+- **The chain is not broken by Project KO's own hook.** `win_key.rs:139` always
+  ends in `CallNextHookEx`, so the chain continues.
+
+**What is still unknown, and it is the crux:** is Toxic's hook **alive** in the
+process that is running now (pid 36488, started 19:18:41)? The only trace of a
+working chord ever seen came from the *previous* process (pid 43196, 18:34-18:56,
+the trace at 18:50:01). **The owner's "it works in every other window" was
+therefore measured on a different Toxic process**, and cannot be carried over to
+this one.

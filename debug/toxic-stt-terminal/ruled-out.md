@@ -74,11 +74,35 @@ typing it, which is not what happened.
 
 ### "Toxic's hook was never called for the Project KO presses"
 
-**Dead.** A matched chord **swallows** the key (`hook_proc` returns 1, so the
-key is never posted to the application). The probe received the key-down, so no
-hook swallowed it - and since the hook is global, it must have been called and
-must have declined to act. The refusal line is written only when a mask is not
-empty, so the refusal left no trace.
+**REOPENED 2026-11-24 20:04 - the ruling was based on faulty logic.** It argued:
+"a matched chord swallows the key, the probe received the key-down, so no hook
+swallowed it, and since the hook is global it must have been called and must have
+declined to act."
+
+That last step does not follow. **A hook that is called and declines to act also
+lets the key through** - the key reaching the application proves only that *no
+hook swallowed it*, not that Toxic's hook was called.
+
+The second half of the old argument is the part that holds, and it is decisive:
+a refusal always writes a line when a modifier is held
+(`check.tracked.any() || check.live.any()`), and `live` is `GetAsyncKeyState`,
+which cannot read "up" while Ctrl is physically down for 3.9 seconds. So the
+absence of any line means **neither mask was ever consulted**.
+
+**This is now the live hypothesis** (see [`evidence.md`](evidence.md),
+2026-11-24 20:04). It is being tested against a stand-alone `WH_KEYBOARD_LL`
+probe installed on this machine at 20:22:23: if the probe sees the chord over
+the Project KO window while Toxic's log stays empty, the chain is healthy and
+**Toxic's hook is the broken link**.
+
+### "The Project KO window is elevated, so UIPI hides its input from other hooks"
+
+**Dead.** Measured 2026-11-24 20:10: `OpenProcess(PROCESS_ALL_ACCESS)` against
+`projectko.exe` (18776), `toxic.exe` (36488), `chrome.exe` (11028) and
+`Overwatch.exe` (28828) succeeds from this shell for **all four** - they run at
+the same integrity level. Neither binary carries `requireAdministrator`,
+`highestAvailable` or `asInvoker` in its manifest, and the machine has no
+`EnableLUA` policy key.
 
 ### "Project KO's own keyboard hook breaks Toxic's chain"
 

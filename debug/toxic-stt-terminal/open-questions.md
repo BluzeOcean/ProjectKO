@@ -28,30 +28,39 @@ fix is written up in the Toxic ticket, committed `32229ce`.
 
 ## H3 - Toxic's hook is not installed at the moment of the press
 
-**ANSWERED - dead.** The hook is alive: the trace at 18:50:01 shows it with
-5440 events behind it, and the keepalive logs a removal when one happens. See
-[`ruled-out.md`](ruled-out.md).
+**ANSWERED for the process that worked (pid 43196) - still open for the process
+that is running now (pid 36488, started 19:18:41).** The hook is alive in the
+old process: the trace at 18:50:01 shows it with 5440 events behind it, and the
+keepalive logs a removal when one happens. The **current** process has written
+nothing but `keyboard hook installed` since it started - and the owner's "it
+works in every other window" was measured on the *old* process, so it says
+nothing about this one. See [`ruled-out.md`](ruled-out.md).
 
 ---
 
 ## The test
 
 **Two presses by the owner, one in each of two windows, with nothing
-dictating.** Toxic was restarted at 19:18:41 (pid 36488), so its hook starts
-from a clean state and its log starts empty. The trace is the judge.
+dictating.** A stand-alone `WH_KEYBOARD_LL` probe (`.cache/hook-probe.ps1`,
+running since 20:22:23) logs every key event with its virtual-key code, its
+flags and the foreground window. Toxic's own log is read over CDP. **The two
+instruments watch the same chain, so they can be compared on the same keypress.**
 
-1. **In the Project KO chatspace terminal:** press plain `Ctrl+T`.
-2. **In this MiniMax Code window** (or any other application): press plain
-   `Ctrl+T`.
+1. **In the Project KO terminal:** type a few characters, then press plain
+   `Ctrl+T` once.
+2. **In any ordinary window** (Chrome is fine): press plain `Ctrl+T` once.
 
-| What the trace shows | What it means | What to do next |
-| --- | --- | --- |
-| Both presses traced, the first with `front projectko.exe "Project KO — Chats"` | The hook sees the Project KO window after a restart. The old process was dead or poisoned. | Find what kills the hook, and why a stale mask refuses the chord. |
-| Only the second press traced | The hook is blind to the Project KO window: those key events never entered the input pipeline. | The keys are reaching the web view without going through the operating system's keyboard path. Check whether the events are trusted, and whether Project KO injects them itself. |
-| Neither traced | The hook is not installed or not called at all. | Restart Toxic and check the keepalive: it logs every removal, and nothing is in the log. |
+| Probe log | Toxic's log | What it means | What to do next |
+| --- | --- | --- | --- |
+| the characters are logged with `front=18776:Project KO` | nothing | The chain reaches a hook over the Project KO window, so **Toxic's hook is the broken link**. | The fix is on the Toxic side: why its hook is not called. |
+| the characters are logged with `front=18776:Project KO` | a trace with `front projectko.exe` | Toxic's hook *is* called and refuses the chord. | Read the trace's masks; the decision itself is wrong. |
+| nothing is logged for the Project KO window | nothing | The chain is cut for the Project KO window specifically. | Look at what sits in the chain. |
+| the characters are logged with `front=18776:Project KO` | a trace with `front chrome.exe` for step 2 | The hook is alive and healthy, and blind to the Project KO window only. | As row 1: the fix is on the Toxic side. |
+| the characters are **not** logged | nothing | The probe itself is blind - the chain is broken for every window. | Restart Toxic and re-test; the hook is not installed. |
 
 **Rules for this test:** nothing dictating (no take in progress, the agent app
-idle). Report what happened for each press, and the clock time.
+idle). Report what happened for each press, and the clock time. If a take opens
+in step 2, press **Escape** to cancel it.
 
 ---
 
