@@ -130,6 +130,34 @@ try {
   last = { text: 'Typed by Toxic twice.', at: Date.now() + 12000 };
   await page.waitForTimeout(2600);
   assert.equal(await textarea.inputValue(), 'Already here: Typed by Toxic twice.', 'words already in the field are not repeated');
+  // A take made in another application belongs to that application. Toxic types
+  // the words where the caret is, so Project KO must not type them a second
+  // time. The view is opened again first, so the watcher starts with a clean
+  // slate and the transcript below is new to it.
+  await page.getByRole('button', { name: 'Terminal', exact: true }).click();
+  await expect(page.locator('.xterm-helper-textarea')).toBeAttached();
+  await page.getByRole('button', { name: 'Conversation', exact: true }).click();
+  await expect(textarea).toBeVisible();
+  await textarea.fill('');
+  const base = Date.now();
+  last = { text: 'Words for this window.', at: base };
+  await expect(textarea).toHaveValue('Words for this window.', { timeout: 8000 });
+  // The person moves to another application, and the window says so.
+  await textarea.fill('');
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await page.waitForTimeout(1200);
+  last = { text: 'Words for another window.', at: base + 1 };
+  await page.waitForTimeout(2600);
+  assert.equal(await textarea.inputValue(), '', 'a take made in another application is not typed here');
+  // The person comes back. The take was made before this window had the focus
+  // again, so its words still belong to the other application.
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  last = { text: 'Words from before the return.', at: base + 2 };
+  await page.waitForTimeout(2600);
+  assert.equal(await textarea.inputValue(), '', 'a transcript made before the return is not ours');
+  // A take in this window is placed again.
+  last = { text: 'Words for this window again.', at: Date.now() };
+  await expect(textarea).toHaveValue('Words for this window again.', { timeout: 8000 });
   // A missing Toxic is a prompt to install it, in the composer's status line.
   unavailable = true;
   await textarea.fill('');
@@ -146,5 +174,5 @@ try {
   last = { text: 'Words for the terminal.', at: Date.now() + 9000 };
   await expect.poll(() => writes.slice(beforeTerminal).some(chunk => chunk.includes('Words for the terminal.')), { timeout: 8000 }).toBe(true);
   assert.ok(writes.slice(beforeTerminal).every(chunk => chunk.includes('\x1b[200~')), 'the words are pasted, not submitted');
-  console.log(JSON.stringify({ ok: true, screenshot: path.join(repo, 'desktop-dictation.png'), checks: ['switch only', 'open take adopted', 'chord opens a take', 'escape cancels', 'external end', 'draft insert', 'Toxic take left alone', 'Toxic words placed', 'install prompt', 'terminal fallback'] }));
+  console.log(JSON.stringify({ ok: true, screenshot: path.join(repo, 'desktop-dictation.png'), checks: ['switch only', 'open take adopted', 'chord opens a take', 'escape cancels', 'external end', 'draft insert', 'Toxic take left alone', 'Toxic words placed', 'take from another window left there', 'install prompt', 'terminal fallback'] }));
 } finally { await browser?.close(); session.process = null; await service.close(); }

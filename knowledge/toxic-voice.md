@@ -113,6 +113,13 @@ switch back to `listening` instead of leaving an open microphone with no control
 When Toxic ended the take itself (Escape, or the maximum length) the newest `last`
 transcript is inserted, so a take is never lost silently.
 
+Toxic is a machine-wide tool, so its transcript history also holds takes made in
+other applications. Those words belong to the window that had the focus when the
+take ended, and Project KO leaves them there: a take is only placed here when
+this window held the focus. The whole arrangement — the three paths into a take,
+who owns which one, and the rule that keeps a take in the window it belongs to —
+is in [the dictation memory](dictation-memory.md).
+
 ## The chord is Toxic's, and this window answers it too
 
 Toxic installs a low-level keyboard hook for the speech-to-text chord (`Ctrl+T`

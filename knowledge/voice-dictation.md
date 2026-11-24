@@ -44,6 +44,12 @@ automatic fallback from one provider to another.
   the paired connection, and leaves the text as a draft for you to send.
 - **Workspace Mak composer** — its microphone uses the same provider.
 
+Toxic is a machine-wide tool, so its chord also opens a take in any other
+application — Chrome, Notepad, a code editor. Such a take belongs to that
+application: Toxic types the words where the caret is, and they stay there.
+Project KO only places the words of a take that ended while its own window had
+the focus. See [the dictation memory](dictation-memory.md).
+
 Toxic's own machine-wide shortcut is **double-tap Ctrl**. Project KO no longer
 listens for that gesture on desktop, so the two apps cannot start recording at
 the same time. On the phone, double-tap Ctrl belongs to the page.

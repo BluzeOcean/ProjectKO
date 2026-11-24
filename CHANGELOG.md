@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- A take in another application stays in that application. Toxic is a machine-wide tool, so its transcript history holds every take on the machine, and the words of a take made in Chrome were also typed into the Project KO terminal. A transcript is now only placed here when the take ended while this window had the focus: the window's own focus events decide that, a transcript made before the window regained the focus is dropped, and one that is older than a poll cycle is left where it was typed. The behaviour is checked against the code before the fix, which typed the words of another window into the composer.
 - The Vaultspace inspector follows the window instead of standing still. The facts column used to be a fixed 400px, which squeezed the board list beside it until the list scrolled sideways. The column now takes a share of the deck and gives it back as the window narrows, and it leaves once the deck is too narrow to carry both, so the boards keep the room.
 - The Files tree calls the project folder **PROJECT-KO**. It said MR-MAK, the name of the project this app was forked from; the app's own name is what the folder reads now. The code, the mark and the `pKO` abbreviations stay as they are.
 
