@@ -350,7 +350,14 @@
 .handoff-offer{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;flex-shrink:0;padding:8px 14px;border-bottom:1px solid color-mix(in srgb,var(--text) 12%,transparent);background:var(--surface-solid);font-size:11px;color:var(--text)}.handoff-offer>span{flex:1 1 300px;min-width:0;line-height:1.5}.handoff-offer strong{color:var(--text-bright);font-weight:600}
 .handoff-offer button{padding:5px 10px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent);border-radius:7px;background:transparent;color:var(--text);font-size:10.5px}.handoff-offer button.primary{border-color:color-mix(in srgb,var(--pink) 33%,transparent);background:color-mix(in srgb,var(--pink) 10%,transparent);color:var(--text-bright)}
 .handoff-offer.working>i{width:7px;height:7px;border-radius:50%;background:var(--pink);animation:conversation-pulse 1.2s ease-in-out infinite}.handoff-offer.failed{background:var(--surface-solid);color:var(--amber)}
-.chat-context-usage{display:flex;align-items:center;flex-wrap:wrap;gap:8px;flex-shrink:0;padding:6px 16px;border-bottom:1px solid var(--hairline);color:var(--text-dim);font-size:11px;line-height:1.5}
+/* The context strip is a readout, not a permanent band. The zone holds the
+   chat row and the handoff banner; the strip hangs over the top edge of the
+   pane below it and fades in while the pointer is on the row above. It stays
+   out of the flow on purpose: a row that grows on hover would resize the pane,
+   and a pane resize resizes the PTY and repaints the running agent. */
+.chat-context-zone{position:relative;flex-shrink:0}
+.chat-context-usage{position:absolute;z-index:30;top:100%;left:0;right:0;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:6px 16px;border-bottom:1px solid var(--hairline);background:var(--bg);box-shadow:0 8px 18px #0006;color:var(--text-dim);font-size:11px;line-height:1.5;opacity:0;pointer-events:none;transform:translateY(-6px);transition:opacity 140ms var(--ease),transform 140ms var(--ease)}
+.chat-context-zone:hover .chat-context-usage,.chat-context-zone:focus-within .chat-context-usage{opacity:1;pointer-events:auto;transform:none}
 .chat-context-usage strong{margin-left:8px;color:var(--text);font-weight:500;font-variant-numeric:tabular-nums}
 .chat-context-usage meter{width:64px;height:8px;accent-color:var(--pink)}
 .option-select-setting{display:flex;flex-direction:column;gap:6px;padding:8px 9px;border-top:1px solid color-mix(in srgb,var(--text) 12%,transparent);font-size:11px;color:var(--text-dim)}.option-select-setting small{color:var(--text-dim);font-size:9.5px;margin-left:4px}.option-select-setting select{padding:5px 7px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent);border-radius:6px;background:var(--surface-solid);color:var(--text);font:inherit;font-size:11px}

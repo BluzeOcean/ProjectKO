@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The context strip is a hover readout. The line under the chat row reports how much of the context the agent has used; it now stays out of the way until the pointer is on the chat row above it, and it hangs over the top of the pane instead of taking a row of its own, so revealing it never resizes the terminal and never disturbs the running agent.
+
 - The Chatspace header loses its pink fist. The fist started the microphone and the bubble beside it opened the conversation that microphone produces, so the two said the same thing twice. The nose now lives in Vaultspace alone, where the voice conversation is started, and the button that opens Vaultspace carries the pink mark instead.
 
 - The development launcher opens in about three seconds instead of fifteen. Two causes, both measured. The dev server was watching the whole repository - the Rust build tree, the scratch folder and the vault, which also arrives through a junction - and registered a watch for all 3,832 directories under `.cache` before it served the first page. Those trees are no longer watched; the interface still reloads on save. And the Rust shell was recompiled on every launch: the build script watches a capabilities directory that does not exist, and cargo re-runs a build script on every build when a watched path is missing. The directory now exists, and the shell compiles once instead of every time.

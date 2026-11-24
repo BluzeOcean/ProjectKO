@@ -49,6 +49,18 @@ try {
   await page.setViewportSize({ width: 900, height: 760 });
   await choose('kimi'); await expect(display).toContainText('Unavailable');
   await choose('codex'); await expect(display).toContainText('30,000');
+  // The strip is a hover readout: hidden until the pointer is on the chat row
+  // above it, and it must not push the pane around when it appears.
+  const strip = page.locator('.chat-context-usage');
+  const opacity = () => strip.evaluate(node => Number(getComputedStyle(node).opacity));
+  assert.equal(await opacity(), 0, 'the context strip starts hidden');
+  const pane = await page.locator('.terminal-area').boundingBox();
+  await page.locator('.chat-context').hover();
+  await expect.poll(opacity, { timeout: 2000 }).toBe(1);
+  const paneShown = await page.locator('.terminal-area').boundingBox();
+  assert.equal(Math.round(paneShown.height), Math.round(pane.height), 'revealing the strip must not resize the pane');
+  await page.mouse.move(450, 8);
+  await expect.poll(opacity, { timeout: 2000 }).toBe(0);
   service.sessions.nativeEvent(codex, nativeContext({ type: 'compacted' }, 'codex'));
   await expect(display).toContainText('Unknown · waiting after compact');
   service.sessions.nativeEvent(codex, report(4000));
@@ -68,7 +80,7 @@ try {
   connection.close();
   await expect(display).toContainText('Unknown · disconnected');
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ ok: true, fixture: repo, checks: ['unknown and unsupported', 'live native reports', 'session switching', 'compact and new reset', 'scrollback clear preserves context', 'disconnected hides old values', '320/500/900/1440px', 'no page errors'] }));
+  console.log(JSON.stringify({ ok: true, fixture: repo, checks: ['unknown and unsupported', 'live native reports', 'session switching', 'compact and new reset', 'hover reveal hides and shows the strip', 'the reveal does not resize the pane', 'scrollback clear preserves context', 'disconnected hides old values', '320/500/900/1440px', 'no page errors'] }));
 } finally {
   // These are fixture objects only; do not exercise native shutdown delays.
   if (service) for (const session of service.sessions.items.values()) session.process = null;
