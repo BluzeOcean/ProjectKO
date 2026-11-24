@@ -1,5 +1,12 @@
 # The Toxic ticket, rewritten (2026-11-25 00:40)
 
+> **Superseded - the owner deleted this ticket.** It carried more than one
+> feature. The replacement is
+> `ticket\(open) 2026-11-25-type-into-the-window-that-started-the-take.md`
+> (commit `09e0e9c`), which is only *"type into the window that started the
+> take"* - see `m-2026-11-25-0046-ticket-filed.md`. This file is kept as the
+> record of what the rewrite said and why it was withdrawn.
+
 **Taken:** 2026-11-25 00:38-00:40 (Asia/Shanghai).
 **By:** the agent that took over the handoff.
 **Written to:** `V:\04_Projects\Toxic\ticket\(open) 2026-11-24-dictation-chord-and-typing-target.md`
