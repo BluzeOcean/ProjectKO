@@ -81,6 +81,60 @@ holds only `history.json`, `config.json`, `state.json`, `mcp.json` and
 persisted trace of a take is one row in `history.json`, and it has no target
 field: it records *that* a take happened, never *where* it was typed.
 
+## The decisive measurement, 2026-11-24 15:31 and 15:34
+
+Project KO's probe (see below) recorded what the Project KO window actually
+received while the owner pressed the chord in the Project KO terminal:
+
+```
+15:31:51.256 | keydown code=17 key=Control ctrl=1 shift=0 alt=0 composing=0 target=textarea.xterm-helper-textarea
+15:31:51.257 | keydown code=84 key=t     ctrl=1 shift=0 alt=0 composing=0 target=textarea.xterm-helper-textarea
+15:31:51.259 |   ^ after: defaultPrevented=0
+15:31:51.259 |   ^ after: defaultPrevented=1
+15:31:51.362 | keyup   code=17 key=Control ctrl=0 target=textarea.xterm-helper-textarea
+15:31:51.363 | keyup   code=84 key=t      ctrl=0 target=textarea.xterm-helper-textarea
+```
+
+and the same pair again at 15:31:52, 15:34:19 and 15:34:21 - four presses.
+
+What this proves, and it is worth reading carefully:
+
+1. **The chord reached Project KO intact.** The `Ctrl` key-down arrived, the
+   `T` key-down arrived with `ctrl=1`, `shift=0`, `alt=0` - exactly the
+   modifier state the chord asks for. Both key-ups arrived as well, so no
+   modifier was left stuck anywhere in the application.
+2. **Toxic's hook did not act on it.** A low-level hook that acts returns a
+   non-zero value and the key never reaches the target window. The key *did*
+   reach the window, so the chord branch in `handle()` was never taken: the
+   key was passed through untouched.
+3. **Nothing was injected.** There is no `keydown` with the key code 229 and
+   no `beforeinput` of inserted text in the whole record. No microphone, no
+   transcript, no characters - and Toxic's `history.json` gained no row
+   either (its newest entry was still the 15:01 take).
+
+So the failing condition is one of exactly three, all inside Toxic:
+
+- `chord.matches(vk)` was false - it should not be: `Ctrl+T` parses to the
+  virtual key `0x54`, which is the key that arrived;
+- `chord.modifiers_held()` was false - the tracked mask disagreed with the
+  modifiers the application saw;
+- the chord branch was never reached, because `config.stt_mode` was not
+  `"chord"`, `config.enabled` was false, or **the hook was no longer
+  installed**.
+
+The third is the one to check first. `WH_KEYBOARD_LL` is removed silently by
+Windows when its callback is slow, and this machine has a second low-level
+keyboard hook that is re-registered every ten seconds
+(`src-tauri/src/win_key.rs`, the `WM_TIMER` arm) - the hook chain is therefore
+re-ordered constantly, and every hook in it shares one timeout budget. Toxic
+installs its hook once, in `hotkeys::install()`, and **never reinstalls it**.
+
+The control case matters for reading this: the same chord worked over another
+Chromium application at 14:53:25, 15:01:19 and 15:01:22, with Project KO
+running the whole time. So the chain is not broken in general, and the
+difference is either **which window is in front** or **when** the press
+happens.
+
 Runtime configuration on the machine that showed it
 (`%APPDATA%\app.toxic.desktop\config.json`):
 
