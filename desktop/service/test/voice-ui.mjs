@@ -43,11 +43,21 @@ try {
   });
   for (const surface of ['chats', 'workspace']) {
     await page.goto(service.urls[surface]);
-    await page.getByRole('button', { name: 'Talk to Mr.KO', exact: true }).click();
-    await page.getByRole('alert').filter({ hasText: 'Permission denied' }).waitFor();
-    await page.getByRole('button', { name: 'Dismiss voice error' }).click();
-    assert.equal(await page.getByRole('alert').count(), 0);
-    assert.equal(await page.evaluate(() => window.fixtureMicRequests), 1);
+    // The interface mounts after the bootstrap; the conversation toggle is in
+    // both windows, so it is the marker that the app is there.
+    await page.getByRole('button', { name: 'Toggle conversation' }).waitFor();
+    // Chatspace has no nose: the conversation is opened there, not started.
+    const nose = page.getByRole('button', { name: 'Talk to Mr.KO', exact: true });
+    if (await nose.count()) {
+      await nose.click();
+      await page.getByRole('alert').filter({ hasText: 'Permission denied' }).waitFor();
+      await page.getByRole('button', { name: 'Dismiss voice error' }).click();
+      assert.equal(await page.getByRole('alert').count(), 0);
+    } else {
+      assert.equal(surface, 'chats');
+      await page.getByRole('button', { name: 'Toggle conversation' }).click();
+    }
+    assert.equal(await page.evaluate(() => window.fixtureMicRequests), surface === 'chats' ? 0 : 1);
     const input = page.getByRole('textbox', { name: 'Message Project KO' });
     const before = requests.length;
     await input.fill('First line'); await input.press('Shift+Enter'); await input.pressSequentially('Second line');

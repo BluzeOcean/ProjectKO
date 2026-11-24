@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The Chatspace header loses its pink fist. The fist started the microphone and the bubble beside it opened the conversation that microphone produces, so the two said the same thing twice. The nose now lives in Vaultspace alone, where the voice conversation is started, and the button that opens Vaultspace carries the pink mark instead.
+
 - The development launcher opens in about three seconds instead of fifteen. Two causes, both measured. The dev server was watching the whole repository - the Rust build tree, the scratch folder and the vault, which also arrives through a junction - and registered a watch for all 3,832 directories under `.cache` before it served the first page. Those trees are no longer watched; the interface still reloads on save. And the Rust shell was recompiled on every launch: the build script watches a capabilities directory that does not exist, and cargo re-runs a build script on every build when a watched path is missing. The directory now exists, and the shell compiles once instead of every time.
 
 - The chat microphone is a switch for **Toxic**, not a recorder. Project KO keeps no audio and draws no recording panel: the button starts Toxic's own listening mode, Toxic shows its HUD and transcribes with Hex, and the words land in the composer or the terminal when it stops. Starting it wakes Toxic when the app is closed, and asks you to install Toxic when the app is missing.
