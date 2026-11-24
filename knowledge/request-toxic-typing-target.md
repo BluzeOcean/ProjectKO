@@ -2,6 +2,9 @@
 
 **Status:** open. **Raised:** 2026-11-24 by Project KO (this repository).
 **Addressed to:** whoever owns the **Toxic** repository at `V:\04_Projects\Toxic`.
+**Filed as a ticket there:** `V:\04_Projects\Toxic\ticket\2026-11-24-dictation-chord-and-typing-target.md`
+(2026-11-24) - it carries this defect together with the chord defect of
+`request-toxic-chord.md`, because both are needed for dictation to work.
 
 This is a ticket, not a change. Project KO cannot edit Toxic; it can only report
 what was measured and what has to change.
