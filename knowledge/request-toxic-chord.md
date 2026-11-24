@@ -240,6 +240,22 @@ the hook is fixed, keep Toxic in **chord mode** (`sttMode: "chord"`), where the
 hook swallows the key machine-wide, and use Toxic's double tap where a take
 should be opened in another application.
 
+### What Project KO can log for you now
+
+While this ticket is open, Project KO carries a temporary probe in every
+desktop window (`src/desktop/dictationProbe.ts`). It records, with a
+timestamp, every key-down and key-up of the chord and its modifiers, every
+packet (`keyCode 229`) and every `beforeinput` of inserted text, and writes
+the lines to the window's own web view storage under `mrmak.dictationProbe`.
+It reads nothing, sends nothing and is not part of the product - it will be
+removed when the cause is known.
+
+That answers the "a refused chord leaves no trace" requirement on Project KO's
+side of the boundary: **if the key reaches a Project KO window, it is on
+record**, and the record says whether the chord was seen, swallowed or
+replaced by injected text. What Project KO cannot see is whether Toxic's hook
+saw it - that is the part only Toxic can log.
+
 ## Rules
 
 - **Do not modify, build or commit Project KO.** It is a separate repository
