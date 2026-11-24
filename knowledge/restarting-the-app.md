@@ -20,6 +20,42 @@ That also means the window runs the **development** React build, where
 `<StrictMode>` double-invokes effects and production-only assumptions break — see
 [the mounted-guard lesson](toxic-voice.md#a-mounted-guard-has-to-survive-strictmode).
 
+## Starting it for real
+
+The development launcher is slow to start for a reason that was measured and
+fixed: see [the dev server's start-up cost](dev-server-startup.md).
+
+`npm run desktop:dev -- -- --repo <repo>` does **not** work: the extra `--` makes
+cargo see `--repo` and fail with `unexpected argument '--repo' found`. The
+tauri script puts the app's own arguments before the `--`. Two ways forward:
+
+- Run the dev script and let it pass the repository the way it expects (a
+  `tauri.conf.json` setting), or
+- Launch the built binary directly, which is what was done on 2026-11-24:
+
+```powershell
+$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
+Remove-Item Env:\NO_COLOR -ErrorAction SilentlyContinue
+Start-Process -FilePath 'V:\06_App\ProjectKO\src-tauri\target\debug\projectko.exe' `
+  -ArgumentList '--repo','V:\06_App\ProjectKO' -WorkingDirectory 'V:\06_App\ProjectKO'
+```
+
+The service is a child process of that binary, so this one command brings up the
+app, the service and both windows (Chatspace and Vaultspace). The pages listen on
+the service's own origin; the CDP port is a separate, fixed `9222`.
+
+**A long-lived app must not be started from a background task that can be
+cancelled.** Cancelling the task kills the process tree it started, and Toxic died
+that way on 2026-11-24. Start it from a script that exits immediately, so nothing
+owns the process afterwards.
+
+Toxic starts the same way, detached, and its speech engine starts on demand:
+
+```powershell
+Start-Process -FilePath 'V:\04_Projects\Toxic\src-tauri\target\release\toxic.exe' `
+  -WorkingDirectory 'V:\04_Projects\Toxic'
+```
+
 ## Driving the running window
 
 Clicking by screen coordinates is guesswork, and this machine's screens are at 125%

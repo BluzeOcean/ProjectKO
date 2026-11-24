@@ -208,5 +208,6 @@ Toxic's listening mode: Project KO keeps no recording, and pressing the button
 opens Toxic when it is closed. Reading aloud still needs Toxic open. No speech
 model, Python environment or cloud key belongs to Project KO.
 The voice and language are chosen in Toxic. Phone settings still lists one read
-aloud voice, **Toxic · Pocket TTS**. Updating service files requires
+aloud voice, **Toxic**. The label names Toxic and nothing else: whatever speaks
+behind it is Toxic's business. Updating service files requires
 a user-approved application restart.

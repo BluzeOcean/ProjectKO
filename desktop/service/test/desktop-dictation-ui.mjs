@@ -70,14 +70,20 @@ try {
   assert.deepEqual(actions.slice(firstStart, firstStart + 2), ['start', 'stop'], 'one press opens the take, the next closes it');
   assert.ok(writes.includes('\x1b[200~' + transcript + '\x1b[201~'), 'the words are pasted into the CLI');
   assert.ok(!writes.includes('\r'), 'nothing is submitted for the person');
-  // The chord belongs to Toxic's system-wide hook. This window must leave it
-  // alone, and the CLI must never receive ^T if it does arrive here.
+  // The chord is Toxic's, read from Toxic's config. Its system-wide hook does
+  // not always act on it while a Project KO window is in front, so this window
+  // answers the chord itself and asks Toxic to listen. The CLI must never
+  // receive the chord either way.
   const starts = actions.filter(action => action === 'start').length;
   await page.locator('.xterm-helper-textarea').focus();
   await page.keyboard.press('Control+t');
-  await page.waitForTimeout(500);
-  assert.equal(actions.filter(action => action === 'start').length, starts, 'the chord never opens a take here');
-  await expect(stop(page)).toHaveCount(0);
+  await expect(stop(page)).toBeVisible();
+  assert.equal(actions.filter(action => action === 'start').length, starts + 1, 'the chord opens a take');
+  assert.ok(!writes.some(chunk => chunk.includes('\x14')), 'the CLI never receives the chord');
+  // The same chord closes the take, and the words are pasted into the CLI.
+  await page.keyboard.press('Control+t');
+  await expect(mic(page)).toBeEnabled();
+  assert.ok(writes.includes('\x1b[200~' + transcript + '\x1b[201~'), 'the words are pasted into the CLI');
   assert.ok(!writes.some(chunk => chunk.includes('\x14')), 'the CLI never receives the chord');
   // Escape throws the take away and the switch comes back on its own.
   await mic(page).click();
@@ -140,5 +146,5 @@ try {
   last = { text: 'Words for the terminal.', at: Date.now() + 9000 };
   await expect.poll(() => writes.slice(beforeTerminal).some(chunk => chunk.includes('Words for the terminal.')), { timeout: 8000 }).toBe(true);
   assert.ok(writes.slice(beforeTerminal).every(chunk => chunk.includes('\x1b[200~')), 'the words are pasted, not submitted');
-  console.log(JSON.stringify({ ok: true, screenshot: path.join(repo, 'desktop-dictation.png'), checks: ['switch only', 'open take adopted', 'chord untouched', 'escape cancels', 'external end', 'draft insert', 'Toxic take left alone', 'Toxic words placed', 'install prompt', 'terminal fallback'] }));
+  console.log(JSON.stringify({ ok: true, screenshot: path.join(repo, 'desktop-dictation.png'), checks: ['switch only', 'open take adopted', 'chord opens a take', 'escape cancels', 'external end', 'draft insert', 'Toxic take left alone', 'Toxic words placed', 'install prompt', 'terminal fallback'] }));
 } finally { await browser?.close(); session.process = null; await service.close(); }

@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
-import { api, onServiceEvent, pickFiles, reportError, sendEvent, uploadImage } from './client'
+import { api, onServiceEvent, pickFiles, reportError, sendEvent, uploadImage, useDesktop } from './client'
 import { Icon } from './Icons'
 import type { AgentId } from './types'
 import { decorateTerminal, originalTheme, terminalTheme, terminalRoleColors, type TerminalAppearance } from './terminalAppearance'
 import { useWorkspaceTheme } from '../lib/workspace-theme'
 import { fileManager, isMac, modKey, modLabel } from './platform'
 import { deferredClipboardWrite, terminalClipboardGate, terminalCopyWindow, type PendingCopy } from './terminalClipboard'
+import { fallbackChord, matchesChord, parseChord } from './dictationChord'
 
 export default function TerminalPane({ id, agent, fontSize, appearance, optionMeta, onAttachmentStatus }: { id: string; agent: AgentId; fontSize: number; appearance: TerminalAppearance; optionMeta: boolean; onAttachmentStatus: (id: string, text: string) => void }) {
   const { resolved } = useWorkspaceTheme('chat')
@@ -19,9 +20,13 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
   const fitRef = useRef<FitAddon | null>(null)
   const [dragging, setDragging] = useState(false)
   const statusTimer = useRef(0)
-  // Ctrl+T stays the dictation chord in a terminal. Project KO records the
-  // words and asks Toxic to transcribe them, so the CLI never receives ^T and
-  // Toxic keeps the machine-wide double-tap Ctrl shortcut for other apps.
+  // The dictation chord is Toxic's, read from Toxic's config. The CLI must
+  // never receive it: Project KO opens Toxic's listening mode with it, so the
+  // control character would only reach the agent as noise.
+  const state = useDesktop()
+  const chord = useMemo(() => parseChord(state.dictationShortcut) || fallbackChord, [state.dictationShortcut])
+  const chordRef = useRef(chord)
+  useEffect(() => { chordRef.current = chord }, [chord])
   const uploading = useRef(false)
   const choosing = useRef(false)
   async function pasteImages(files: File[]) {
@@ -172,10 +177,12 @@ export default function TerminalPane({ id, agent, fontSize, appearance, optionMe
       if (ready && !deviceReply) sendEvent({ type: 'input', id, data })
     })
     terminal.attachCustomKeyEventHandler(event => {
-      // The dictation chord belongs to Toxic, whose system-wide hook sees it
-      // before this window does. Only when that hook is absent does it arrive
-      // here, and it is swallowed then: the CLI must never receive ^T.
-      if (event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey && typeof event.key === 'string' && (event.code === 'KeyT' || event.key.toLowerCase() === 't')) {
+      // The dictation chord belongs to Toxic. Its system-wide hook is the
+      // first to see it, but it does not always act on it while a Project KO
+      // window is in front, and then the key arrives here. The chord opens
+      // Toxic's listening mode in this app too (see DictationButton), so the
+      // CLI must never receive it either way.
+      if (matchesChord(event, chordRef.current)) {
         event.preventDefault(); event.stopPropagation()
         return false
       }

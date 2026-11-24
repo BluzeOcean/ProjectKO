@@ -1,4 +1,4 @@
-export const readingVoices = [{ id: 'toxic', label: 'Toxic · Pocket TTS' }]
+export const readingVoices = [{ id: 'toxic', label: 'Toxic' }]
 export const readingVoiceKey = 'mrmak.mobile.read-aloud.voice'
 export const readingVoiceChanged = 'mrmak-reading-voice-changed'
 let currentVoice = 'toxic'

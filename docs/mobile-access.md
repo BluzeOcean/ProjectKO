@@ -236,9 +236,9 @@ media. Tap it to read; during playback it becomes Pause/Resume, with a Stop icon
 It reads your most recent message and all following agent messages through that
 reply, with Pause, Resume and Stop controls. New replies do not extend speech
 already playing; tap Read aloud again to include them.
-Speech is generated locally on your computer by **Toxic** with Pocket TTS.
+Speech is generated locally on your computer by **Toxic**.
 Toxic owns the voice, language and model; Project KO lists the single voice
-**Toxic · Pocket TTS** and Phone settings shows it without a browser voice list.
+**Toxic** and Phone settings shows it without a browser voice list.
 No API key or paid speech provider is required. Toxic must be running: when it
 is not, the speaker row says so and offers **Check again**.
 Inference is offline; text/audio are not sent to a cloud provider.

@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, useDesktop } from './client'
 import { Icon } from './Icons'
+import { matchesChord, parseChord } from './dictationChord'
 import { noteDelivered, useToxicTranscripts } from './useToxicTranscripts'
 
 type Phase = 'idle' | 'starting' | 'listening' | 'stopping'
@@ -19,10 +20,12 @@ const longestTake = 5 * 60_000
  * panel. One press opens the microphone, the next closes it, Escape throws the
  * take away, any other key finishes it - and the words land in the field.
  *
- * The system-wide shortcut is Toxic's, not ours. It reaches Toxic's keyboard
- * hook before this window sees anything, so binding it here would only steal it
- * when Toxic is not running. A take opened by that chord belongs to Toxic, and
- * the watcher in useToxicTranscripts collects its words.
+ * The chord is Toxic's own setting, read from its config. Toxic's system-wide
+ * hook is the first to see that chord, but it does not always act on it while a
+ * Project KO window is in front: the key then arrives here and would be lost.
+ * This window therefore answers the chord as well, and asks Toxic to listen.
+ * A take Toxic opened by itself is left alone - that one is Toxic's to finish
+ * and type, and the watcher in useToxicTranscripts collects its words.
  */
 export default function DictationButton({ connected, disabled, onText, onNote, alreadyThere }: {
   connected: boolean
@@ -98,6 +101,18 @@ export default function DictationButton({ connected, disabled, onText, onNote, a
     } finally { window.clearTimeout(hint) }
   }, [say])
 
+  // The switch, as one action: the microphone and Toxic's chord both open and
+  // close the same take.
+  const toggle = useCallback(() => {
+    const phase = phaseRef.current
+    if (phase === 'listening') { void finishTaking(); return }
+    if (phase === 'starting') { cancelPending.current = true; say('Stopping…'); return }
+    if (phase === 'stopping') return
+    if (!connected) { say('Project KO is not connected to its service.'); return }
+    if (disabled) { say('The chat is not running.'); return }
+    void startTaking()
+  }, [connected, disabled, finishTaking, startTaking, say])
+
   // Toxic can end a take on its own: Escape cancels it, and its maximum
   // recording length stops it. Watching the state keeps the switch honest and
   // recovers the words Toxic already transcribed.
@@ -135,7 +150,9 @@ export default function DictationButton({ connected, disabled, onText, onNote, a
     return () => { live = false }
   }, [connected])
 
-  // The chord is Toxic's; only its label is read here, for the tooltip.
+  // The chord label comes from Toxic's own config, so a rebind in Toxic is
+  // followed here. The state carries it already; the route is the fallback for
+  // a window that connected before Toxic was read.
   useEffect(() => {
     if (state.dictationShortcut) return
     let live = true
@@ -149,9 +166,19 @@ export default function DictationButton({ connected, disabled, onText, onNote, a
   // dictation does: Escape discards, any other key finishes and is swallowed so
   // it cannot type into the field the words are about to fill. A take Toxic
   // owns is never touched here - those keys belong to Toxic.
+  //
+  // Toxic's own chord comes first: it opens and closes this switch, so the
+  // chord works in a terminal too, where Toxic's system-wide hook does not
+  // always reach it.
+  const chord = useMemo(() => parseChord(shortcut), [shortcut])
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.repeat || event.isComposing || event.keyCode === 229) return
+      if (matchesChord(event, chord)) {
+        event.preventDefault(); event.stopPropagation()
+        toggle()
+        return
+      }
       if (phaseRef.current === 'starting') {
         // The microphone is still opening: remember the wish and cancel as soon
         // as Toxic answers, so a take can never open with nobody holding it.
@@ -166,7 +193,7 @@ export default function DictationButton({ connected, disabled, onText, onNote, a
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [finishTaking, cancelTaking, say])
+  }, [chord, toggle, finishTaking, cancelTaking, say])
 
   // Words from a take Toxic opened and finished by itself.
   useToxicTranscripts(text => { take(text); say('') }, { enabled: connected && phase === 'idle', alreadyThere })
@@ -176,9 +203,5 @@ export default function DictationButton({ connected, disabled, onText, onNote, a
     aria-label={listening ? 'Stop dictating' : starting ? 'Cancel opening the microphone' : stopping ? 'Toxic is finishing' : 'Dictate a message'}
     title={listening ? 'Stop dictating and add the words' : starting ? 'Opening the microphone · press again to cancel' : shortcut ? 'Dictate with Toxic · ' + shortcut : 'Dictate with Toxic'}
     disabled={stopping || phase === 'idle' && (disabled || !connected)}
-    onClick={() => {
-      if (listening) void finishTaking()
-      else if (starting) { cancelPending.current = true; say('Stopping…') }
-      else void startTaking()
-    }}><Icon name={listening || starting ? 'stop' : 'mic'} size={16} /></button>
+    onClick={() => toggle()}><Icon name={listening || starting ? 'stop' : 'mic'} size={16} /></button>
 }

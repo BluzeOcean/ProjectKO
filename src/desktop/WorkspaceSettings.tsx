@@ -170,9 +170,9 @@ export default function WorkspaceSettings({ onClose }: { onClose: () => void }) 
       ],
     },
     {
-      id: 'read-aloud', label: 'Read aloud', summary: (speech?.ready ? 'Toxic · Pocket TTS' : 'Toxic is not running') + ' · ' + (settings.readAloudSpeed || 1) + '×',
+      id: 'read-aloud', label: 'Read aloud', summary: (speech?.ready ? 'Toxic' : 'Toxic is not running') + ' · ' + (settings.readAloudSpeed || 1) + '×',
       rows: [
-        row('Engine', <span className="settings-path">{speech?.ready ? 'Toxic · Pocket TTS' : 'Toxic is not running'}</span>,
+        row('Engine', <span className="settings-path">{speech?.ready ? 'Toxic' : 'Toxic is not running'}</span>,
           'Read aloud uses the voice and language configured in Toxic. Start Toxic to enable it.', 'speech tts toxic'),
         row('Speaking speed', pick('Speaking speed', String(settings.readAloudSpeed || 1), [1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5].map(rate => [String(rate), rate + '×'] as [string, string]), value => void change({ readAloudSpeed: Number(value) }))),
       ],

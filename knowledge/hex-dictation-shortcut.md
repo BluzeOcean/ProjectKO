@@ -9,6 +9,11 @@
 > take over Notepad but not while a Project KO window is in front. Project KO
 > therefore sweeps the chord up in its own windows and calls Toxic itself, which
 > is the conclusion this note reached for Hex and the reason the bridge existed.
+> That sweep was briefly taken out again - on the assumption that Toxic's hook
+> always wins - which left the chord belonging to nobody: the terminal swallowed
+> it and nothing answered. It is back, in `src/desktop/DictationButton.tsx`, and
+> the defect on Toxic's side is written up as
+> [a request](request-toxic-chord.md).
 
 [Hex](https://anoma.ly) is a local dictation app for Windows with a Ctrl+T
 dictation shortcut. In a Project KO terminal that chord produced a `^T` control

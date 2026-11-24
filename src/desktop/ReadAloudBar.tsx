@@ -5,9 +5,10 @@ import { Icon } from './Icons'
 /**
  * Read aloud, through Toxic.
  *
- * Project KO no longer installs or owns a speech model: Toxic runs Pocket TTS
- * and exposes it over MCP. The bar says which voice Toxic is using and offers a
- * retry when Toxic is not running; the voice itself is chosen in Toxic.
+ * Project KO no longer installs or owns a speech model: Toxic speaks, over MCP.
+ * The bar names Toxic and nothing else - whatever speaks behind it is Toxic's
+ * business - and offers a retry when Toxic is not running. The voice itself is
+ * chosen in Toxic.
  */
 
 interface Voice { id: string; label: string }
@@ -28,7 +29,7 @@ export default function ReadAloudBar({ activeId, paused, loading, error, onRead,
     </div>
   }
 
-  const label = status?.label || status?.voices?.[0]?.label || 'Toxic · Pocket TTS'
+  const label = status?.label || status?.voices?.[0]?.label || 'Toxic'
   return <div className="conversation-read-aloud">
     <button type="button" className="ra-play" onClick={onRead} aria-label={activeId ? paused ? 'Resume reading' : 'Pause reading' : 'Read aloud'} title={activeId ? paused ? 'Resume reading' : 'Pause reading' : 'Read this reply aloud'}><Icon name={activeId ? paused ? 'play' : 'pause' : 'speaker'} size={15} /></button>
     {activeId && <button type="button" onClick={onStop} aria-label="Stop reading" title="Stop"><Icon name="stop" size={13} /></button>}

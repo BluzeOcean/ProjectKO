@@ -78,7 +78,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 900, height: 760 } });
   page.setDefaultTimeout(12000); page.on('pageerror', error => errors.push(error.message));
   // Toxic is a separate app this check must not depend on.
-  await page.route('**/api/read-aloud', route => route.fulfill({ json: { engine: 'toxic', ready: true, installing: false, progress: { phase: 'idle', percent: 0, message: '' }, voices: [{ id: 'toxic', label: 'Toxic · Pocket TTS' }], voice: 'toxic', label: 'Toxic · Pocket TTS', clips: [] } }));
+  await page.route('**/api/read-aloud', route => route.fulfill({ json: { engine: 'toxic', ready: true, installing: false, progress: { phase: 'idle', percent: 0, message: '' }, voices: [{ id: 'toxic', label: 'Toxic' }], voice: 'toxic', label: 'Toxic', clips: [] } }));
   await page.route('**/api/sessions/*/speak', route => route.fulfill({ status: 200, headers: { 'Content-Type': 'audio/wav' }, body: silence(6) }));
   await page.goto(service.urls.chats);
   await page.getByRole('button', { name: 'Conversation', exact: true }).click();

@@ -11,9 +11,29 @@ import { ToxicClient } from './toxic.mjs';
 
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 
-export const toxicVoice = { id: 'toxic', label: 'Toxic · Pocket TTS' };
+export const toxicVoice = { id: 'toxic', label: 'Toxic' };
 const maximumQueue = 24;
 const maximumCached = 64;
+
+/**
+ * An engine that answers with no samples in it.
+ *
+ * Toxic owns whatever is behind the wrapper, so Project KO does not look at
+ * ports or processes to explain this. What the owner needs is the one action
+ * that fixes it: Toxic's tray has "Restart engines", and Toxic adopts a
+ * server left behind by an earlier run, so its engine can answer while saying
+ * nothing. The message says that, instead of repeating "no audio".
+ */
+const silentEngine = /no audio|empty recording/i;
+
+export function engineFailure(error) {
+  const message = String(error?.message || '');
+  if (!silentEngine.test(message)) return error;
+  return Object.assign(
+    new Error('Toxic\'s speech engine answered with no sound. Right-click the Toxic tray icon and choose Restart engines, then try again.'),
+    { status: error?.status || 502 },
+  );
+}
 
 export class ToxicReadAloud {
   constructor({ client = null, env = process.env } = {}) {
@@ -52,7 +72,9 @@ export class ToxicReadAloud {
       progress: { phase: 'idle', percent: 0, message: '' },
       voices: [toxicVoice],
       voice: toxicVoice.id,
-      label: health ? 'Pocket TTS · via Toxic' : null,
+      // Toxic is the interface. Whatever speaks behind it is Toxic's business,
+      // so the label names only Toxic.
+      label: health ? 'Toxic' : null,
       clips: 0,
       detail: health ? `Toxic ${health.version || ''}`.trim() : 'Toxic is not running',
     };
@@ -101,7 +123,7 @@ export class ToxicReadAloud {
           this.remember(job.key, audio);
           job.resolve(audio);
         } catch (error) {
-          job.reject(error);
+          job.reject(engineFailure(error));
         } finally {
           if (this.running === job) this.running = null;
         }

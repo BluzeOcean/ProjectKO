@@ -52,7 +52,7 @@ export class MobileDictation {
     // not start a process or wait on a server the owner is not using.
     const toxicAvailable = config.provider === 'toxic' ? await this.toxicStatus() : true;
     const providers = [
-      { id: 'toxic', label: 'Toxic · local', available: toxicAvailable, detail: 'Speech to text through Toxic on your computer. Hex runs inside Toxic.' },
+      { id: 'toxic', label: 'Toxic · local', available: toxicAvailable, detail: 'Speech to text through Toxic on your computer.' },
       { id: 'local', label: 'Local Whisper · Free', available: await this.localStatus(config.local), detail: 'Runs on your computer. No API charges.' },
       { id: 'openai', label: 'OpenAI · Paid', available: !!(keys.OPENAI_API_KEY || keys.OPENAI_KEY), detail: 'Uses your OpenAI API credit.' },
       { id: 'openrouter', label: 'OpenRouter · Paid', available: !!(keys.OPENROUTER_API_KEY || keys.OPENROUTER_KEY), detail: 'Uses your OpenRouter API credit.' },

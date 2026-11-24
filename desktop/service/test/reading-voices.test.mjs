@@ -26,8 +26,8 @@ const speak = (speech, text, signal) => speech.synthesize('desktop', { voice: 't
 const until = async (check, label) => { for (let index = 0; index < 200 && !check(); index += 1) await new Promise(resolve => setTimeout(resolve, 5)); assert.ok(check(), label); };
 
 test('the one voice is Toxic, and a stopped app reads as unavailable', async () => {
-  assert.deepEqual(readingVoices, [{ id: 'toxic', label: 'Toxic · Pocket TTS' }]);
-  assert.deepEqual(toxicVoice, { id: 'toxic', label: 'Toxic · Pocket TTS' });
+  assert.deepEqual(readingVoices, [{ id: 'toxic', label: 'Toxic' }]);
+  assert.deepEqual(toxicVoice, { id: 'toxic', label: 'Toxic' });
   const stopped = new ToxicReadAloud({ client: { health: async () => null } });
   const status = await stopped.status();
   assert.equal(status.engine, 'toxic');
@@ -39,7 +39,7 @@ test('the one voice is Toxic, and a stopped app reads as unavailable', async () 
   const ready = await fake().speech.status();
   assert.equal(ready.ready, true);
   assert.equal(ready.available, true);
-  assert.equal(ready.label, 'Pocket TTS · via Toxic');
+  assert.equal(ready.label, 'Toxic');
 });
 
 test('strict synthesis inputs, and a failed engine fails only that segment', async () => {
@@ -48,6 +48,23 @@ test('strict synthesis inputs, and a failed engine fails only that segment', asy
   await assert.rejects(speak(speech, 'x'.repeat(8001)), error => error.status === 400);
   await assert.rejects(speak(speech, 'hello'), error => error.status === 502);
   speech.close();
+});
+
+test('an engine that answers with silence says what to do about it', async () => {
+  const { speech } = fake({ speak: async () => { throw Object.assign(new Error('The engine returned no audio'), { status: 502 }); } });
+  await assert.rejects(speak(speech, 'hello'), error => {
+    assert.equal(error.status, 502);
+    assert.match(error.message, /Restart engines/);
+    return true;
+  });
+  speech.close();
+  // Any other failure keeps its own words.
+  const other = fake({ speak: async () => { throw Object.assign(new Error('Toxic is not running.'), { status: 503 }); } });
+  await assert.rejects(speak(other.speech, 'hello'), error => {
+    assert.equal(error.message, 'Toxic is not running.');
+    return true;
+  });
+  other.speech.close();
 });
 
 test('segments are spoken one at a time, in order, and the same words are reused', async () => {
