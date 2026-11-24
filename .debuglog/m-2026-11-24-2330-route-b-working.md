@@ -64,8 +64,11 @@ typing it, so:
 - the chord in every other application still goes through Toxic's own hook,
   unchanged.
 
-An agent terminal submits the spoken words; a shell terminal only shows them,
-so a spoken sentence never runs itself as a command.
+The words are **inserted, never submitted**: they arrive as plain input, so
+they can be read and edited before Enter sends them. A newline in a
+transcript would submit the line, so it becomes a space. (Changed on
+2026-11-25 - see
+[m-2026-11-25-0025-insert-not-submit.md](m-2026-11-25-0025-insert-not-submit.md).)
 
 ## The checks
 

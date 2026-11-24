@@ -141,8 +141,10 @@ The chord in **every other application** is unchanged: Toxic's own hook opens
 the take and types the words there. Those words belong to that application
 and stay there - which is exactly what the watcher used to get wrong.
 
-An agent terminal submits the spoken words. A shell terminal only shows them,
-so a spoken sentence never runs itself as a command.
+The words are **inserted, never submitted**. They arrive as plain input, so
+they sit in the terminal's own line where they can be read and edited, and
+the person presses Enter. A newline inside a transcript would submit the
+line, so it becomes a space.
 
 ## The delivery: where the words land
 
