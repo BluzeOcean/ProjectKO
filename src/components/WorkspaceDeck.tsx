@@ -33,6 +33,14 @@ interface WorkspaceDeckProps {
   searching: boolean
   query: string
   offline: boolean
+  /** How many boards are put away right now. */
+  archivedCount: number
+  /** The boards that are put away, by id. A board can be in the archive
+   *  because it says so or because it has been quiet for a week. */
+  archivedIds: string[]
+  /** Whether the deck is showing the archive instead of the working boards. */
+  archiveOpen: boolean
+  onToggleArchive: () => void
 }
 
 export default function WorkspaceDeck({
@@ -43,6 +51,10 @@ export default function WorkspaceDeck({
   searching,
   query,
   offline,
+  archivedCount,
+  archivedIds,
+  archiveOpen,
+  onToggleArchive,
 }: WorkspaceDeckProps) {
   const [focusId, setFocusId] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -54,6 +66,9 @@ export default function WorkspaceDeck({
   // The board being described. A board the filter put away hands the column
   // to the first one that is still there.
   const focus = shown.find(entity => entity.id === focusId) ?? shown[0] ?? null
+  // Whether the board is in the archive, not whether its status says so: a
+  // board that has been quiet for a week is in the archive too.
+  const focusArchived = focus ? archivedIds.includes(focus.id) : false
   const steps = boards.reduce((total, entity) => total + entity.steps.length, 0)
   const lastChange = boards
     .map(entity => entity.updated ?? entity.created)
@@ -69,6 +84,22 @@ export default function WorkspaceDeck({
       await updateWorkspaceEntity(focus.id, { category })
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'The board could not be tagged. Try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  /** Puts a board away, or brings it back. The board keeps its files and its
+   *  tabs either way: only the deck and the sidebar stop showing it. */
+  async function setArchived(archived: boolean) {
+    if (!focus || saving) return
+    setSaving(true)
+    setError('')
+    try {
+      await updateWorkspaceEntity(focus.id, { status: archived ? 'archived' : 'active' })
+      setNote(<><b>{focus.title}</b> {archived ? 'archived.' : 'brought back.'}</>)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The board could not be archived. Try again.')
     } finally {
       setSaving(false)
     }
@@ -105,13 +136,25 @@ export default function WorkspaceDeck({
               </button>
             ))}
           </div>
+          {/* The boards that are put away. The toggle only appears once there
+              is something in it, so the deck stays quiet until it is used. */}
+          {archivedCount > 0 && (
+            <button
+              type="button"
+              className={`deck-archive-toggle${archiveOpen ? ' active' : ''}`}
+              aria-pressed={archiveOpen}
+              onClick={onToggleArchive}
+            >
+              {archiveOpen ? '▼ Archive' : `▶ Archived (${archivedCount})`}
+            </button>
+          )}
         </div>
       </header>
 
       <div className="deck-page">
         <section className="deck-stage">
           <div className="deck-stage-head">
-            <span className="deck-label">Boards</span>
+            <span className="deck-label">{archiveOpen ? 'Archive' : 'Boards'}</span>
             <span className="deck-stage-count">{shown.length}</span>
             {searching && <span className="deck-stage-note">matching “{query.trim()}”</span>}
             {offline && <span className="deck-offline">workspace.json unreachable</span>}
@@ -214,6 +257,20 @@ export default function WorkspaceDeck({
                 </div>
                 <div className="deck-insp-actions">
                   <a className="deck-insp-action" href={entityHash(focus.id)}>Open board</a>
+                  {/* Putting a board away is a plain thing to do, so it is a
+                      button of its own and not a corner of a dialog. */}
+                  <button
+                    type="button"
+                    className="deck-insp-archive"
+                    aria-label={focusArchived ? `Bring ${focus.title} back` : `Archive ${focus.title}`}
+                    title={isDesktop
+                      ? (focusArchived ? `Bring ${focus.title} back` : `Archive ${focus.title}`)
+                      : 'Open the desktop app to archive a board'}
+                    disabled={!isDesktop || saving}
+                    onClick={() => void setArchived(!focusArchived)}
+                  >
+                    {focusArchived ? 'Restore' : 'Archive'}
+                  </button>
                   <button
                     type="button"
                     className="deck-insp-delete"

@@ -27,18 +27,53 @@ The grid it replaced is gone: `src/components/HomeGrid.tsx` and
 ## The shape of the page
 
 - **Banner** — "Vaultspace" in Fraunces, a pink **+ New board** on the right, and the
-  genre filter group on the banner's bottom row.
-- **Stage** — a "Boards" label with a count, the thumbnail gallery
+  genre filter group on the banner's bottom row, with "Archived (N)" at the far
+  end of that row once the archive holds something.
+- **Stage** — a "Boards" label with a count ("Archive" while the archive is
+  open), the thumbnail gallery
   (`repeat(auto-fill, 92px)`; 92px is the narrowest cell that still breaks every
   board name into two lines), and a bottom band.
 - **Inspector** — a column on the right: title, date, description, the current
   tag with its assign pills, the facts (status, updated, created, folder) and an
-  action row: "Open board" with a bin on its right. Its width is a share of the
-  deck (`clamp(260px, 36%, 420px)`), not a fixed 400px, so the board list keeps
-  the room the facts do not need.
+  action row: "Open board", "Archive" and a bin on its right. Its width is a
+  share of the deck (`clamp(260px, 36%, 420px)`), not a fixed 400px, so the board
+  list keeps the room the facts do not need.
 
 The bottom band carries workspace-level facts only (`4 boards · 18 steps · last
 change 2026-10-20`). The inspector carries facts, not cards.
+
+## Putting a board away
+
+Archiving is not new — a board has carried the status `archived` since the
+start, the deck hides those boards and the sidebar has a "Show archive (N)"
+toggle. But in the Vaultspace it was buried: the only way in was the tiny
+status dot in the inspector, which opens a dialog where "Archived" is one of
+three options, and the one place that listed the archive was the sidebar, which
+is collapsed by default in the deck. The owner asked for an archive option in
+the Vaultspace on 2026-11-25.
+
+**Where the button lives.** "Archive" sits in the inspector's action row,
+between "Open board" and the bin — the same row, the same height, in the quiet
+clothes of the way in. Pink stays for the way in and red for the bin; archiving
+is neither, so it wears the border of "Open board".
+
+**The archive is a list of its own.** The deck shows one list at a time: the
+working boards, or the archive. "Archived (N)" at the far end of the tag row
+switches to it, and the stage label changes from "Boards" to "Archive". The
+toggle only appears once there is something in it, so the deck stays quiet
+until it is used.
+
+**Putting a board away keeps its files.** Archiving writes the status
+`archived` through the same PATCH endpoint the tag uses; the board's folder,
+steps and media stay where they are. "Restore" brings it back to `active` in
+one click.
+
+**The empty archive is not a dead end.** When the last board is restored, the
+deck goes back to the working boards by itself (`App.tsx` closes the archive
+view when nothing is left in it), and the restored board is there.
+
+**The status dialog still offers Archived.** The Archive button and the status
+dot are two ways to the same thing; the dialog keeps its three options.
 
 ## Deleting a board
 
@@ -108,6 +143,11 @@ the files are already correct at that point — only the list is behind.
   mock's tile has no chip. The inspector's focus follows the board you point at and
   falls back to the first shown board; a re-sort can move that default, which is why
   the UI tests hover the tile first.
+- **The archive is a view of its own, not a filter on the working list.** The deck
+  shows the working boards or the archive, never both. The sidebar's "Show archive
+  (N)" keeps its own meaning — it adds the archived boards to the sidebar list —
+  because a sidebar that shows only archived boards would be a strange thing to
+  look at.
 - **The genre list holds the categories present among the visible boards,** in deck
   order. The filter narrows the tiles; the band still describes the whole set.
 - **The inspector follows the deck, not the window.** `.deck-page` is a size
@@ -144,6 +184,14 @@ widths with the Files panel open and checks that the inspector gives room back
 as the deck narrows, leaves when the deck cannot carry it, that the board list
 never scrolls sideways, and that the files tree calls the project folder
 **PROJECT-KO**.
+
+The archive has its own:
+`desktop/service/test/deck-archive-ui.mjs` drives the real UI and checks that
+the deck says nothing about an empty archive, that "Archive" beside "Open
+board" puts a board away in one click and leaves its files alone, that
+"Archived (1)" opens the archive in the deck, that "Restore" brings the board
+back, that the empty archive is not a dead end, and that the status dialog
+still offers "Archived".
 
 The port was also looked at in the shipping build, served by an isolated service
 against a throwaway Workspace: the bin sits 8px to the right of "Open board" on

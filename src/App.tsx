@@ -21,12 +21,17 @@ const lastTouched = (e: WorkspaceEntity) => e.updated ?? e.created
 const statusRank = (e: WorkspaceEntity) => (e.status === 'active' ? 0 : 1)
 const byFreshness = (a: WorkspaceEntity, b: WorkspaceEntity) =>
   lastTouched(b).localeCompare(lastTouched(a)) || statusRank(a) - statusRank(b)
+// A board is put away when it says so, or when it has been quiet for a week.
+// A pinned board and a starter board are never put away by the date rule.
+const isArchived = (e: WorkspaceEntity, cutoff: string) =>
+  e.status === 'archived' || (!e.pinned && !e.sample && lastTouched(e) < cutoff)
 
 export default function App() {
   const { workspace, offline, lastSync, reload } = useWorkspace()
   const [route, setRoute] = useState<Route>(parseHash)
   const [query, setQuery] = useState('')
   const [showArchived, setShowArchived] = useState(false)
+  const [archiveWanted, setArchiveWanted] = useState(false)
   const [genre, setGenre] = useState('all')
   const [collapsed, setCollapsed] = useState(
     () => isDesktop || localStorage.getItem('mak.sidebarCollapsed') === '1',
@@ -39,6 +44,19 @@ export default function App() {
 
   const entities = workspace?.entities ?? []
   const entity = entities.find(e => e.id === route.id) ?? null
+
+  // The archive: the boards that are put away. The view closes itself when
+  // the archive is empty, so it is never a dead end. The state is adjusted
+  // while rendering and not in an effect, so the deck never paints an empty
+  // archive.
+  const cutoff = archiveCutoff()
+  const archivedCount = entities.filter(e => isArchived(e, cutoff)).length
+  const [lastArchiveCount, setLastArchiveCount] = useState(archivedCount)
+  if (archivedCount !== lastArchiveCount) {
+    setLastArchiveCount(archivedCount)
+    if (archivedCount === 0) setArchiveWanted(false)
+  }
+  const archiveOpen = archiveWanted && archivedCount > 0
 
   const stepIndex = entity
     ? resolveStep(entity.steps.length, route.step, entity.defaultStep)
@@ -99,12 +117,10 @@ export default function App() {
 
   const q = query.trim().toLowerCase()
   const searching = q.length > 0
-  const cutoff = archiveCutoff()
   // An explicit `archived` status always wins, so a card can be put away by hand
   // while it is still inside the 7-day window. Otherwise it is the date rule,
   // which `pinned` overrides in the other direction.
-  const isArchived = (e: WorkspaceEntity) =>
-    e.status === 'archived' || (!e.pinned && !e.sample && lastTouched(e) < cutoff)
+  const putAway = (e: WorkspaceEntity) => isArchived(e, cutoff)
   const matchesQuery = (e: WorkspaceEntity) =>
     !searching ||
     [e.title, e.description, e.category, e.id].some(s => s && s.toLowerCase().includes(q))
@@ -112,16 +128,21 @@ export default function App() {
   // Search digs through everything, archive included; otherwise the
   // archive stays hidden behind the toggle.
   const visible = entities.filter(
-    e => matchesQuery(e) && (searching || showArchived || !isArchived(e)),
+    e => matchesQuery(e) && (searching || showArchived || !putAway(e)),
   )
-  const archivedCount = entities.filter(isArchived).length
 
   const pinned = visible.filter(e => e.pinned).sort(byFreshness)
   const rest = visible.filter(e => !e.pinned).sort(byFreshness)
   // The deck shows the boards themselves: the pinned ones first, then the
   // freshest. The genre filter groups them, it does not rearrange them.
   const boards = [...pinned, ...rest]
-  const genres = [...new Set(boards.map(e => e.category || 'other'))]
+  // The archive is a list of its own: the boards that are put away, so they
+  // can be found and brought back from the Vaultspace itself.
+  const archive = entities.filter(putAway).sort(byFreshness)
+  const archivedIds = archive.map(entity => entity.id)
+  // The deck shows one list at a time: the working boards, or the archive.
+  const deckBoards = archiveOpen ? archive.filter(e => matchesQuery(e)) : boards
+  const genres = [...new Set(deckBoards.map(e => e.category || 'other'))]
   // A genre that no board carries any more falls back to the whole deck.
   const activeGenre = genre === 'all' || genres.includes(genre) ? genre : 'all'
   // Category grouping is for the short working set only. With the archive open or a
@@ -192,13 +213,17 @@ export default function App() {
             <Suspense fallback={<div className="boot"><PkoLogo size={56} animated={false} /></div>}><ReportViewer key={reportUrl} url={reportUrl} title={step?.name ?? entity.title} relativePath={`workspace/${entity.folder}/${step?.path}`} /></Suspense>
           ) : (
             <WorkspaceDeck
-              boards={boards}
+              boards={deckBoards}
               genres={genres}
               genre={activeGenre}
               onGenre={setGenre}
               searching={searching}
               query={query}
               offline={offline}
+              archivedCount={archivedCount}
+              archivedIds={archivedIds}
+              archiveOpen={archiveOpen}
+              onToggleArchive={() => setArchiveWanted(v => !v)}
             />
           )}
           </ReportBoundary>
