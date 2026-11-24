@@ -36,22 +36,19 @@ fix is written up in the Toxic ticket, committed `32229ce`.
 
 ## The test
 
-**Two presses by the owner, in the Project KO chatspace terminal, with nothing
-dictating.** The variable is the *speed* of the chord; the window stays the
-same.
+**Two presses by the owner, one in each of two windows, with nothing
+dictating.** Toxic was restarted at 19:18:41 (pid 36488), so its hook starts
+from a clean state and its log starts empty. The trace is the judge.
 
-1. **Slow:** hold `Ctrl`, wait about half a second, then press `T`. The
-   listening bar should appear - the asynchronous state has caught up, and the
-   chord matches.
-2. **Fast:** press `Ctrl+T` as one quick movement. The bar should **not**
-   appear - the asynchronous state is still a batch behind, the chord is
-   refused, and, today, the refusal leaves no log line at all.
+1. **In the Project KO chatspace terminal:** press plain `Ctrl+T`.
+2. **In this MiniMax Code window** (or any other application): press plain
+   `Ctrl+T`.
 
-| What happens | What it means | What to do next |
+| What the trace shows | What it means | What to do next |
 | --- | --- | --- |
-| Slow works, fast does not | **The asynchronous lag is the cause.** The ticket is right. | Hand the ticket to the Toxic agent; the acceptance test in it is exactly this pair of presses. |
-| Both work | The cause is intermittent, not the press speed. | Re-open the root cause. The trace in the Logs view is the tool now, and it must be read with `__TAURI_INTERNALS__`, not `__TAURI__`. |
-| Neither works | The cause is something else and the ticket is wrong. | Correct the ticket before the Toxic agent works on it. |
+| Both presses traced, the first with `front projectko.exe "Project KO — Chats"` | The hook sees the Project KO window after a restart. The old process was dead or poisoned. | Find what kills the hook, and why a stale mask refuses the chord. |
+| Only the second press traced | The hook is blind to the Project KO window: those key events never entered the input pipeline. | The keys are reaching the web view without going through the operating system's keyboard path. Check whether the events are trusted, and whether Project KO injects them itself. |
+| Neither traced | The hook is not installed or not called at all. | Restart Toxic and check the keepalive: it logs every removal, and nothing is in the log. |
 
 **Rules for this test:** nothing dictating (no take in progress, the agent app
 idle). Report what happened for each press, and the clock time.

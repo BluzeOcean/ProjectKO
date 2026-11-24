@@ -303,3 +303,57 @@ in the Toxic repo, committed `32229ce`.**
 Slow works and fast does not -> the asynchronous lag is the cause, and the
 ticket is right. If the slow press also fails, the root cause is elsewhere and
 the ticket must be corrected before the Toxic agent works on it.
+
+### 2026-11-24 19:14:52 - the owner ran the test: neither press worked
+
+Three presses in the chatspace terminal, from the probe's own log:
+
+```
+19:14:52.696 | keydown code=84 key=t ctrl=1 shift=0 alt=0 composing=0   (fast)
+19:14:52.844 | keyup   code=84 key=t ctrl=0
+
+19:15:11.781 | keydown code=17 key=Control ctrl=1 shift=0 alt=0 composing=0
+19:15:15.718 | keydown code=84 key=t ctrl=1 shift=0 alt=0 composing=0      (slow)
+19:15:15.918 | keyup   code=84 key=t ctrl=1
+19:15:16.382 | keyup   code=17 key=Control ctrl=0
+
+19:15:19.846 | keydown code=17 key=Control ctrl=1 shift=0 alt=0 composing=0
+19:15:19.902 | keydown code=84 key=t ctrl=1 shift=0 alt=0 composing=0      (56 ms)
+19:15:20.158 | keyup   code=17 key=Control ctrl=0
+```
+
+**No take, no HUD and no log line for any of them.** The slow press held the
+modifier for **3.9 seconds**.
+
+**The asynchronous-lag hypothesis is disproved.** With the modifier held for
+3.9 seconds, `GetAsyncKeyState(VK_CONTROL)` cannot still read "up": the
+asynchronous state is many batches old by then. The chord would have matched,
+the take would have started, and the line would exist.
+
+**And the masks are ruled out too.** The owner held `Ctrl` alone
+(`shift=0 alt=0`), so the expected mask is exactly what the chord asks for. A
+refusal that leaves no line needs `check.tracked.any() || check.live.any()` to
+be false - both masks empty - which means **the hook never saw the modifier
+key-down either**.
+
+**So the hook is not called for the keys that go into the Project KO window.**
+A `WH_KEYBOARD_LL` hook is global and is called for every physical key, so
+either the hook was not installed at that moment, or **those key events never
+entered the input pipeline** and reached the web view another way.
+
+Toxic was restarted at 19:18:41 (pid 36488) so the hook starts clean, and the
+ticket was corrected in the same breath (commit `98b287f`) so the Toxic agent
+cannot build a fix that the measurement has disproved.
+
+### 2026-11-24 19:17 - the ticket files were deleted from the working tree
+
+Both files under `V:\04_Projects\Toxic\ticket\` disappeared between 19:06 (my
+last commit) and 19:19, with the folder's timestamp at **19:17:11**. Nothing
+in this session removed them: the only delete this session ran was the
+`mavis-trash` call for `.cache\toxic-ticket-commit.txt`, which reported one
+file moved, and the runtime trash holds no ticket. The `.codegraph` folder in
+that repo was last touched at 13:19, so it was not involved, and the Toxic
+workspace session has been idle since 18:12.
+
+**Nothing was lost**: both files were restored from commit `32229ce` with
+`git checkout -- ticket/`. The working tree is clean again.
