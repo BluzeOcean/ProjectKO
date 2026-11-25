@@ -189,3 +189,74 @@ Two ways to do it. Pick one, and say which in the commit:
   service-side change needs a rebuild to reach the running instance.
 - Commit with a clear message and report the hash. The owner's standing
   permission to commit applies to a tested change.
+
+---
+
+## Investigation, 2026-11-26 03:00 — Claude Code
+
+**The defect is real and it is broader than this ticket says.** The working
+log is in `.debuglog/board-files-resolve-against-the-repository-not-the-vault/`,
+with three re-runnable measurement scripts in it. The running app was never
+disturbed: every measurement used a service instance of its own, started
+against a throwaway state directory so `.mrmak/settings.json` was untouched.
+
+**Measured.**
+
+| What | Result |
+| --- | --- |
+| The UI's URL for a board file outside the repository | **404** — `ENOENT ... realpath '<repo>/workspace/<board>/<file>'` |
+| The service's URL (`files.url()`) for the same file | **200** — the board's own HTML |
+| The Markdown preview on the UI's path | **400** — the same ENOENT |
+| Cards | **200** — they resolve against the Vault |
+| The default Vault | `files.url()` gives a URL **byte-identical** to the one the UI builds today |
+
+So the HTML failure this ticket could only read from the code is now observed,
+and the service's own builder is safe to build the fix on: for the default
+Vault it produces the same grant token and the same path as today.
+
+### Two corrections
+
+1. **The path in the reported error can no longer be reproduced on that
+   board.** It was restructured on 2026-11-25: its steps are `board.html` plus
+   ten `.card.json` files, and `prototype.md` no longer exists. The defect
+   behind the error is unchanged and is reproduced with a controlled fixture —
+   a board with an `.html` step and a `.md` step in a Vault outside the
+   repository — where both fail through the UI's URL and both succeed through
+   the service's.
+
+2. **Three boards appear to work only by accident.** `my-dream-game`,
+   `creative-mcp` and `arachne-character` have stale copies of their folders
+   in `<repo>/workspace/`, byte-identical to the Vault's. They are ordinary
+   directories, not junctions, and the Vault's registry is what the service
+   reads. The Epic Game Jam board has no such copy, which is why it is the one
+   that fails. The copies mask the defect; they are not a fix, and the rule
+   above against moving boards back into `workspace/` stands.
+
+Also: `contentBase` is at `desktop/service/server.mjs:335`, not 322.
+
+### One symptom this ticket does not mention: the images inside a card
+
+A card's document opens — it comes through an API route that resolves against
+the Vault — but its **images** resolve against the card's report URL
+(`src/components/CardContent.tsx:31`) and come back **404**. On the real Vault
+this hits the Epic Game Jam board's Gallery card, whose three entries point at
+`media/devlog-screenshots/*.png`. Whoever fixes this must fix that too, or the
+Gallery of a Vault board shows empty pictures.
+
+### A correction to option (a)
+
+The UI holds exactly one grant — `contentBase` is the **repository's** — and
+the token for a second root is a secret the service holds. The UI therefore
+**cannot mint a Vault-rooted URL on its own**. Option (a) needs the service to
+hand the UI a Vault-rooted base (or the vault grant) as well as the Vault
+root. The three shapes that work are set out in the log's `open-questions.md`.
+
+### Still open
+
+- The choice of shape: a board base in the state, or the service owning board
+  URLs. This is the owner's call, and the ticket asks that it be named in the
+  commit.
+- Whether the fix should mint a grant for one board rather than for the whole
+  Vault.
+- The stale copies under `<repo>/workspace/`: leave them until the fix is in,
+  then decide.
