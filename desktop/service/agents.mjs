@@ -98,7 +98,7 @@ export function codexSupportsNoDaemon(env = process.env) {
 
 const dshBridge = fileURLToPath(new URL('./dsh-bridge.mjs', import.meta.url));
 
-export function terminalCommand(agent, { bypass = false, resumeId, nativeId, effort, opencodeMajor = 1, antigravityLog, initialPrompt, readDir, noDaemon = false, dshLog, dshModel = 'deepseek-v4-flash', permissionMode } = {}) {
+export function terminalCommand(agent, { bypass = false, resumeId, nativeId, effort, opencodeMajor = 1, antigravityLog, initialPrompt, readDir, noDaemon = false, dshLog, dshModel = 'deepseek-v4-flash', permissionMode, briefing = null } = {}) {
   if (!AGENTS.some(item => item.id === agent)) throw new Error('Unknown agent');
   resumeId = nativeConversationId(resumeId); nativeId = nativeConversationId(nativeId);
   initialPrompt = initialPromptArgument(initialPrompt);
@@ -114,6 +114,10 @@ export function terminalCommand(agent, { bypass = false, resumeId, nativeId, eff
     if (permissionMode) bridgeArgs.push('--permission', permissionMode);
     if (bypass) bridgeArgs.push('--allow');
     if (initialPrompt) bridgeArgs.push('--initial', initialPrompt);
+    // The briefing travels as a file: the bridge hands it to the harness prompt when
+    // it can, and falls back to the first message when it cannot.
+    if (briefing?.file) bridgeArgs.push('--briefing', briefing.file);
+    if (briefing?.overlay) bridgeArgs.push('--overlay', briefing.overlay);
     return { file: process.execPath, args: bridgeArgs };
   }
   const command = agent === 'shell' ? shellCommand() : { file: commandPath(AGENTS.find(item => item.id === agent).command), args: [] };
@@ -138,7 +142,13 @@ export function terminalCommand(agent, { bypass = false, resumeId, nativeId, eff
     else if (nativeId) args.push('--session-id', nativeId);
     if (bypass) args.push('--dangerously-skip-permissions');
     if (effort) args.push('--effort', effort);
-    if (readDir) args.push('--add-dir', readDir);
+    // The briefing is a file: the CLI reads it and refuses to start when it is not
+    // there, so the service writes it before the launch. It points at the app
+    // repository, which the chat may then read.
+    if (briefing?.file) args.push('--append-system-prompt-file', briefing.file);
+    // --add-dir takes every following argument, so it comes last.
+    const directories = [briefing?.repo, readDir].filter(Boolean);
+    if (directories.length) args.push('--add-dir', ...directories);
   } else if (agent === 'antigravity') {
     if (resumeId && !validAntigravityId(resumeId)) throw new Error('Use the Antigravity conversation UUID from its /resume picker.');
     if (resumeId) args.push('--conversation', resumeId);

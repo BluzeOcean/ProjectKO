@@ -17,7 +17,7 @@
  */
 
 import { spawn } from 'node:child_process';
-import { appendFileSync, mkdirSync } from 'node:fs';
+import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createInterface } from 'node:readline';
 
@@ -37,6 +37,13 @@ const sessionId = String(args.get('session') || `session-${Date.now().toString(3
 const allow = args.get('allow') === true;
 const permission = typeof args.get('permission') === 'string' ? args.get('permission') : null;
 
+// The briefing: a file of text, and the overlay that carries it into the harness
+// prompt. The overlay is the harness's own channel; when the harness refuses it,
+// the briefing is sent as the first message instead.
+const briefingFile = typeof args.get('briefing') === 'string' ? String(args.get('briefing')) : '';
+const overlayFile = typeof args.get('overlay') === 'string' ? String(args.get('overlay')) : '';
+const briefingText = briefingFile ? readFileSync(briefingFile, 'utf8').trim() : '';
+
 const dim = text => `\x1b[2m${text}\x1b[0m`;
 const say = text => process.stdout.write(`${text}\r\n`);
 
@@ -50,13 +57,43 @@ const record = event => {
 // the approval policy, so the chat starts in the mode the picker shows.
 const env = { ...process.env };
 if (permission) env.DSH_PERMISSION_MODE = permission;
-const child = process.platform === 'win32'
-  ? spawn('cmd.exe', ['/c', launcher, '--profile', 'sdk'], { cwd, env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
-  : spawn(launcher, ['--profile', 'sdk'], { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
 
-child.stderr.on('data', () => { /* Startup diagnostics stay out of the chat. */ });
-child.on('error', error => { say(`\x1b[31mdsh could not start: ${error.message}\x1b[0m`); process.exit(1); });
-child.on('exit', code => { if (code !== 0) say(dim(`dsh exited (${code}).`)); process.exit(code ?? 0); });
+let child = null;
+let overlayInUse = Boolean(overlayFile && briefingText);
+let briefingPending = '';
+let greeted = false;
+let handshaken = false;
+let generation = 0;
+
+function spawnHarness(withOverlay) {
+  const harness = ['--profile', 'sdk'];
+  if (withOverlay && overlayFile) harness.push('--patch', overlayFile);
+  const next = process.platform === 'win32'
+    ? spawn('cmd.exe', ['/c', launcher, ...harness], { cwd, env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true })
+    : spawn(launcher, harness, { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
+  next.stderr.on('data', () => { /* Startup diagnostics stay out of the chat. */ });
+  next.on('error', error => { say(`\x1b[31mdsh could not start: ${error.message}\x1b[0m`); process.exit(1); });
+  next.on('exit', code => {
+    // A patch the harness refuses kills it before it starts. The briefing then
+    // goes in as the first message, which always works. A harness that did start
+    // and died later is a different thing: the chat simply ends.
+    if (overlayInUse && briefingText && !handshaken) {
+      overlayInUse = false;
+      briefingPending = briefingText;
+      say(dim('The harness would not take the briefing as a prompt; it is sent as the first message.'));
+      child = spawnHarness(false);
+      begin();
+      return;
+    }
+    for (const waiter of pending.values()) waiter.reject(new Error('The harness stopped.'));
+    pending.clear();
+    if (code !== 0) say(dim(`dsh exited (${code}).`));
+    process.exit(code ?? 0);
+  });
+  const frames = createInterface({ input: next.stdout });
+  frames.on('line', line => handleFrame(line));
+  return next;
+}
 
 let nextId = 0;
 const pending = new Map();
@@ -70,8 +107,7 @@ const request = (method, params) => new Promise((resolve, reject) => {
   send({ jsonrpc: '2.0', id, method, params });
 });
 
-const frames = createInterface({ input: child.stdout });
-frames.on('line', line => {
+function handleFrame(line) {
   let message;
   try { message = JSON.parse(line); } catch { return; }
   if (message.id !== undefined && !message.method) {
@@ -97,7 +133,7 @@ frames.on('line', line => {
     awaitingApproval = { id: message.id, sessionId: asked };
     return;
   }
-});
+}
 
 // What the terminal shows. The conversation view reads the log instead; this
 // is the same story in one voice, for anyone who prefers the scrollback.
@@ -159,15 +195,28 @@ lines.on('close', finish);
 process.on('SIGINT', finish);
 process.on('SIGTERM', finish);
 
-async function start() {
-  await request('initialize', { cwd, provider: 'deepseek-official', model, approvalRequests: true, capabilities: { userQuestions: false } });
-  if (args.get('session')) {
-    // A stored chat adopts its session; an unknown id is simply a new one.
-    await request('session/resume', { sessionId }).catch(() => {});
+async function begin() {
+  const mine = ++generation;
+  try {
+    await request('initialize', { cwd, provider: 'deepseek-official', model, approvalRequests: true, capabilities: { userQuestions: false } });
+    handshaken = true;
+    if (args.get('session')) {
+      // A stored chat adopts its session; an unknown id is simply a new one.
+      await request('session/resume', { sessionId }).catch(() => {});
+    }
+    if (!greeted) { greeted = true; say(dim(`DeepSeek Harness · ${model}`)); }
+    const initial = args.get('initial');
+    if (typeof initial === 'string' && initial.trim()) await submit(initial);
+    // The briefing the harness could not take as a prompt arrives as the first
+    // message. It is recorded, so the conversation shows what the agent was told.
+    if (briefingPending) { const text = briefingPending; briefingPending = ''; await submit(text); }
+  } catch (error) {
+    // A newer start took over: this attempt is stale and its failure is not news.
+    if (mine !== generation) return;
+    say(`\x1b[31m${error.message}\x1b[0m`);
+    process.exit(1);
   }
-  say(dim(`DeepSeek Harness · ${model}`));
-  const initial = args.get('initial');
-  if (typeof initial === 'string' && initial.trim()) await submit(initial);
 }
 
-start().catch(error => { say(`\x1b[31m${error.message}\x1b[0m`); process.exit(1); });
+child = spawnHarness(overlayInUse);
+begin();

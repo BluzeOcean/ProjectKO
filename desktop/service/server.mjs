@@ -11,6 +11,7 @@ import { importFile, dragFiles, moveFile, recyclePath, MAX_FILE_BYTES } from './
 import { inventory } from './agents.mjs';
 import { Attachments, attachmentText, MAX_IMAGE_BYTES } from './attachments.mjs';
 import { ContextLibrary } from './context.mjs';
+import { Briefing } from './briefing.mjs';
 import { groupLabel, taskTitle } from './titles.mjs';
 import { defaultWorkerEffort, taskEffort, workerEfforts } from './effort.mjs';
 import { Workspace, localDay, metadataPatch } from './workspace.mjs';
@@ -51,7 +52,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const environment = parseEnv(await readFile(path.join(repo, '.env'), 'utf8').catch(() => ''));
   const settingsPath = path.join(stateDir, 'settings.json');
   const savedSettings = await readJson(settingsPath, null);
-  let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, dshPermissionMode: 'workspace-write', readAloudSpeed: 1, readAloudVoice: '', terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', ...savedSettings };
+  let settings = { defaultAgent: 'codex', defaultBypass: false, defaultEffort: defaultWorkerEffort, coordinatorModel: environment.MRMAK_COORDINATOR_MODEL?.trim() || null, dshPermissionMode: 'workspace-write', readAloudSpeed: 1, readAloudVoice: '', terminalFontSize: 13, terminalAppearance: 'original', workspaceTheme: 'dark', coordinatorEffort: 'medium', voiceName: 'cedar', voiceStyle: defaultVoiceStyle, handoffAfter: 40, quotaRefreshMinutes: 5, groupTabsByProject: false, projectOrder: [], systemEvents: 'compact', workerBriefing: true, ...savedSettings };
   // The dictation probe is a diagnostic, not product behaviour. A development
   // build records by default - a measurement that is never taken cannot be read
   // - but a release build records nothing until an agent asks for it, so the
@@ -126,6 +127,18 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const selection = new Selection({ cards, changed: value => broadcast('board-selection', { selection: value }) });
   // The chat a board remembers, so a hand-off always lands in the same place.
   const boardAgents = new BoardAgents({ vault, cards, sessions, settings: () => settings, focus });
+  // The briefing every worker chat starts with. The setting is read at launch, so
+  // turning it off stops the briefing for every later launch, including chats
+  // that are resumed later.
+  const briefing = new Briefing({
+    repo, stateDir,
+    vaultRoot: () => vault.root,
+    boards: async () => (await workspace.registry()).entities,
+    enabled: () => settings.workerBriefing !== false,
+  });
+  sessions.briefing = briefing;
+  // The briefing files of chats that no longer exist are removed at startup.
+  await briefing.prune(sessions.list().map(item => item.id));
   const history = query => sessions.list().filter(item => !query || `${item.name} ${item.agent} ${item.cwd} ${item.preview || ''}`.normalize('NFC').toLowerCase().includes(query.normalize('NFC').toLowerCase())).sort((a, b) => Number(b.pinned) - Number(a.pinned) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
   const closeChat = async id => {
     await sessions.remove(id);
@@ -411,6 +424,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
           if (Number.isInteger(data.terminalFontSize) && data.terminalFontSize >= 10 && data.terminalFontSize <= 24) settings.terminalFontSize = data.terminalFontSize;
           if (['focus', 'original'].includes(data.terminalAppearance)) settings.terminalAppearance = data.terminalAppearance;
           if (typeof data.terminalOptionMeta === 'boolean') settings.terminalOptionMeta = data.terminalOptionMeta;
+          if (typeof data.workerBriefing === 'boolean') settings.workerBriefing = data.workerBriefing;
           if (Number.isInteger(data.handoffAfter) && (data.handoffAfter === 0 || (data.handoffAfter >= 10 && data.handoffAfter <= 500))) settings.handoffAfter = data.handoffAfter;
           if ([1, 3, 5, 10, 15, 30].includes(data.quotaRefreshMinutes)) settings.quotaRefreshMinutes = data.quotaRefreshMinutes;
           if (permissionModes.includes(data.dshPermissionMode)) settings.dshPermissionMode = data.dshPermissionMode;

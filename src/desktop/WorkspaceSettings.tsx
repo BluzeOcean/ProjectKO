@@ -167,6 +167,8 @@ export default function WorkspaceSettings({ onClose }: { onClose: () => void }) 
               'Sends Meta shortcuts to the CLI. When off, Option types your keyboard layout\'s characters, such as @ or #.')]
           : []),
         row('Bypass CLI permissions', toggleSwitch(settings.defaultBypass, enabled => void change({ defaultBypass: enabled })), 'Default for new chats.'),
+        row('Brief worker chats', toggleSwitch(settings.workerBriefing !== false, enabled => void change({ workerBriefing: enabled })),
+          'Every chat Project KO starts begins with a short briefing: that this is a Project KO project, where the Vault and the app are, and which module to read before acting. Turn it off to start a chat with nothing added.'),
       ],
     },
     {

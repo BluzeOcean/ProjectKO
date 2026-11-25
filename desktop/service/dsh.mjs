@@ -1,4 +1,7 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import path from 'node:path';
 
 /**
@@ -11,6 +14,8 @@ import path from 'node:path';
  * no network, nothing to keep in step with the harness beyond the event names
  * a session already reports.
  */
+
+const run = promisify(execFile);
 
 // The three presets the harness ships and the desktop app offers, in the order
 // the app shows them: what the chat may read, write, and do without asking.
@@ -129,3 +134,100 @@ export function readRecords(file) {
 }
 
 export const dshLogPath = (stateDir, id) => path.join(stateDir, 'dsh', `${id}.jsonl`);
+
+// ── The briefing channel ────────────────────────────────────────────────────
+// The harness assembles one system prompt per model step. Its `system-prompt`
+// plugin owns the persona slots, and a patch entry can fill the suffix slot.
+// The loader applies a patch to the running tree exactly as `--dump-config`
+// prints it, so the dump is the proof that a patch took.
+
+export const overlayPath = (stateDir, id) => path.join(stateDir, 'dsh', `briefing-${id}.patch.yml`);
+
+const DEFAULT_PERSONA = 'You are a coding agent powered by the {{model}} model.';
+
+/** The persona prefix the harness profile carries, read from its own dump. */
+export function personaFromDump(dump) {
+  const lines = String(dump || '').split(/\r?\n/);
+  let inRow = false;
+  for (const line of lines) {
+    if (/^\s*-\s+id:\s*system-prompt\s*$/.test(line)) { inRow = true; continue; }
+    if (inRow && /^\s*-\s+id:/.test(line)) break;
+    if (!inRow) continue;
+    const match = /^\s*personaPrefix:\s*(.+?)\s*$/.exec(line);
+    if (!match) continue;
+    const value = match[1];
+    return /^['"]/.test(value) ? value.replace(/^['"]|['"]$/g, '') : value;
+  }
+  return null;
+}
+
+/**
+ * The patch that gives the harness the briefing as a persona suffix. A patch
+ * replaces the whole config of the row it targets, so the persona prefix the
+ * profile already carries is restated. The persona strings are `{{variable}}`
+ * templates that fail on an unknown group, so the briefing is made literal.
+ */
+export function dshOverlay(text, personaPrefix = DEFAULT_PERSONA) {
+  const safe = String(text || '').replace(/\{\{([\s\S]*?)\}\}/g, '{ {$1} }');
+  const body = safe.split(/\r?\n/).map(line => `      ${line}`).join('\n');
+  return [
+    '- id: system-prompt',
+    "  name: '@deepseek-ai/dsh-system-prompt'",
+    '  config:',
+    `    personaPrefix: ${JSON.stringify(personaPrefix)}`,
+    '    personaSuffix: |-',
+    body,
+    '',
+  ].join('\n');
+}
+
+/** Run the launcher and return what it printed. */
+export async function dshProfile(env = process.env, args = []) {
+  const launcher = dshCli(env);
+  if (!launcher) return '';
+  const windows = process.platform === 'win32';
+  const file = windows ? 'cmd.exe' : launcher;
+  const argv = windows ? ['/c', launcher, ...args] : args;
+  const { stdout } = await run(file, argv, { env, windowsHide: true, timeout: 60000, maxBuffer: 8 * 1024 * 1024 }).catch(error => ({ stdout: error.stdout || '' }));
+  return stdout;
+}
+
+/**
+ * Whether the harness can take the briefing in its own prompt, and the persona
+ * it keeps. Probed once per machine and cached: the dump is boot-free, so the
+ * probe costs no model call.
+ */
+export async function dshBriefingChannel(env = process.env, stateDir) {
+  const cache = path.join(stateDir, 'dsh-briefing.json');
+  const cached = JSON.parse(await readFile(cache, 'utf8').catch(() => 'null'));
+  if (cached && typeof cached.persona === 'string') return cached;
+  if (cached && cached.ok === false) return null;
+  const dump = await dshProfile(env, ['--profile', 'sdk', '--dump-config']);
+  const persona = personaFromDump(dump);
+  if (!persona) {
+    await writeFile(cache, JSON.stringify({ ok: false }), 'utf8').catch(() => {});
+    return null;
+  }
+  // The proof: a patch that carries a marker must show it in the composed tree.
+  const marker = 'pko-briefing-probe';
+  const sample = path.join(stateDir, 'dsh-briefing-probe.patch.yml');
+  await mkdir(stateDir, { recursive: true });
+  await writeFile(sample, dshOverlay(marker, persona), 'utf8').catch(() => {});
+  const patched = await dshProfile(env, ['--profile', 'sdk', '--dump-config', '--patch', sample]);
+  await rm(sample, { force: true }).catch(() => {});
+  if (!patched.includes(marker)) {
+    await writeFile(cache, JSON.stringify({ ok: false }), 'utf8').catch(() => {});
+    return null;
+  }
+  const result = { persona };
+  await writeFile(cache, JSON.stringify(result), 'utf8').catch(() => {});
+  return result;
+}
+
+/** Write the overlay that carries one chat's briefing into the harness prompt. */
+export async function writeBriefingOverlay(stateDir, id, text, persona) {
+  const file = overlayPath(stateDir, id);
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, dshOverlay(text, persona), 'utf8');
+  return file;
+}

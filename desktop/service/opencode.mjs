@@ -24,7 +24,7 @@ export async function opencodeVersion(env) {
   return versions.get(key);
 }
 
-export function opencodeEnvironment(env, { stateDir, session, major, launchId = randomUUID() }) {
+export function opencodeEnvironment(env, { stateDir, session, major, launchId = randomUUID(), briefing = null }) {
   if (session.nativeId && !validSessionId(session.nativeId)) throw new Error('Use an OpenCode session ID starting with ses_.');
   let config;
   try { config = env.OPENCODE_CONFIG_CONTENT ? JSON.parse(env.OPENCODE_CONFIG_CONTENT) : {}; }
@@ -33,9 +33,14 @@ export function opencodeEnvironment(env, { stateDir, session, major, launchId = 
   const key = major >= 2 ? 'plugins' : 'plugin';
   if (config[key] !== undefined && !Array.isArray(config[key])) throw new Error(`OpenCode ${key} must be an array.`);
   const plugin = new URL(major === 2 ? './opencode/v2/' : './opencode/v1.mjs', import.meta.url).href;
+  // The briefing is an instruction file: OpenCode reads the configured list and
+  // sends it with the request. The owner's own instructions are kept.
+  const instructions = [...(Array.isArray(config.instructions) ? config.instructions : []), ...(briefing?.file ? [briefing.file] : [])];
+  const merged = { ...config, [key]: [...(config[key] || []), plugin] };
+  if (instructions.length) merged.instructions = instructions;
   return {
     ...env,
-    OPENCODE_CONFIG_CONTENT: JSON.stringify({ ...config, [key]: [...(config[key] || []), plugin] }),
+    OPENCODE_CONFIG_CONTENT: JSON.stringify(merged),
     MRMAK_OPENCODE_STATE: opencodeStatePath(stateDir, session.id),
     MRMAK_OPENCODE_CHAT_ID: session.id,
     MRMAK_OPENCODE_LAUNCH_ID: launchId,

@@ -17,7 +17,7 @@ import { composerText, terminalPrompt } from './terminal-prompt.mjs';
 import { opencodeVersion, opencodeEnvironment, readOpencodeState, watchOpencode } from './opencode.mjs';
 import { antigravityTranscript, prepareAntigravityLog, readAntigravityConversation, validAntigravityId, watchAntigravity, watchAntigravityContext } from './antigravity.mjs';
 import { unknownContext } from './native-context.mjs';
-import { dshLogPath, permissionModes, usageFrom } from './dsh.mjs';
+import { dshBriefingChannel, dshLogPath, permissionModes, usageFrom, writeBriefingOverlay } from './dsh.mjs';
 
 const { Terminal } = headless;
 // Native CLIs record getcwd(): symlinks resolved (/tmp -> /private/tmp, cloud
@@ -60,6 +60,8 @@ export class Sessions extends EventEmitter {
     this.saveChain = Promise.resolve();
     this.dirty = false;
     this.closed = false;
+    // The service hands the briefing in; the sessions never read the settings.
+    this.briefing = null;
   }
 
   async init() {
@@ -179,22 +181,34 @@ export class Sessions extends EventEmitter {
     session.contextUsage = unknownContext(session.agent);
     let env = childEnvironment(this.repo);
     let opencodeMajor;
+    // The briefing is composed before the launch: the CLI reads the file when it
+    // starts, and a chat that is resumed later gets it again.
+    const briefing = this.briefing ? await this.briefing.forSession(session).catch(() => null) : null;
     if (session.agent === 'opencode') {
       opencodeMajor = await opencodeVersion(env);
       // v2 explicitly accepts a new ID through --session. Assign it before
       // launch, so even a very early close retains an exact resume target.
       if (opencodeMajor === 2 && !session.nativeId) session.nativeId = `ses_${randomUUID().replaceAll('-', '')}`;
       if (opencodeMajor === 2) resumeId ||= session.nativeId;
-      env = opencodeEnvironment(env, { stateDir: this.stateDir, session, major: opencodeMajor });
+      env = opencodeEnvironment(env, { stateDir: this.stateDir, session, major: opencodeMajor, briefing });
     }
     if (this.closed || !session.open) throw new Error('The chat was closed before its terminal started.');
     if (session.agent === 'antigravity' && resumeId && !validAntigravityId(resumeId)) throw new Error('Use the Antigravity conversation UUID from its /resume picker.');
     const antigravityLog = session.agent === 'antigravity' ? await prepareAntigravityLog(this.stateDir, session.id) : undefined;
     let dshLog;
-    if (session.agent === 'dsh') { dshLog = dshLogPath(this.stateDir, session.id); session.dshLog = dshLog; await mkdir(path.dirname(dshLog), { recursive: true }); }
+    if (session.agent === 'dsh') {
+      dshLog = dshLogPath(this.stateDir, session.id); session.dshLog = dshLog; await mkdir(path.dirname(dshLog), { recursive: true });
+      // The harness can take the briefing in its own prompt. When it can, the
+      // bridge passes it as a persona patch; when it cannot, the bridge falls
+      // back to the first message.
+      if (briefing) {
+        const channel = await dshBriefingChannel(env, this.stateDir).catch(() => null);
+        if (channel) briefing.overlay = await writeBriefingOverlay(this.stateDir, session.id, briefing.text, channel.persona).catch(() => null);
+      }
+    }
     const noDaemon = session.agent === 'codex' && await codexSupportsNoDaemon(env);
     if (this.closed || !session.open) throw new Error('The chat was closed before its terminal started.');
-    const command = terminalCommand(session.agent, { bypass: session.bypass, resumeId, nativeId: session.nativeId, effort: session.effort, opencodeMajor, antigravityLog, noDaemon, dshLog, permissionMode: session.permissionMode, ...first });
+    const command = terminalCommand(session.agent, { bypass: session.bypass, resumeId, nativeId: session.nativeId, effort: session.effort, opencodeMajor, antigravityLog, noDaemon, dshLog, permissionMode: session.permissionMode, briefing, ...first });
     if (session.agent === 'codex') env.CODEX_INTERNAL_ORIGINATOR_OVERRIDE = `mrmak_chat_${session.id}`;
     if (session.terminal) this.resetTerminal(session);
     const proc = pty.spawn(command.file, command.args, ptyOptions({ cwd: session.cwd, env, cols: session.cols, rows: session.rows }));

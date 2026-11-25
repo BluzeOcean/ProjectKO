@@ -19,6 +19,12 @@ working. Ask for missing personal preferences; do not invent a biography.
 - Put project knowledge in this repository, not in global agent memory.
 - Use `.agents/skills/workspace-authoring/SKILL.md` for cards and reports. Keep
   related revisions in one card, preserve editable sources, and verify previews.
+- **Describe a domain once, in its module.** The app's own domains — the Vault and
+  its boards, the skills, the assets, the MCP servers, the working rules — are
+  described in `desktop/modules/`, one file per domain. Change a domain by editing
+  its module file; add a domain by adding a module file, because the briefing's map
+  is generated from that folder. Never describe a domain in `desktop/briefing.md` or
+  `desktop/coordinator.md`: point at the module instead.
 - Register deliverables in `workspace/workspace.json`. Update `updated` when
   substantive work changes a card. Sample cards have `sample: true` so they remain
   visible until explicitly archived; new personal work normally omits that flag.

@@ -4,6 +4,7 @@ import { readFile, realpath, stat } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { commandPath } from './agents.mjs';
+import { modules } from './briefing.mjs';
 import { within } from './util.mjs';
 const execute = promisify(execFile);
 
@@ -18,6 +19,10 @@ export class ContextLibrary {
       const text = await readFile(path.join(this.repo, name), 'utf8').catch(() => '');
       return text ? `## ${name}\n${text.slice(0, 14000)}` : '';
     }));
+    // The same module map the worker chats receive: one vocabulary for the
+    // coordinator and the workers.
+    const map = await modules(this.repo);
+    if (map.length) parts.push(`## The app's modules\nOne domain per file, in ${path.join(this.repo, 'desktop', 'modules')}:\n${map.map(item => `- ${item.name} — ${item.file}${item.description ? ` (${item.description})` : ''}`).join('\n')}`);
     return parts.filter(Boolean).join('\n\n').slice(0, 38000);
   }
   async skills(query = '') {
