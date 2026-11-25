@@ -89,8 +89,21 @@ should mint a scoped grant per board.
 
 ---
 
-## Q4. Does the fix have to reach the running app?
+## Q4. Is this an upstream defect that belongs to Mr. Mak?
 
+**Answered: no.** Upstream has no Vault at all, and its repository-rooted path
+is correct there because upstream's boards live in `<repo>/workspace/`. The
+Vault arrived in `a8b888c`, which taught the service about the new root and
+left the UI's three path builders behind. The defect is ours to fix and there
+is nothing to report upstream — see
+[`m-2026-11-26-0315-origin-of-the-defect.md`](m-2026-11-26-0315-origin-of-the-defect.md).
+
+It also means the **shape of the fix is a Project KO decision**: upstream will
+never need this repair, so the Vault base, a board-scoped grant, and the choice
+between "the UI learns the Vault" and "the service owns board URLs" are all
+ours to make.
+
+## Q5. Does the fix have to reach the running app?
 Yes, if it touches the service. `desktop/prepare.mjs:101` copies
 `desktop/service/` into `.cache/desktop-runtime/service/`, and the running
 `projectko.exe` (pid 9672 at 02:42) serves from that copy. **A service-side
@@ -102,7 +115,7 @@ rebuild of the front end may be enough. That is one more argument for shape A.
 
 ---
 
-## Q5. The stale copies under `<repo>/workspace/`
+## Q6. The stale copies under `<repo>/workspace/`
 
 Three boards work today only because an identical copy of their folder sits in
 the repository's `workspace/` (measurement of 03:00). Those copies are not in

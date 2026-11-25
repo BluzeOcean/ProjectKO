@@ -107,3 +107,25 @@ The Epic Game Jam board has no such copy, so it is the one that fails. A fix
 must not depend on those copies — and the ticket's rule "do not move the boards
 back into `workspace/`" is the right call, because moving them would hide the
 defect rather than fix it.
+
+---
+
+### 2026-11-26 03:15 — where the defect came from
+
+Git history. Full detail in
+[`m-2026-11-26-0315-origin-of-the-defect.md`](m-2026-11-26-0315-origin-of-the-defect.md).
+
+```
+upstream/main 57adc60  has no desktop/service/vault.mjs and no vaultPath setting
+upstream/main:src/App.tsx:46   contentUrl(`/workspace/${entity.folder}/${step.path}`)   <- the same line, correct upstream
+e6d5f1e  Initial release of Mr. Mak Workspace    <- the line enters this history
+a8b888c  Give the Vault its own folder …         <- the Vault arrives; 31 src/ files touched, all labels
+```
+
+**Proves:** the defect is **ours, not inherited**. Upstream has no Vault, and
+its repository-rooted path is correct because upstream's boards live in
+`<repo>/workspace/`. `a8b888c` moved the boards out, taught the **service**
+about the new root — and added `vaultPath` to **`Settings`**, not to the
+**`DesktopState`** the UI reads from `/api/bootstrap` — while leaving the three
+UI path builders untouched. The mobile side was updated in the same commit
+because it builds its URL in the service; the desktop side was left behind.

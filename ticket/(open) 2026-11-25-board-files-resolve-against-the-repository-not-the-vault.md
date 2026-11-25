@@ -260,3 +260,33 @@ root. The three shapes that work are set out in the log's `open-questions.md`.
   Vault.
 - The stale copies under `<repo>/workspace/`: leave them until the fix is in,
   then decide.
+
+### Where the defect came from
+
+**Ours, not inherited.** Measured from the git history:
+
+```
+upstream/main (witnesstodark/mr-mak-workspace) has no desktop/service/vault.mjs
+                                                  and no vaultPath setting
+upstream/main:src/App.tsx:46  contentUrl(`/workspace/${entity.folder}/${step.path}`)
+                                                  <- the same line, and correct there
+e6d5f1e  Initial release of Mr. Mak Workspace   <- the line enters this history
+a8b888c  Give the Vault its own folder …        <- the Vault arrives
+```
+
+The three path builders are inherited code and were **correct** upstream, where
+the boards live in `<repo>/workspace/`. `a8b888c` (2026-11-23) moved the boards
+out of the repository and taught the **service** about the new root — it
+touched 31 files under `src/`, but every UI change was a word ("Workspace" →
+"Vaultspace", "cards" → "boards") plus one field, `vaultPath`, added to
+**`Settings`** rather than to the **`DesktopState`** the UI reads from
+`/api/bootstrap`. The three path builders and `ReportViewer.tsx` were left
+behind, and so were they by the four later commits that came near them.
+
+That is also why the mobile preview works and the desktop does not: the same
+commit updated `mobile-reports.mjs`, because the mobile side builds its report
+URL **in the service**. The desktop side builds its URL **in the UI**.
+
+So this is a Project KO regression, not an upstream bug, and there is nothing
+to report to `witnesstodark/mr-mak-workspace`. It also means the shape of the
+fix is ours to choose: upstream will never need this repair.
