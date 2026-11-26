@@ -1,113 +1,290 @@
 {
-  "entities": [
+  "format": "pko-vault",
+  "version": 2,
+  "boards": [
     {
       "id": "my-dream-game",
       "title": "My Dream Game",
       "description": "Mr. Mak 64: a small Sky Islands adventure, with character studies, world layouts and a development board.",
-      "type": "group",
-      "category": "image-gen",
+      "tags": [
+        "gallery"
+      ],
       "created": "2026-09-15",
       "updated": "2026-11-20",
       "folder": "2026-09-15_my-dream-game",
-      "steps": [
-        {
-          "name": "Mr. Mak 64",
-          "path": "index.html"
-        },
-        {
-          "name": "Editable references",
-          "path": "references.card.json",
-          "viewer": "card"
-        }
-      ],
       "status": "active",
       "pinned": true,
       "sample": true,
-      "defaultStep": 0
+      "pages": [
+        {
+          "id": "mr-mak-64",
+          "title": "Mr. Mak 64",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-20",
+          "tabs": [
+            {
+              "id": "mr-mak-64",
+              "name": "Mr. Mak 64",
+              "path": "index.html",
+              "viewer": "report"
+            }
+          ]
+        },
+        {
+          "id": "editable-references",
+          "title": "Editable references",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-20",
+          "tabs": [
+            {
+              "id": "overview",
+              "name": "Editable references",
+              "path": "editable-references/overview.tab.json"
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "creative-mcp",
       "title": "Creative MCP Connections",
       "description": "A source-linked starter list for Blender, game engines, generation and project skills.",
-      "type": "group",
-      "category": "research",
+      "tags": [
+        "research"
+      ],
       "created": "2026-09-15",
       "updated": "2026-11-21",
       "folder": "2026-09-15_creative-mcp",
-      "steps": [
-        {
-          "name": "Tool shortlist",
-          "path": "report.html"
-        },
-        {
-          "name": "Connect a tool",
-          "path": "connect.md"
-        },
-        {
-          "name": "Editable research",
-          "path": "notes.card.json",
-          "viewer": "card"
-        }
-      ],
       "status": "active",
-      "pinned": false,
       "sample": true,
-      "defaultStep": 0
+      "pages": [
+        {
+          "id": "tool-shortlist",
+          "title": "Tool shortlist",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-21",
+          "tabs": [
+            {
+              "id": "tool-shortlist",
+              "name": "Tool shortlist",
+              "path": "report.html",
+              "viewer": "report"
+            }
+          ]
+        },
+        {
+          "id": "connect-a-tool",
+          "title": "Connect a tool",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-21",
+          "tabs": [
+            {
+              "id": "connect-a-tool",
+              "name": "Connect a tool",
+              "path": "connect.md",
+              "viewer": "report"
+            }
+          ]
+        },
+        {
+          "id": "editable-research",
+          "title": "Editable research",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-21",
+          "tabs": [
+            {
+              "id": "overview",
+              "name": "Editable research",
+              "path": "editable-research/overview.tab.json"
+            }
+          ]
+        }
+      ]
     },
     {
       "id": "arachne-character",
       "title": "Arachne Character Lab",
       "description": "From creature concepts to a refined spider queen: nine design rounds and eight motion studies.",
-      "type": "group",
-      "category": "research",
+      "tags": [
+        "research"
+      ],
       "created": "2026-09-15",
       "updated": "2026-11-20",
       "folder": "2026-09-15_arachne-character",
-      "steps": [
-        {
-          "name": "Version 1 · Creature concepts",
-          "path": "report.html"
-        },
-        {
-          "name": "Version 2 · A stronger premise",
-          "path": "report_v2.html"
-        },
-        {
-          "name": "Version 3 · Four directions",
-          "path": "report_v3.html"
-        },
-        {
-          "name": "Version 4 · Targeted refinement",
-          "path": "report_v4.html"
-        },
-        {
-          "name": "Version 5 · Arachne exploration",
-          "path": "report_v5.html"
-        },
-        {
-          "name": "Version 6 · Style refinement",
-          "path": "report_v6.html"
-        },
-        {
-          "name": "Version 7 · The mixed direction",
-          "path": "report_v7.html"
-        },
-        {
-          "name": "Version 8 · A coherent queen",
-          "path": "report_v8.html"
-        },
-        {
-          "name": "Version 9 · Palette studies",
-          "path": "report_v9.html"
-        },
-        {
-          "name": "Motion Tests",
-          "path": "report_motion.html"
-        }
-      ],
       "status": "active",
-      "pinned": false,
-      "sample": true
+      "sample": true,
+      "pages": [
+        {
+          "id": "version-1-creature-concepts",
+          "title": "Version 1 · Creature concepts",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-20",
+          "tabs": [
+            {
+              "id": "version-1-creature-concepts",
+              "name": "Version 1 · Creature concepts",
+              "path": "report.html",
+              "viewer": "report"
+            }
+          ]
+        },
+        {
+          "id": "version-2-a-stronger-premise",
+          "title": "Version 2 · A stronger premise",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-20",
+          "tabs": [
+            {
+              "id": "version-2-a-stronger-premise",
+              "name": "Version 2 · A stronger premise",
+              "path": "report_v2.html",
+              "viewer": "report"
+            }
+          ]
+        },
+        {
+          "id": "version-3-four-directions",
+          "title": "Version 3 · Four directions",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-20",
+          "tabs": [
+            {
+              "id": "version-3-four-directions",
+              "name": "Version 3 · Four directions",
+              "path": "report_v3.html",
+              "viewer": "report"
+            }
+          ]
+        },
+        {
+          "id": "version-4-targeted-refinement",
+          "title": "Version 4 · Targeted refinement",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-20",
+          "tabs": [
+            {
+              "id": "version-4-targeted-refinement",
+              "name": "Version 4 · Targeted refinement",
+              "path": "report_v4.html",
+              "viewer": "report"
+            }
+          ]
+        },
+        {
+          "id": "version-5-arachne-exploration",
+          "title": "Version 5 · Arachne exploration",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-20",
+          "tabs": [
+            {
+              "id": "version-5-arachne-exploration",
+              "name": "Version 5 · Arachne exploration",
+              "path": "report_v5.html",
+              "viewer": "report"
+            }
+          ]
+        },
+        {
+          "id": "version-6-style-refinement",
+          "title": "Version 6 · Style refinement",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-20",
+          "tabs": [
+            {
+              "id": "version-6-style-refinement",
+              "name": "Version 6 · Style refinement",
+              "path": "report_v6.html",
+              "viewer": "report"
+            }
+          ]
+        },
+        {
+          "id": "version-7-the-mixed-direction",
+          "title": "Version 7 · The mixed direction",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-20",
+          "tabs": [
+            {
+              "id": "version-7-the-mixed-direction",
+              "name": "Version 7 · The mixed direction",
+              "path": "report_v7.html",
+              "viewer": "report"
+            }
+          ]
+        },
+        {
+          "id": "version-8-a-coherent-queen",
+          "title": "Version 8 · A coherent queen",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-20",
+          "tabs": [
+            {
+              "id": "version-8-a-coherent-queen",
+              "name": "Version 8 · A coherent queen",
+              "path": "report_v8.html",
+              "viewer": "report"
+            }
+          ]
+        },
+        {
+          "id": "version-9-palette-studies",
+          "title": "Version 9 · Palette studies",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-20",
+          "tabs": [
+            {
+              "id": "version-9-palette-studies",
+              "name": "Version 9 · Palette studies",
+              "path": "report_v9.html",
+              "viewer": "report"
+            }
+          ]
+        },
+        {
+          "id": "motion-tests",
+          "title": "Motion Tests",
+          "description": "",
+          "tags": [],
+          "created": "2026-09-15",
+          "updated": "2026-11-20",
+          "tabs": [
+            {
+              "id": "motion-tests",
+              "name": "Motion Tests",
+              "path": "report_motion.html",
+              "viewer": "report"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

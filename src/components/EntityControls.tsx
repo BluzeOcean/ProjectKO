@@ -1,36 +1,34 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import type { WorkspaceEntity } from '../types'
-import { updateWorkspaceEntity, type EntityPatch } from '../lib/workspace'
-import { CATEGORY_ICONS } from '../lib/categories'
+import type { Board } from '../types'
+import { updateBoard, type BoardPatch } from '../lib/workspace'
 import { isDesktop } from '../desktop/client'
 import './entity-controls.css'
 
 const labels = { active: 'Active', done: 'Done', archived: 'Archived' } as const
-const Controls = createContext<{ open: (entity: WorkspaceEntity, button: HTMLButtonElement) => void; editing: string | null } | null>(null)
+const Controls = createContext<{ open: (board: Board, button: HTMLButtonElement) => void; editing: string | null } | null>(null)
 type Target = { id: string; button: HTMLButtonElement; anchor: DOMRect }
 
-export function EntityStatusButton({ entity }: { entity: WorkspaceEntity }) {
+export function EntityStatusButton({ entity }: { entity: Board }) {
   const controls = useContext(Controls)
   return (
     <button
       type="button"
       className="entity-status-button"
-      aria-label={`Edit ${entity.title}: ${labels[entity.status]}`}
+      aria-label={'Edit ' + entity.title + ': ' + labels[entity.status]}
       aria-haspopup="dialog"
       aria-expanded={controls?.editing === entity.id}
-      title={`${labels[entity.status]} · ${isDesktop ? 'Change status or category' : 'Open the desktop app to edit this card'}`}
+      title={labels[entity.status] + ' · ' + (isDesktop ? 'Change status or pin' : 'Open the desktop app to edit this board')}
       disabled={!isDesktop}
       onClick={event => controls?.open(entity, event.currentTarget)}
     >
-      <span className={`status-dot ${entity.status}`} aria-hidden="true" />
+      <span className={'status-dot ' + entity.status} aria-hidden="true" />
     </button>
   )
 }
 
-function EntityMenu({ entity, entities, target, onClose, onChanged }: {
-  entity: WorkspaceEntity
-  entities: WorkspaceEntity[]
+function EntityMenu({ board, target, onClose, onChanged }: {
+  board: Board
   target: Target
   onClose: () => void
   onChanged: () => Promise<void>
@@ -38,8 +36,6 @@ function EntityMenu({ entity, entities, target, onClose, onChanged }: {
   const dialog = useRef<HTMLDialogElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const category = entity.category || 'other'
-  const categories = [...new Set([...Object.keys(CATEGORY_ICONS), 'project', 'tools', 'other', ...entities.map(item => item.category).filter(Boolean)])].sort()
 
   useLayoutEffect(() => {
     const element = dialog.current!
@@ -47,8 +43,8 @@ function EntityMenu({ entity, entities, target, onClose, onChanged }: {
     const position = () => {
       const rect = target.button.isConnected ? target.button.getBoundingClientRect() : target.anchor
       const width = element.offsetWidth, height = element.offsetHeight
-      element.style.left = `${Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12))}px`
-      element.style.top = `${Math.max(12, Math.min(rect.bottom + 6, window.innerHeight - height - 12))}px`
+      element.style.left = Math.max(12, Math.min(rect.right - width, window.innerWidth - width - 12)) + 'px'
+      element.style.top = Math.max(12, Math.min(rect.bottom + 6, window.innerHeight - height - 12)) + 'px'
     }
     position()
     const observer = new ResizeObserver(position)
@@ -63,15 +59,15 @@ function EntityMenu({ entity, entities, target, onClose, onChanged }: {
     return () => window.removeEventListener('hashchange', navigate)
   }, [onClose])
 
-  async function save(patch: EntityPatch) {
+  async function save(patch: BoardPatch) {
     if (saving) return
     setSaving(true); setError('')
     try {
-      await updateWorkspaceEntity(entity.id, patch)
+      await updateBoard(board.id, patch)
       await onChanged()
       onClose()
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'The card could not be updated. Try again.')
+      setError(reason instanceof Error ? reason.message : 'The board could not be updated. Try again.')
     } finally { setSaving(false) }
   }
 
@@ -79,7 +75,7 @@ function EntityMenu({ entity, entities, target, onClose, onChanged }: {
     <dialog
       ref={dialog}
       className="entity-menu"
-      aria-label={`Card settings: ${entity.title}`}
+      aria-label={'Board settings: ' + board.title}
       aria-busy={saving}
       onCancel={event => { event.preventDefault(); if (!saving) onClose() }}
       onClick={event => {
@@ -90,31 +86,25 @@ function EntityMenu({ entity, entities, target, onClose, onChanged }: {
       onKeyDown={event => event.stopPropagation()}
     >
       <div className="entity-menu-heading">
-        <div><span>Card settings</span><h2>{entity.title}</h2></div>
-        <button type="button" className="entity-menu-close" aria-label="Close card settings" disabled={saving} onClick={onClose}>×</button>
+        <div><span>Board settings</span><h2>{board.title}</h2></div>
+        <button type="button" className="entity-menu-close" aria-label="Close board settings" disabled={saving} onClick={onClose}>×</button>
       </div>
       <fieldset disabled={saving}>
         <legend>Status</legend>
         <div className="entity-status-options">
-          {(Object.keys(labels) as Array<WorkspaceEntity['status']>).map(status => (
-            <button type="button" key={status} aria-pressed={entity.status === status} onClick={() => void save({ status })}>
-              <span className={`status-dot ${status}`} aria-hidden="true" />
+          {(Object.keys(labels) as Array<Board['status']>).map(status => (
+            <button type="button" key={status} aria-pressed={board.status === status} onClick={() => void save({ status })}>
+              <span className={'status-dot ' + status} aria-hidden="true" />
               <span>{labels[status]}</span>
-              <span className="entity-status-check" aria-hidden="true">{entity.status === status ? '✓' : ''}</span>
+              <span className="entity-status-check" aria-hidden="true">{board.status === status ? '✓' : ''}</span>
             </button>
           ))}
         </div>
       </fieldset>
-      <label className="entity-category-control">
-        Category
-        <select aria-label="Card category" value={category} disabled={saving} onChange={event => void save({ category: event.target.value })}>
-          {categories.map(value => <option key={value} value={value}>{value.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</option>)}
-        </select>
-      </label>
-      <button type="button" className="entity-pin-toggle" disabled={saving} onClick={() => void save({ pinned: !entity.pinned })}>
-        {entity.pinned ? 'Unpin card' : 'Pin card'}
+      <button type="button" className="entity-pin-toggle" disabled={saving} onClick={() => void save({ pinned: !board.pinned })}>
+        {board.pinned ? 'Unpin board' : 'Pin board'}
       </button>
-      <p className="entity-menu-hint">Archived cards keep their files and tabs. Find them in search or Show archive.</p>
+      <p className="entity-menu-hint">Tags are set in the board's own inspector. Archived boards keep their files and pages.</p>
       {saving && <p className="entity-menu-feedback" role="status">Saving…</p>}
       {error && <p className="entity-menu-error" role="alert">{error}</p>}
     </dialog>, document.body,
@@ -122,7 +112,7 @@ function EntityMenu({ entity, entities, target, onClose, onChanged }: {
 }
 
 export default function EntityControls({ entities, onChanged, children }: {
-  entities: WorkspaceEntity[]
+  entities: Board[]
   onChanged: () => Promise<void>
   children: ReactNode
 }) {
@@ -135,7 +125,7 @@ export default function EntityControls({ entities, onChanged, children }: {
   return (
     <Controls.Provider value={{ editing: target?.id ?? null, open: (item, button) => setTarget({ id: item.id, button, anchor: button.getBoundingClientRect() }) }}>
       {children}
-      {entity && target && <EntityMenu key={entity.id} entity={entity} entities={entities} target={target} onClose={close} onChanged={onChanged} />}
+      {entity && target && <EntityMenu key={entity.id} board={entity} target={target} onClose={close} onChanged={onChanged} />}
     </Controls.Provider>
   )
 }

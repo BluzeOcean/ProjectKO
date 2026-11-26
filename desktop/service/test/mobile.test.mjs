@@ -237,7 +237,7 @@ test('report grants are limited to the selected folder, sandboxed and revoked wi
   await writeFile(path.join(repo, 'workspace/example/report.html'), '<h1>Example</h1>');
   await writeFile(path.join(repo, 'workspace/example/picture.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>');
   await writeFile(path.join(repo, 'workspace/other/private.html'), 'Unrelated document');
-  await writeFile(path.join(repo, 'workspace/workspace.json'), JSON.stringify({ entities: [{ id: 'example', title: 'Example', folder: 'example', steps: [{ name: 'Report', path: 'report.html' }] }] }));
+  await writeFile(path.join(repo, 'workspace/workspace.json'), JSON.stringify({ format: 'pko-vault', version: 2, boards: [{ id: 'example', title: 'Example', tags: ['research'], status: 'active', folder: 'example', created: '2026-01-01', updated: '2026-01-01', pages: [{ id: 'report', title: 'Report', tags: [], created: '2026-01-01', updated: '2026-01-01', tabs: [{ id: 'report', name: 'Report', path: 'report.html', viewer: 'report' }] }] }] }));
   const opened = await request('/reports/open', { entityId: 'example', step: 0 }, device.cookie); assert.equal(opened.status, 200);
   assert.equal(opened.data.statePersistence, true);
   const token = opened.data.url.split('/')[3], grant = gateway.reports.grants.get(token);
@@ -263,9 +263,10 @@ test('report boundaries resolve a linked repository and still reject external fo
   const outside = await mkdtemp(path.join(os.tmpdir(), 'mrmak-mobile-outside-'));
   await writeFile(path.join(outside, 'private.html'), 'Outside the workspace');
   await symlink(outside, path.join(repo, 'workspace/external'), process.platform === 'win32' ? 'junction' : 'dir');
-  await writeFile(path.join(repo, 'workspace/workspace.json'), JSON.stringify({ entities: [
-    { id: 'example', title: 'Example', folder: 'example', steps: [{ name: 'Report', path: 'report.html' }] },
-    { id: 'external', title: 'External', folder: 'external', steps: [{ name: 'Private', path: 'private.html' }] },
+  const page = (id, name, tab) => ({ id, title: name, tags: [], created: '2026-01-01', updated: '2026-01-01', tabs: [tab] });
+  await writeFile(path.join(repo, 'workspace/workspace.json'), JSON.stringify({ format: 'pko-vault', version: 2, boards: [
+    { id: 'example', title: 'Example', tags: ['research'], status: 'active', folder: 'example', created: '2026-01-01', updated: '2026-01-01', pages: [page('report', 'Report', { id: 'report', name: 'Report', path: 'report.html', viewer: 'report' })] },
+    { id: 'external', title: 'External', tags: ['research'], status: 'active', folder: 'external', created: '2026-01-01', updated: '2026-01-01', pages: [page('private', 'Private', { id: 'private', name: 'Private', path: 'private.html', viewer: 'report' })] },
   ] }));
   const aliasParent = await mkdtemp(path.join(os.tmpdir(), 'mrmak-mobile-alias-'));
   const alias = path.join(aliasParent, 'workspace');

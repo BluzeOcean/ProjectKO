@@ -1,11 +1,11 @@
 {
-  "format": "mrmak-card",
+  "format": "pko-tab",
   "version": 1,
-  "template": "workbench",
-  "title": "Try a tool, keep the evidence",
+  "layout": "workbench",
   "summary": "A starter research page you can edit yourself. Use these entries as a checklist for evaluating a connection. They are examples, not completed test results; the **Tool shortlist** tab keeps the broader reference list.",
-  "items": [
+  "nodes": [
     {
+      "kind": "card",
       "id": "blender-connection",
       "title": "Try a Blender connection",
       "body": "Read the provider's setup instructions, then try one small scene operation. Record the tool version and what happened before adding it to a production workflow.",
@@ -14,12 +14,14 @@
       "status": "idea"
     },
     {
+      "kind": "card",
       "id": "permissions",
       "title": "Check what the tool can change",
       "body": "Start in a disposable project. Identify which operations read data, which write files, and which send data to another service. Record any approval steps you want the agent to keep.",
       "status": "idea"
     },
     {
+      "kind": "card",
       "id": "repeatable-test",
       "title": "Save a test you can repeat",
       "body": "Keep the input, the expected result and a screenshot of the actual result. If the tool changes later, rerun this same test before replacing a working setup.",

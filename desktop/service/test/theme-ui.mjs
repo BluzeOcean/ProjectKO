@@ -33,7 +33,7 @@ await writeFile(path.join(repo, 'knowledge/notes.md'), '# Theme notes\n\nReadabl
 await writeFile(path.join(repo, 'workspace/test/report.html'), `<!doctype html><html data-mak-report="document"><head><style>body{background:#101115;color:#d3d0d9;min-height:2200px}h1{color:#fff}img{width:60px}</style></head><body><h1>Reading report</h1><p>Dark text on a light background.</p><input aria-label="Keep my draft" value="Original"><img alt="Artwork" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Crect width='40' height='40' fill='%23ee3377'/%3E%3C/svg%3E"><script>window.mountId=crypto.randomUUID()</script></body></html>`);
 await writeFile(path.join(repo, 'workspace/test/custom.html'), '<!doctype html><html data-mak-report="document" data-mak-theme="custom"><head><style>body{background:rgb(20,30,40);color:white}</style></head><body><h1>Custom game</h1><canvas style="background:rgb(30,80,40)"></canvas></body></html>');
 await writeFile(path.join(repo, 'workspace/test/notes.md'), '# Readable notes\n\nA **strong** paragraph and [a link](https://example.com/).\n\n| Name | State |\n| --- | --- |\n| Theme | Ready |\n');
-await writeFile(path.join(repo, 'workspace/workspace.json'), JSON.stringify({ entities: [{ id: 'test', folder: 'test', title: 'Theme check', sample: true, category: 'dev', created: '2026-10-02', status: 'active', defaultStep: 0, steps: [{ name: 'Report', path: 'report.html' }, { name: 'Notes', path: 'notes.md' }, { name: 'Custom game', path: 'custom.html' }] }] }));
+await writeFile(path.join(repo, 'workspace/workspace.json'), JSON.stringify({ format: 'pko-vault', version: 2, boards: [{ id: 'test', folder: 'test', title: 'Theme check', sample: true, tags: ['app-project'], created: '2026-10-02', updated: '2026-10-02', status: 'active', pages: [{ id: 'documents', title: 'Documents', tags: ['ui'], created: '2026-10-02', updated: '2026-10-02', tabs: [{ id: 'report', name: 'Report', path: 'report.html', viewer: 'report' }, { id: 'notes', name: 'Notes', path: 'notes.md', viewer: 'report' }, { id: 'custom', name: 'Custom game', path: 'custom.html', viewer: 'report' }] }] }] }));
 let service, browser;
 try {
   service = await createService({ repo, uiDir: path.join(root, 'dist'), mcpOptions: { home: repo, env: {} } });
@@ -52,7 +52,7 @@ try {
     { id: 'a1', role: 'assistant', text: '## A comfortable place to focus\n\nReadable text, quiet surfaces and a little personality.\n\n- A distinct accent for actions\n- Clear **hierarchy** and balanced contrast\n\n```ts\nconst nextStep = "Make something useful"\n```', at: '2026-10-20T12:00:01Z' },
   ] } }));
   const errors = []; for (const view of [page, second, chats]) { view.setDefaultTimeout(12000); view.on('pageerror', error => errors.push(error.message)); }
-  await page.goto(service.urls.workspace + '#/test/0');
+  await page.goto(service.urls.workspace + '#/test/documents/report');
   await second.goto(service.urls.workspace);
   await chats.goto(service.urls.chats);
   await page.locator('.report-document[aria-busy=false]').waitFor();

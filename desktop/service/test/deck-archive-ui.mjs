@@ -18,11 +18,12 @@ await mkdir(path.join(root, '.cache'), { recursive: true });
 const repo = await mkdtemp(path.join(root, '.cache', 'deck-archive-ui-'));
 await mkdir(path.join(repo, 'workspace', 'sample'), { recursive: true });
 await writeFile(path.join(repo, 'workspace', 'sample', 'report.html'), '<h1>Notes</h1><p>The report must survive.</p>');
-const card = { id: 'sample', title: 'Character Workshop', description: 'A reviewable sample.', category: 'research', type: 'group', folder: 'sample', status: 'active', created: localDay(), steps: [{ name: 'Notes', path: 'report.html' }] };
+const page = () => ({ id: 'notes', title: 'Notes', description: '', tags: ['game-idea'], created: localDay(), updated: localDay(), tabs: [{ id: 'notes', name: 'Notes', path: 'report.html', viewer: 'report' }] });
+const card = { id: 'sample', title: 'Character Workshop', description: 'A reviewable sample.', tags: ['research'], status: 'active', folder: 'sample', created: localDay(), updated: localDay(), pages: [page()] };
 // The third board has been quiet for years: the date rule puts it away on its
 // own, without anybody asking.
-const quiet = { ...card, id: 'old', title: 'Old Project', category: 'game', created: '2020-01-01' };
-await writeFile(path.join(repo, 'workspace', 'workspace.json'), JSON.stringify({ entities: [card, { ...card, id: 'other', title: 'Another project', category: 'game' }, quiet] }));
+const quiet = { ...card, id: 'old', title: 'Old Project', created: '2020-01-01', updated: '2020-01-01' };
+await writeFile(path.join(repo, 'workspace', 'workspace.json'), JSON.stringify({ format: 'pko-vault', version: 2, boards: [card, { ...card, id: 'other', title: 'Another project', folder: 'other', pages: [] }, quiet] }));
 await cp(path.join(root, 'public', 'assets'), path.join(root, 'dist', 'assets'), { recursive: true });
 const service = await createService({ repo, uiDir: path.join(root, 'dist') });
 let browser;
@@ -81,12 +82,12 @@ try {
   await expect(page.locator('.deck-label')).toHaveText('Boards');
   await expect(toggle).toHaveCount(0);
   await expect(page.locator('.deck-tile[data-card="sample"]')).toHaveCount(1);
-  assert.equal(JSON.parse(await readFile(path.join(repo, 'workspace', 'workspace.json'))).entities[0].status, 'active', 'the board is active again');
+  assert.equal(JSON.parse(await readFile(path.join(repo, 'workspace', 'workspace.json'))).boards[0].status, 'active', 'the board is active again');
 
   // The status dialog still offers Archived, next to the new button.
   await page.locator('.deck-tile[data-card="sample"]').hover();
   await inspector.getByRole('button', { name: /^Edit Character Workshop:/ }).click();
-  const menu = page.getByRole('dialog', { name: 'Card settings: Character Workshop' });
+  const menu = page.getByRole('dialog', { name: 'Board settings: Character Workshop' });
   await expect(menu).toBeVisible();
   await expect(menu.getByRole('button', { name: 'Archived', exact: true })).toBeVisible();
 

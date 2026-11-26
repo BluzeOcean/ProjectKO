@@ -15,8 +15,9 @@ await mkdir(path.join(repo, 'workspace', 'sample'), { recursive: true });
 const report = '<h1>Project notes</h1><p>The report must survive metadata edits.</p>';
 await writeFile(path.join(repo, 'workspace', 'sample', 'report.html'), report);
 const file = path.join(repo, 'workspace', 'workspace.json');
-const card = { id: 'sample', title: 'Character Workshop', description: 'A reviewable sample.', category: 'research', type: 'group', folder: 'sample', status: 'active', created: localDay(), steps: [{ name: 'Notes', path: 'report.html' }] };
-await writeFile(file, JSON.stringify({ entities: [card, { ...card, id: 'other', title: 'Another project', category: 'game' }, { ...card, id: 'old', title: 'Older project', created: '2020-01-01' }] }));
+const page = () => ({ id: 'notes', title: 'Notes', description: '', tags: ['game-idea'], created: localDay(), updated: localDay(), tabs: [{ id: 'notes', name: 'Notes', path: 'report.html', viewer: 'report' }] });
+const board = { id: 'sample', title: 'Character Workshop', description: 'A reviewable sample.', tags: ['research'], status: 'active', folder: 'sample', created: localDay(), updated: localDay(), pages: [page()] };
+await writeFile(file, JSON.stringify({ format: 'pko-vault', version: 2, boards: [board, { ...board, id: 'other', title: 'Another project', tags: ['gallery'], folder: 'other', pages: [] }, { ...board, id: 'old', title: 'Older project', created: '2020-01-01', updated: '2020-01-01', pages: [] }] }));
 await cp(path.join(root, 'public', 'assets'), path.join(root, 'dist', 'assets'), { recursive: true });
 const service = await createService({ repo, uiDir: path.join(root, 'dist') });
 let browser;
@@ -33,7 +34,7 @@ try {
   // Pointing at a board is what puts it in the inspector column.
   const point = async (target, id) => { await target.hover(); await expect(page.locator('.deck-inspector')).toHaveAttribute('data-card', id); };
   const dot = () => inspector.getByRole('button', { name: /^Edit Character Workshop:/ });
-  const menu = page.getByRole('dialog', { name: 'Card settings: Character Workshop' });
+  const menu = page.getByRole('dialog', { name: 'Board settings: Character Workshop' });
   await point(homeCard, 'sample');
   await dot().click(); await expect(menu).toBeVisible();
   assert.equal(new URL(page.url()).hash, '', 'The status button must not follow the card link');
@@ -44,9 +45,10 @@ try {
   await peer.locator('.deck-tile[data-card="sample"]').hover();
   await expect(peer.locator('.deck-inspector .entity-status-button')).toHaveAttribute('aria-label', 'Edit Character Workshop: Done');
   await point(homeCard, 'sample');
-  await dot().click(); await menu.getByRole('combobox', { name: 'Card category' }).selectOption('dev');
-  await expect(inspector.locator('.deck-tag-current')).toHaveText(/dev/i);
-  await expect(page.locator('.deck-genres')).toContainText('Dev');
+  // Tags are toggles in the inspector now: a board can carry more than one.
+  await inspector.getByRole('button', { name: 'App Project', exact: true }).click();
+  await expect(inspector.getByRole('button', { name: 'App Project', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.deck-genres')).toContainText('App Project');
   await point(homeCard, 'sample');
   await dot().click(); await menu.getByRole('button', { name: 'Archived', exact: true }).click();
   await expect(homeCard).toHaveCount(0);
@@ -60,31 +62,33 @@ try {
   await page.getByRole('button', { name: /Hide archive/ }).click();
   await expect(homeCard).toBeVisible();
   // A date-archived card can be brought back even if its stored status is active.
-  await page.getByRole('textbox', { name: 'Search entities' }).fill('Older project');
+  await page.getByRole('textbox', { name: 'Search boards and pages' }).fill('Older project');
   await page.locator('.sidebar [data-card="old"] button').click();
   await page.getByRole('dialog').getByRole('button', { name: 'Active', exact: true }).click();
   await page.getByRole('button', { name: 'Clear search', exact: true }).click();
   await expect(page.locator('.deck-tile[data-card="old"]')).toBeVisible();
-  await row.getByRole('button').click(); await menu.getByRole('button', { name: 'Pin card', exact: true }).click();
+  await row.getByRole('button').click(); await menu.getByRole('button', { name: 'Pin board', exact: true }).click();
   await expect(row.locator('a')).toHaveClass(/pinned/);
-  await row.getByRole('button').click(); await menu.getByRole('button', { name: 'Unpin card', exact: true }).click();
+  await row.getByRole('button').click(); await menu.getByRole('button', { name: 'Unpin board', exact: true }).click();
   await expect(row.locator('a')).not.toHaveClass(/pinned/);
   await row.getByRole('button').focus(); await page.keyboard.press('Enter'); await expect(menu).toBeVisible();
   await page.keyboard.press('Escape'); await expect(menu).toHaveCount(0); await expect(row.getByRole('button')).toBeFocused();
   await row.getByRole('button').click(); await page.mouse.click(800, 15); await expect(menu).toHaveCount(0);
   // Failed writes stay visible and never pretend the status changed.
-  await page.route('**/api/workspace/entities/sample', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Fixture: service temporarily unavailable.' }) }));
+  await page.route('**/api/workspace/boards/sample', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Fixture: service temporarily unavailable.' }) }));
   await row.getByRole('button').click(); await menu.getByRole('button', { name: 'Done', exact: true }).click();
   await expect(menu.getByRole('alert')).toHaveText('Fixture: service temporarily unavailable.');
   await expect(row.getByRole('button')).toHaveAttribute('aria-label', 'Edit Character Workshop: Active');
-  await page.unroute('**/api/workspace/entities/sample');
+  await page.unroute('**/api/workspace/boards/sample');
   await menu.getByRole('button', { name: 'Done', exact: true }).click(); await expect(menu).toHaveCount(0);
   // The selected report also has an always-accessible status button.
+  // A board link opens the page grid; the page holds the report.
   await row.getByRole('link').click();
+  await page.locator('.deck-tile[data-card="notes"]').click();
   await page.frameLocator('iframe.report-frame').getByRole('heading', { name: 'Project notes' }).waitFor();
   await page.locator('.topbar').getByRole('button', { name: 'Edit Character Workshop: Done' }).click();
   // Let the save land before reloading; WebKit cancels in-flight requests on reload.
-  const saved = page.waitForResponse(response => response.url().includes('/api/workspace/entities/sample') && response.request().method() === 'PATCH');
+  const saved = page.waitForResponse(response => response.url().includes('/api/workspace/boards/sample') && response.request().method() === 'PATCH');
   await menu.getByRole('button', { name: 'Active', exact: true }).click(); await saved;
   await page.reload();
   await expect(page.locator('.topbar').getByRole('button', { name: 'Edit Character Workshop: Active' })).toBeVisible();
@@ -104,8 +108,8 @@ try {
     }
   }
   const registry = JSON.parse(await readFile(file, 'utf8'));
-  assert.deepEqual(registry.entities.find(item => item.id === 'sample').steps, card.steps);
-  assert.equal(registry.entities.find(item => item.id === 'sample').category, 'dev');
+  assert.deepEqual(registry.boards.find(item => item.id === 'sample').pages, board.pages);
+  assert.ok(registry.boards.find(item => item.id === 'sample').tags.includes('app-project'), 'the tag assigned in the inspector is kept');
   assert.deepEqual(errors, []);
   console.log(`Workspace controls passed: status/category/pin, archive and restore, date archive, live peer sync, keyboard/focus, error/retry, report preservation, persisted reload, dark/light and 390px layout. Screenshots: ${repo}`);
 } finally { await browser?.close(); await service.close(); }

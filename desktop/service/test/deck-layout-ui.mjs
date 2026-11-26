@@ -13,10 +13,11 @@ await mkdir(path.join(root, '.cache'), { recursive: true });
 const repo = await mkdtemp(path.join(root, '.cache', 'deck-layout-ui-'));
 await mkdir(path.join(repo, 'workspace', 'sample'), { recursive: true });
 await writeFile(path.join(repo, 'workspace', 'sample', 'report.html'), '<h1>Project notes</h1>');
-const base = { description: 'A reviewable sample.', category: 'research', type: 'group', folder: 'sample', status: 'active', created: localDay(), steps: [{ name: 'Notes', path: 'report.html' }] };
-await writeFile(path.join(repo, 'workspace', 'workspace.json'), JSON.stringify({ entities: [
+const page = () => ({ id: 'notes', title: 'Notes', description: '', tags: ['game-idea'], created: localDay(), updated: localDay(), tabs: [{ id: 'notes', name: 'Notes', path: 'report.html', viewer: 'report' }] });
+const base = { description: 'A reviewable sample.', tags: ['research'], status: 'active', folder: 'sample', created: localDay(), updated: localDay(), pages: [page()] };
+await writeFile(path.join(repo, 'workspace', 'workspace.json'), JSON.stringify({ format: 'pko-vault', version: 2, boards: [
   { ...base, id: 'sample', title: 'Character Workshop' },
-  { ...base, id: 'second', title: 'Second Board', category: 'image-gen' },
+  { ...base, id: 'second', title: 'Second Board', tags: ['gallery'], folder: 'second' },
 ] }));
 await cp(path.join(root, 'public', 'assets'), path.join(root, 'dist', 'assets'), { recursive: true });
 const service = await createService({ repo, uiDir: path.join(root, 'dist') });

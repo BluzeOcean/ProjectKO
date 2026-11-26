@@ -15,8 +15,11 @@ async function fixture() {
   await mkdir(path.join(repo, 'workspace', 'test-card'), { recursive: true }); await mkdir(path.join(repo, 'ui'));
   await writeFile(path.join(repo, 'ui', 'index.html'), '<html>Test</html>');
   await writeFile(path.join(repo, 'workspace', 'test-card', 'report.html'), '<html><style>hidden styles</style><h1>Test report</h1><p>The animation was exported.</p><script>not report content</script></html>');
-  const entities = [{ id: 'test-card', title: 'Animation Review', description: 'Reviewing the animation export.', folder: 'test-card', created: '2026-09-10', updated: '2026-09-12', status: 'active', steps: [{ name: 'Review', path: 'report.html' }], extra: 'preserve me' }, { id: 'another-card', title: 'Another Review', description: 'A separate task.', status: 'done', created: '2026-09-09', steps: [] }];
-  await writeFile(path.join(repo, 'workspace', 'workspace.json'), JSON.stringify({ entities, extraRoot: true }, null, 2));
+  const boards = [
+    { id: 'test-card', title: 'Animation Review', description: 'Reviewing the animation export.', tags: ['research'], status: 'active', folder: 'test-card', created: '2026-09-10', updated: '2026-09-12', pages: [{ id: 'review', title: 'Review', tags: [], created: '2026-09-10', updated: '2026-09-10', tabs: [{ id: 'review', name: 'Review', path: 'report.html', viewer: 'report' }] }], extra: 'preserve me' },
+    { id: 'another-card', title: 'Another Review', description: 'A separate task.', tags: ['research'], status: 'done', folder: 'another-card', created: '2026-09-09', updated: '2026-09-09', pages: [] },
+  ];
+  await writeFile(path.join(repo, 'workspace', 'workspace.json'), JSON.stringify({ format: 'pko-vault', version: 2, boards, extraRoot: true }, null, 2));
   const events = [];
   const service = await createService({ repo, uiDir: path.join(repo, 'ui'), native: event => events.push(event) });
   service.coordinator.ask = async () => { throw new Error('A direct action must not use an LLM.'); };
@@ -27,27 +30,27 @@ async function fixture() {
   return { repo, service, events, request };
 }
 
-test('direct card actions and date lookups bypass the model and never open worker chats', async () => {
+test('direct board actions and date lookups bypass the model and never open worker chats', async () => {
   const { repo, service, request, events } = await fixture();
   try {
     const open = await request('open', 'Открой карточку Animation Review'); assert.equal(open.route, 'direct'); assert.equal(open.status, 'completed');
     assert.ok(events.some(event => event.type === 'window' && event.window === 'workspace'));
     const archive = await request('archive', 'Архивируй эту карточку'); assert.equal(archive.status, 'completed');
     let registry = JSON.parse(await readFile(path.join(repo, 'workspace', 'workspace.json'), 'utf8'));
-    assert.equal(registry.entities[0].status, 'archived'); assert.equal(registry.entities[0].extra, 'preserve me'); assert.equal(registry.extraRoot, true); assert.equal(registry.entities[1].status, 'done');
+    assert.equal(registry.boards[0].status, 'archived'); assert.equal(registry.boards[0].extra, 'preserve me'); assert.equal(registry.extraRoot, true); assert.equal(registry.boards[1].status, 'done');
     await request('restore', 'Верни из архива эту карточку');
     await request('done', 'Отметь эту карточку готовой');
-    registry = JSON.parse(await readFile(path.join(repo, 'workspace', 'workspace.json'), 'utf8')); assert.equal(registry.entities[0].status, 'done');
+    registry = JSON.parse(await readFile(path.join(repo, 'workspace', 'workspace.json'), 'utf8')); assert.equal(registry.boards[0].status, 'done');
     const read = await request('read', 'Прочитай эту карточку'); assert.match(read.result, /animation was exported/); assert.doesNotMatch(read.result, /hidden styles|not report content/);
     const day = await request('date', 'Что делали 10 сентября 2026?'); assert.match(day.result, /Animation Review/);
     service.quick.context = () => ({ chats: [{ id: 'unrelated-chat', name: 'Animation Review' }], route: '#/test-card' });
-    const current = await request('current-card', 'Открой эту карточку', { selectedId: 'unrelated-chat' }); assert.equal(current.status, 'completed'); assert.match(current.result, /card/);
-    await request('pin-card', 'Закрепи эту карточку', { selectedId: 'unrelated-chat' }); assert.equal((await service.workspace.registry()).entities[0].pinned, true);
+    const current = await request('current-card', 'Открой эту карточку', { selectedId: 'unrelated-chat' }); assert.equal(current.status, 'completed'); assert.match(current.result, /board/);
+    await request('pin-card', 'Закрепи эту карточку', { selectedId: 'unrelated-chat' }); assert.equal((await service.workspace.registry()).boards[0].pinned, true);
     assert.equal(await service.quick.ask({ id: 'ambiguous-surface', text: 'Открой Animation Review' }), null);
     assert.equal(await service.quick.ask({ id: 'compound', text: 'Что делали вчера и архивируй Animation Review' }), null);
     assert.equal(service.sessions.list().length, 0); assert.equal(service.coordinator.engine, null);
     assert.deepEqual(await request('archive', 'Архивируй эту карточку'), archive);
-    assert.equal((await service.workspace.registry()).entities[0].status, 'done');
+    assert.equal((await service.workspace.registry()).boards[0].status, 'done');
     assert.equal(await service.quick.ask({ id: 'ambiguous', text: 'Архивируй Review' }), null);
     assert.equal(await service.quick.ask({ id: 'research', text: 'Исследуй лучшие способы анимации и сделай карточку' }), null);
   } finally { await service.close(); }

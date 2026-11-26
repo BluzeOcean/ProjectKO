@@ -1,29 +1,32 @@
-// Hash routing: #/<entityId>/<stepIndex>. Step -1 uses the card's default.
+// Hash routing: #/<boardId>/<pageId>/<tabId>. Anything missing falls back to
+// the level above: no page opens the page grid, no tab opens the page's first.
 // Plain <a href> hash links do the navigation; App listens to hashchange.
 
 export interface Route {
-  id: string | null
-  step: number
+  boardId: string | null
+  pageId: string | null
+  tabId: string | null
 }
+
+const decode = (value?: string) => (value ? decodeURIComponent(value) : null)
 
 export function parseHash(): Route {
   const raw = window.location.hash.replace(/^#\/?/, '')
-  if (!raw) return { id: null, step: -1 }
-  const [id, stepRaw] = raw.split('/')
-  const step = Number(stepRaw)
-  return {
-    id: decodeURIComponent(id),
-    step: Number.isInteger(step) && step >= 0 ? step : -1,
-  }
+  if (!raw) return { boardId: null, pageId: null, tabId: null }
+  const [boardId, pageId, tabId] = raw.split('/')
+  return { boardId: decode(boardId), pageId: decode(pageId), tabId: decode(tabId) }
 }
 
-export function entityHash(id: string, step = -1): string {
-  const base = `#/${encodeURIComponent(id)}`
-  return step >= 0 ? `${base}/${step}` : base
+export function hashFor(boardId: string | null, pageId?: string | null, tabId?: string | null): string {
+  const parts = [boardId, pageId, tabId].filter((value): value is string => !!value).map(encodeURIComponent)
+  return parts.length ? '#/' + parts.join('/') : '#/'
 }
 
-export function resolveStep(count: number, requested: number, preferred?: number): number {
-  const valid = (value: number | undefined): value is number =>
-    typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < count
-  return valid(requested) ? requested : valid(preferred) ? preferred : count - 1
+export const boardHash = (id: string) => hashFor(id)
+export const pageHash = (boardId: string, pageId: string) => hashFor(boardId, pageId)
+export const tabHash = (boardId: string, pageId: string, tabId: string) => hashFor(boardId, pageId, tabId)
+
+/** The tab a page opens on: the one asked for, else its first. */
+export function resolveTab<T extends { id: string }>(tabs: T[], requested: string | null): T | null {
+  return (requested ? tabs.find(tab => tab.id === requested) : undefined) ?? tabs[0] ?? null
 }

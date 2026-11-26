@@ -36,6 +36,10 @@ export const reportError = (error: unknown) => update({ error: error instanceof 
 // serves the repository's `workspace/`.
 export const boardUrl = (folder: string, file: string) =>
   isDesktop ? `${state.boardBase}/${folder}/${file}` : `/workspace/${folder}/${file}`
+// A page is a folder inside the board: its tabs, its media and its icons all
+// resolve here, never at the board's root.
+export const pageUrl = (folder: string, page: string, file: string) =>
+  isDesktop ? `${state.boardBase}/${folder}/${page}/${file}` : `/workspace/${folder}/${page}/${file}`
 
 export async function api<T>(path: string, data?: unknown, method?: string, options: { keepalive?: boolean } = {}): Promise<T> {
   const response = await fetch(`/api${path}`, {
@@ -77,8 +81,8 @@ export async function uploadFile(file: File, folder: string): Promise<{ path: st
   if (!response.ok) throw new Error(value.error || 'File could not be copied')
   return value
 }
-export async function uploadCardImage(entityId: string, step: number, file: File): Promise<{ image: string }> {
-  const response = await fetch(`/api/workspace/cards/${encodeURIComponent(entityId)}/${step}/images?name=${encodeURIComponent(file.name)}`, {
+export async function uploadTabImage(boardId: string, pageId: string, tabId: string, file: File): Promise<{ image: string }> {
+  const response = await fetch(`/api/workspace/boards/${encodeURIComponent(boardId)}/pages/${encodeURIComponent(pageId)}/tabs/${encodeURIComponent(tabId)}/images?name=${encodeURIComponent(file.name)}`, {
     method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/octet-stream' }, body: file,
   })
   const value = await response.json()

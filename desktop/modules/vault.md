@@ -1,70 +1,125 @@
 ---
 name: vault
-label: boards, tabs, cards, the registry
-description: The Vault, its boards, tabs and cards, and the registry that records them.
+label: boards, pages, tabs, sections, the registry
+description: The Vault, its boards, pages and tabs, the sections and cards inside them, and the registry that records them.
 ---
 
 # The Vault
 
-The Vault is one folder of Project KO's documents. It holds every board, tab, card,
-page, report and raw asset the owner has produced. It is not code: the code lives in
-the workspace you were pointed at. The Vault folder is named in your briefing.
+The Vault is one folder of Project KO's documents. It holds every board, page, tab,
+report and raw asset the owner has produced. It is not code: the code lives in the
+workspace you were pointed at. The Vault folder is named in your briefing.
+
+## The four levels
+
+| Level | Is | Lives in |
+| --- | --- | --- |
+| **Board** | a folder plus a registry record | \`<vault>/<board folder>/\` |
+| **Page** | a topic inside a board; its own folder | \`<board>/<page id>/\` |
+| **Tab** | one document of a page; the strip above it | a file named by the tab's \`path\` |
+| **Section / Card** | the blocks inside a tab | the tab's \`.tab.json\` |
+
+A **section** is a heading. A **card** is the visual block under it. They are one
+flat, ordered list — a section introduces the cards that follow it until the next
+section — not nested containers.
 
 ## The registry
 
-`<vault>/workspace.json` lists every board. The app reads and writes it; you may edit
-it when you register new work, and you must keep its shape:
+\`<vault>/workspace.json\` lists every board. The app reads and writes it; you may
+edit it when you register new work, and you must keep its shape:
 
-```json
+\`\`\`json
 {
-  "id": "2026-09-15_my-dream-game",
-  "title": "My Dream Game",
-  "description": "One line the owner reads in the deck.",
-  "status": "active",
-  "category": "dev",
-  "created": "2026-09-15",
-  "updated": "2026-09-15",
-  "pinned": false,
-  "folder": "2026-09-15_my-dream-game",
-  "defaultStep": 0,
-  "steps": [{ "name": "Design", "path": "design.html", "viewer": "report" }]
+  "format": "pko-vault",
+  "version": 2,
+  "boards": [
+    {
+      "id": "ironpath",
+      "title": "IronPath",
+      "description": "One line the owner reads in the deck.",
+      "tags": ["game-project"],
+      "status": "active",
+      "created": "2026-11-26",
+      "updated": "2026-11-26",
+      "pinned": true,
+      "folder": "2026-11-26_ironpath",
+      "pages": [
+        {
+          "id": "game-mechanics",
+          "title": "Game Mechanics",
+          "tags": ["game-mechanics"],
+          "created": "2026-11-26",
+          "updated": "2026-11-26",
+          "tabs": [
+            { "id": "overview", "name": "Overview", "path": "game-mechanics/overview.tab.json" }
+          ]
+        }
+      ]
+    }
+  ]
 }
-```
+\`\`\`
 
-- `status` is `active`, `done` or `archived`. `category` is a lowercase tag
-  (`dev`, `image-gen`, `project`, `research`, or one the owner adds).
-- `folder` is a plain folder name inside the Vault, never a path.
-- `updated` changes when the work in a board changes.
-- A board is deleted through the app, not by hand: the bin in the Vaultspace sends its
-  folder to the system trash, so the registry and the files stay in step.
+- **Board tags** are one or more of \`research\`, \`game-project\`, \`gallery\`,
+  \`app-project\`. **Page tags** are one or more of \`game-mechanics\`, \`game-idea\`,
+  \`ui\`, \`sound\`, \`3d\`, \`2d\`, \`animation\`. Both are closed lists; the app refuses
+  anything else.
+- \`status\` is \`active\`, \`done\` or \`archived\`.
+- \`folder\` is a plain folder name inside the Vault, never a path. It keeps the
+  \`YYYY-MM-DD_slug\` form.
+- A page's folder is its \`id\`, so a page id is also a folder name.
+- A tab's \`path\` is **relative to the board's folder**. A tab document lives under
+  its page's folder (\`<page>/<tab>.tab.json\`); an existing report keeps the path it
+  was written with, so every relative link beside it still resolves.
+- \`viewer\` is absent for a tab document, or \`report\` / \`compare3d\`.
+- \`updated\` changes when the work in a board changes.
+- A board or a page is deleted through the app, not by hand: the bin in the grid
+  sends its folder to the system trash, so the registry and the files stay in step.
 
-## Boards, tabs and cards
+## The tab document
 
-- A **board** is one folder in the Vault, plus its entry in the registry.
-- A **tab** is one step of a board: `{ name, path, viewer }`. `viewer: "card"` opens an
-  editable card; any other viewer opens a report.
-- A **card** is a `.card.json` file: a versioned, editable document with a title, an
-  introduction, ordered entries, optional images, saved prompts and Markdown notes.
-  The schema lives in `desktop/service/card-schema.mjs`; the format is documented in
-  `docs/editable-cards.md`.
-- A **report** is an HTML or Markdown file in the board's folder. HTML reports use the
-  app's shared chrome (`workspace/_shared/report.css` and `report.js`) and carry
-  `data-mak-report="document"` on the root element, so they look like the rest of the
-  app and stay editable by the owner.
+\`\`\`json
+{
+  "format": "pko-tab",
+  "version": 1,
+  "layout": "gallery",
+  "summary": "Markdown introduction for the tab.",
+  "nodes": [
+    { "kind": "section", "id": "silhouette", "title": "Silhouette",
+      "note": "Read the shape at 64px before the detail." },
+    { "kind": "card", "id": "explorer", "title": "The explorer",
+      "body": "Keep the **large hat**.", "image": "media/explorer.webp",
+      "alt": "Explorer reference", "status": "review",
+      "prompt": "Next iteration: simplify the belt.",
+      "url": "https://example.com/reference", "linkLabel": "Reference source" }
+  ]
+}
+\`\`\`
 
-Cards are created from the Vaultspace (`+ New board`, then the board's content). When
-you produce a deliverable, add it as a tab of the right board and register it in the
-registry — do not create a second copy of the same work.
+- \`layout\` is \`gallery\`, \`workbench\` or \`pinboard\`. Gallery draws a grid of cards,
+  workbench one row per card, pinboard a wall of thumbnails with one opened large.
+- \`kind\` is required on every block and is \`section\` or \`card\`.
+- Sections carry \`id\`, \`title\` and an optional \`note\`.
+- Cards carry \`id\`, \`title\`, and optionally \`body\`, \`image\`, \`alt\`, \`prompt\`,
+  \`url\`, \`linkLabel\`, \`status\`, \`feedback\`, \`annotation\` and \`wide\`.
+- IDs are unique within the tab. Images are PNG, JPEG, WebP or GIF and stay inside
+  the page's folder. Cards are capped at 200 blocks and 1 MB per document.
 
-## Working with cards
+The schema lives in \`desktop/service/vault-schema.mjs\`; the format is documented in
+[docs/editable-cards.md](../../docs/editable-cards.md).
 
-- Keep related revisions in one card rather than making several.
-- Preserve the editable source: edit the `.card.json` or the report, do not replace it
-  with a flattened copy.
-- Images and generated assets live in the card's `media/` folder and are referenced with
-  relative paths, so the board stays portable.
-- Check what you changed at wide and narrow sizes, and confirm the previews and links
-  work before you report.
+## Working with tabs
 
-The full authoring workflow is in `processes/workspace-authoring.md` and the
-`workspace-authoring` skill.
+- Keep related revisions in one tab rather than making several.
+- Preserve the editable source: edit the \`.tab.json\` or the report, do not replace
+  it with a flattened copy.
+- Images live in the page's \`media/\` folder and are referenced with relative paths,
+  so the page stays portable.
+- A card's \`feedback\` is what the owner wants changed; its \`annotation\` is the
+  picture with the owner's marks on it. Both are written by the Pinboard and read
+  by the board's agent — keep them when editing.
+- Check what you changed at wide and narrow sizes, and confirm the previews and
+  links work before you report.
+
+The full authoring workflow is in \`processes/workspace-authoring.md\` and the
+\`workspace-authoring\` skill.

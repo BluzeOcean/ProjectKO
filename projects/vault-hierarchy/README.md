@@ -1,8 +1,12 @@
 # Vault hierarchy — Board → Page → Tab → Section
 
-**Status:** specified 2026-11-26. Not built. The owner approved this shape in
-conversation on 2026-11-26; the brand sweep was deferred, so nothing here
-depends on it.
+**Status:** **built 2026-11-26.** The owner approved this shape in conversation
+and asked for it without user review until complete; the brand sweep was deferred,
+so nothing here depends on it. One rule was corrected while building: a tab's path
+is relative to the **board's folder**, not the page's, so an existing report keeps
+its own path and every relative link beside it still resolves. A tab document for
+a card is written under its page's folder, and that page folder is what the tab
+path names (`<page>/<tab>.tab.json`).
 
 ## The outcome, in one sentence
 
@@ -130,11 +134,14 @@ Three, each doing one thing:
 ```
 <vault>/workspace.json
 <vault>/2026-11-25_epic-game-jam-2026/
+  board.html                      a report keeps the path it was written with
   concept-art/
-    concepts.tab.json
-    board.html
-    media/explorer.webp
+    concepts.tab.json             a tab document lives under its page
+    media/explorer.webp           a card's picture lives beside its document
 ```
+
+A tab's `path` is relative to the board's folder: `board.html` resolves at the
+board's root, `concept-art/concepts.tab.json` inside the page's folder.
 
 Page folder = page id, no date prefix: the board already dates the work, and
 page order is the registry's, which a date prefix would fight.

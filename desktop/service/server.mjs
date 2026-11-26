@@ -14,8 +14,8 @@ import { ContextLibrary } from './context.mjs';
 import { Briefing } from './briefing.mjs';
 import { groupLabel, taskTitle } from './titles.mjs';
 import { defaultWorkerEffort, taskEffort, workerEfforts } from './effort.mjs';
-import { Workspace, localDay, metadataPatch } from './workspace.mjs';
-import { CardDocuments } from './card-documents.mjs';
+import { Workspace, localDay, boardPatch, pagePatch } from './workspace.mjs';
+import { TabDocuments } from './tab-documents.mjs';
 import { Selection } from './selection.mjs';
 import { BoardAgents } from './board-agents.mjs';
 import { QuickActions } from './quick-actions.mjs';
@@ -119,21 +119,23 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   const nativeSettings = new NativeSettings(native, value => broadcast('native-settings', value));
   const show = (window, extra = {}) => { native({ type: 'window', action: 'show', window }); broadcast('navigate', { window, ...extra }); };
   const focus = id => { sessions.get(id); selectedId = id; settings.selectedId = id; scheduleSettings(); show('chats', { sessionId: id }); return { selectedId: id }; };
-  const registry = async () => readJson(vault.file, { entities: [] });
   const workspace = new Workspace(vault, () => broadcast('workspace-changed', {}));
-  const cards = new CardDocuments(workspace);
+  // The registry is validated on every read: a Vault from before the page layer
+  // is refused by name instead of being served as an empty one.
+  const registry = async () => workspace.registry();
+  const tabs = new TabDocuments(workspace);
   // The one choice the user makes in a board. It is stored here, not in the
   // document, and an agent pulls it when it wants it.
-  const selection = new Selection({ cards, changed: value => broadcast('board-selection', { selection: value }) });
+  const selection = new Selection({ tabs, changed: value => broadcast('board-selection', { selection: value }) });
   // The chat a board remembers, so a hand-off always lands in the same place.
-  const boardAgents = new BoardAgents({ vault, cards, sessions, settings: () => settings, focus });
+  const boardAgents = new BoardAgents({ vault, tabs, sessions, settings: () => settings, focus });
   // The briefing every worker chat starts with. The setting is read at launch, so
   // turning it off stops the briefing for every later launch, including chats
   // that are resumed later.
   const briefing = new Briefing({
     repo, stateDir,
     vaultRoot: () => vault.root,
-    boards: async () => (await workspace.registry()).entities,
+    boards: async () => (await workspace.registry()).boards,
     enabled: () => settings.workerBriefing !== false,
   });
   sessions.briefing = briefing;
@@ -182,13 +184,18 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         case 'rename_chat': return sessions.rename(args.id, args.name);
         case 'interrupt_chat': sessions.input(args.id, '\x03'); return { delivered: 'Ctrl+C', sessionId: args.id };
         case 'list_workspace': return workspace.list(args);
-        case 'read_workspace': return workspace.read(args.entityId, args.step);
+        case 'read_workspace': return workspace.read(args.boardId, args.pageId, args.tabId);
         case 'current_selection': return selection.resolve();
         case 'workspace_activity': return workspace.activity(args.date);
-        case 'update_workspace': return workspace.update(args.entityId, args);
+        case 'update_workspace': return workspace.updateBoard(args.boardId, {
+          ...(args.status !== undefined ? { status: args.status } : {}),
+          ...(args.tags !== undefined ? { tags: args.tags } : {}),
+          ...(args.pinned !== undefined ? { pinned: args.pinned } : {}),
+        });
         case 'show_workspace': {
-          if (args.entityId && !(await registry()).entities.some(item => item.id === args.entityId)) throw new Error('Workspace report does not exist');
-          workspaceRoute = args.entityId ? `#/${encodeURIComponent(args.entityId)}${Number.isInteger(args.step) ? '/' + args.step : ''}` : null;
+          if (args.boardId && !(await registry()).boards.some(item => item.id === args.boardId)) throw new Error('Workspace board does not exist');
+          const parts = [args.boardId, args.pageId, args.tabId].filter(Boolean).map(value => encodeURIComponent(value));
+          workspaceRoute = parts.length ? '#/' + parts.join('/') : null;
           settings.workspaceRoute = workspaceRoute; scheduleSettings();
           show('workspace', { route: workspaceRoute }); return { shown: true, route: workspaceRoute };
         }
@@ -277,8 +284,8 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
       if (url.pathname.startsWith('/api/')) {
         authorize(request);
         const method = request.method;
-        const cardImage = /^\/api\/workspace\/cards\/([^/]+)\/(\d+)\/images$/.exec(url.pathname);
-        if (method === 'POST' && cardImage) return json(response, 201, await cards.image(decodeURIComponent(cardImage[1]), Number(cardImage[2]), request, url.searchParams.get('name')));
+        const tabImage = /^\/api\/workspace\/boards\/([^/]+)\/pages\/([^/]+)\/tabs\/([^/]+)\/images$/.exec(url.pathname);
+        if (method === 'POST' && tabImage) return json(response, 201, await tabs.image(decodeURIComponent(tabImage[1]), decodeURIComponent(tabImage[2]), decodeURIComponent(tabImage[3]), request, url.searchParams.get('name')));
         if (method === 'POST' && url.pathname === '/api/files/import') {
           if (Number(request.headers['content-length']) > MAX_FILE_BYTES) throw Object.assign(new Error('Choose files of 1 GB or less.'), { status: 413 });
           const result = await importFile(request, url.searchParams.get('folder'), url.searchParams.get('name'));
@@ -293,7 +300,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         }
         if (method === 'GET' && url.pathname === '/api/dictation') return json(response, 200, { ...(await dictation.status()), shortcut: toxicShortcut() });
         if (method === 'POST' && url.pathname === '/api/transcribe') return json(response, 200, await dictation.transcribe(request, 'desktop', () => !closing));
-        const data = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) ? await body(request, url.pathname === '/api/files/markdown' ? 12 * 1024 * 1024 : url.pathname.startsWith('/api/workspace/cards') ? 2 * 1024 * 1024 : 256 * 1024) : {};
+        const data = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(method) ? await body(request, url.pathname === '/api/files/markdown' ? 12 * 1024 * 1024 : url.pathname.startsWith('/api/workspace/boards') ? 2 * 1024 * 1024 : 256 * 1024) : {};
         if (method === 'POST' && url.pathname === '/api/dictation') return json(response, 200, await chooseDictation(data.provider));
         // A partner take: Toxic opens the microphone and hands the transcript
         // back to this app, so the words land in the terminal that asked for
@@ -336,22 +343,39 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         }
         if (method === 'GET' && url.pathname === '/api/workspace') return json(response, 200, await registry());
         if (method === 'GET' && url.pathname === '/api/workspace/selection') return json(response, 200, { selection: await selection.resolve() });
-        if (method === 'POST' && url.pathname === '/api/workspace/selection') return json(response, 200, { selection: await selection.choose(data.entityId, data.step, data.entryId) });
+        if (method === 'POST' && url.pathname === '/api/workspace/selection') return json(response, 200, { selection: await selection.choose({ boardId: data.boardId, pageId: data.pageId, tabId: data.tabId, cardId: data.cardId }) });
         if (method === 'POST' && url.pathname === '/api/workspace/selection/clear') return json(response, 200, { selection: selection.clear() });
-        if (method === 'POST' && url.pathname === '/api/workspace/hand-off') return json(response, 200, await boardAgents.send({ entityId: data.entityId, step: data.step, entryId: data.entryId }));
-        if (method === 'POST' && url.pathname === '/api/workspace/cards') return json(response, 201, await cards.create(data));
-        const cardDocument = /^\/api\/workspace\/cards\/([^/]+)\/(\d+)$/.exec(url.pathname);
-        if (cardDocument && method === 'GET') return json(response, 200, await cards.read(decodeURIComponent(cardDocument[1]), Number(cardDocument[2])));
-        if (cardDocument && method === 'PUT') return json(response, 200, await cards.save(decodeURIComponent(cardDocument[1]), Number(cardDocument[2]), data));
-        const cardMetadata = url.pathname.match(/^\/api\/workspace\/entities\/([^/]+)$/);
-        if (method === 'PATCH' && cardMetadata) return json(response, 200, await workspace.update(decodeURIComponent(cardMetadata[1]), metadataPatch(data)));
-        if (method === 'DELETE' && cardMetadata) {
-          const removed = await workspace.remove(decodeURIComponent(cardMetadata[1]));
+        if (method === 'POST' && url.pathname === '/api/workspace/hand-off') return json(response, 200, await boardAgents.send({ boardId: data.boardId, pageId: data.pageId, tabId: data.tabId, cardId: data.cardId }));
+
+        // A board: created empty, and deleted with its folder.
+        if (method === 'POST' && url.pathname === '/api/workspace/boards') return json(response, 201, { board: await workspace.createBoard(data) });
+        const oneBoard = /^\/api\/workspace\/boards\/([^/]+)$/.exec(url.pathname);
+        if (method === 'PATCH' && oneBoard) return json(response, 200, { board: await workspace.updateBoard(decodeURIComponent(oneBoard[1]), boardPatch(data)) });
+        if (method === 'DELETE' && oneBoard) {
+          const removed = await workspace.removeBoard(decodeURIComponent(oneBoard[1]));
           // The board's own files go with it, into the system trash, where they
           // can still be found if the delete was a mistake.
           native({ type: 'recycle-file', path: removed.folder });
-          return json(response, 200, { removed: true, entity: removed.entity, folder: removed.folder });
+          return json(response, 200, { removed: true, board: removed.board, folder: removed.folder });
         }
+
+        // A page: its own folder inside the board, and its own tags.
+        const pagesOf = /^\/api\/workspace\/boards\/([^/]+)\/pages$/.exec(url.pathname);
+        if (method === 'POST' && pagesOf) return json(response, 201, { page: await workspace.createPage(decodeURIComponent(pagesOf[1]), data) });
+        const onePage = /^\/api\/workspace\/boards\/([^/]+)\/pages\/([^/]+)$/.exec(url.pathname);
+        if (method === 'PATCH' && onePage) return json(response, 200, { page: await workspace.updatePage(decodeURIComponent(onePage[1]), decodeURIComponent(onePage[2]), pagePatch(data)) });
+        if (method === 'DELETE' && onePage) {
+          const removed = await workspace.removePage(decodeURIComponent(onePage[1]), decodeURIComponent(onePage[2]));
+          native({ type: 'recycle-file', path: removed.folder });
+          return json(response, 200, { removed: true, page: removed.page, board: removed.board, folder: removed.folder });
+        }
+
+        // A tab: the file is the document, the registry keeps the name and path.
+        const tabsOf = /^\/api\/workspace\/boards\/([^/]+)\/pages\/([^/]+)\/tabs$/.exec(url.pathname);
+        if (method === 'POST' && tabsOf) return json(response, 201, await tabs.create(decodeURIComponent(tabsOf[1]), decodeURIComponent(tabsOf[2]), data));
+        const oneTab = /^\/api\/workspace\/boards\/([^/]+)\/pages\/([^/]+)\/tabs\/([^/]+)$/.exec(url.pathname);
+        if (method === 'GET' && oneTab) return json(response, 200, await tabs.read(decodeURIComponent(oneTab[1]), decodeURIComponent(oneTab[2]), decodeURIComponent(oneTab[3])));
+        if (method === 'PUT' && oneTab) return json(response, 200, await tabs.save(decodeURIComponent(oneTab[1]), decodeURIComponent(oneTab[2]), decodeURIComponent(oneTab[3]), data));
         if (method === 'GET' && url.pathname === '/api/projects') {
           const matches = await projects.detect(url.searchParams.get('path') || repo);
           return json(response, 200, { matches, adapters: projects.adapters.map(item => ({ id: item.id, label: item.label })) });
@@ -640,7 +664,7 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   watchVault();
   const restoreTimer = restoreSessions ? setTimeout(() => sessions.restore().catch(error => sessions.emit('service-error', error)), 100) : null;
   return {
-    origin, contentOrigin: files.origin, token, sessions, coordinator, quick, workspace, cards, files, projects, knowledge, integrations, mobile,
+    origin, contentOrigin: files.origin, token, sessions, coordinator, quick, workspace, tabs, files, projects, knowledge, integrations, mobile,
     urls: { workspace: `${origin}/?desktop=1&surface=workspace&token=${token}`, chats: `${origin}/?desktop=1&surface=chats&token=${token}` },
       nativeMessage: event => nativeSettings.receive(event),
       async close() {

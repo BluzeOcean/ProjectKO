@@ -1,64 +1,57 @@
-import type { WorkspaceEntity } from '../types'
+import type { Board, Page, Tab } from '../types'
+import { boardHash } from '../lib/route'
 import { isDesktop } from '../desktop/client'
 import BrowserSettings from './BrowserSettings'
 import { EntityStatusButton } from './EntityControls'
-import NewCard from './NewCard'
+import NewTab from './NewTab'
 
 interface TopbarProps {
-  entity: WorkspaceEntity | null
-  stepIndex: number
-  onStep: (id: string, index: number) => void
+  board: Board | null
+  page: Page | null
+  tab: Tab | null
+  onTab: (tabId: string) => void
   onHome: () => void
   reportUrl: string | null
 }
 
-export default function Topbar({ entity, stepIndex, onStep, onHome, reportUrl }: TopbarProps) {
+export default function Topbar({ board, page, tab, onTab, onHome, reportUrl }: TopbarProps) {
   return (
     <div className="topbar">
       <nav className="breadcrumb" aria-label="Breadcrumb">
-        <button className="crumb-link" onClick={onHome}>
-          Vaultspace
-        </button>
-        {entity && (
+        <button className="crumb-link" onClick={onHome}>Vaultspace</button>
+        {board && (
           <>
             <span className="crumb-sep">/</span>
-            <span className="crumb-current">{entity.title}</span>
-            <EntityStatusButton entity={entity} />
+            {page ? <a className="crumb-link" href={boardHash(board.id)}>{board.title}</a> : <span className="crumb-current">{board.title}</span>}
+            <EntityStatusButton entity={board} />
           </>
         )}
+        {page && <><span className="crumb-sep">/</span><span className="crumb-current">{page.title}</span></>}
         {!isDesktop && <BrowserSettings />}
-        {isDesktop && <NewCard />}
       </nav>
 
-      {entity && (
+      {page && (
         <div className="topbar-right">
-          {entity.steps.length > 0 && (
+          {page.tabs.length > 1 && (
             <div className="step-tabs" role="tablist">
-              {entity.steps.map((s, i) => (
+              {page.tabs.map(item => (
                 <button
-                  key={i}
+                  key={item.id}
                   role="tab"
-                  aria-selected={i === stepIndex}
-                  className={`step-tab${i === stepIndex ? ' active' : ''}`}
-                  onClick={() => onStep(entity.id, i)}
-                  title={s.name}
+                  aria-selected={item.id === tab?.id}
+                  className={'step-tab' + (item.id === tab?.id ? ' active' : '')}
+                  onClick={() => onTab(item.id)}
+                  title={item.name}
                 >
-                  {s.name}
+                  {item.name}
                 </button>
               ))}
             </div>
           )}
-          {reportUrl && (
-            <a
-              className="open-ext"
-              href={reportUrl}
-              target="_blank"
-              rel="noreferrer"
-              title="Open report in a new tab"
-            >
-              ↗
-            </a>
+          {reportUrl && tab?.viewer === 'report' && (
+            <a className="open-ext" href={reportUrl} target="_blank" rel="noreferrer" title="Open report in a new tab">↗</a>
           )}
+          {isDesktop && <NewTab boardId={board!.id} pageId={page.id} />}
         </div>
       )}
     </div>

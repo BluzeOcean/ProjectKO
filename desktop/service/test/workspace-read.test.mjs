@@ -32,17 +32,23 @@ test('three megabytes of unclosed opening tags are handled in linear time', () =
     const text = unit.repeat(Math.ceil(3 * 1024 * 1024 / unit.length));
     const started = performance.now();
     stripCodeBlocks(text);
-    assert.ok(performance.now() - started < 1000, `${JSON.stringify(unit)} took too long`);
+    assert.ok(performance.now() - started < 1000, JSON.stringify(unit) + ' took too long');
   }
 });
 
 test('reading a report with many unclosed generic tags does not stall', async () => {
-  const repo = await mkdtemp(path.join(os.tmpdir(), 'mrmak-report-read-'));
+  const repo = await mkdtemp(path.join(os.tmpdir(), 'pko-report-read-'));
   await mkdir(path.join(repo, 'workspace'));
-  await writeFile(path.join(repo, 'workspace/workspace.json'), JSON.stringify({ entities: [{ id: 'malformed', title: 'Malformed report', folder: '.', steps: [{ name: 'Report', path: 'malformed.html' }] }] }));
-  await writeFile(path.join(repo, 'workspace/malformed.html'), 'Before ' + '<unclosed '.repeat(280000));
+  const board = {
+    id: 'malformed', title: 'Malformed report', tags: ['research'], status: 'active',
+    folder: 'malformed', created: '2026-01-01', updated: '2026-01-01',
+    pages: [{ id: 'report', title: 'Report', tags: [], created: '2026-01-01', updated: '2026-01-01', tabs: [{ id: 'report', name: 'Report', path: 'report.html', viewer: 'report' }] }],
+  };
+  await mkdir(path.join(repo, 'workspace/malformed'), { recursive: true });
+  await writeFile(path.join(repo, 'workspace/workspace.json'), JSON.stringify({ format: 'pko-vault', version: 2, boards: [board] }));
+  await writeFile(path.join(repo, 'workspace/malformed/report.html'), 'Before ' + '<unclosed '.repeat(280000));
   const started = performance.now();
-  const result = await new Workspace(repo).read('malformed');
+  const result = await new Workspace(repo).read('malformed', 'report', 'report');
   assert.ok(result.text.startsWith('Before'));
   assert.equal(result.text.length, 12000);
   assert.ok(performance.now() - started < 2000);

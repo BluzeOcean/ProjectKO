@@ -1,6 +1,11 @@
 # Vaultspace overview (the board deck)
 
 Status: approved by the owner on 2026-11-20; shipped in `6066179`.
+**Updated 2026-11-26:** the grid below is now one component, `TileDeck`, used by
+both the Vaultspace (boards) and a board's own screen (its pages). A board carries
+tag **arrays**, so the filter row matches any of them; the inspector's tag pills
+are toggles. A page's inspector is the same column with the page's own facts. The
+deck's behaviour, layout and testing notes below still describe the board level.
 
 The Vaultspace overview is a gallery of board thumbnails with a thin facts column
 beside it, not a grid of cards. It was designed as a mock in `lab/` (Mock 1, page

@@ -17,8 +17,10 @@ const report = '<h1>Project notes</h1><p>The report belongs to the board that is
 await writeFile(path.join(repo, 'workspace', 'sample', 'report.html'), report);
 await writeFile(path.join(repo, 'workspace', 'other', 'report.html'), '<h1>Other</h1>');
 const file = path.join(repo, 'workspace', 'workspace.json');
-const card = { id: 'sample', title: 'Character Workshop', description: 'A reviewable sample.', category: 'research', type: 'group', folder: 'sample', status: 'active', created: localDay(), steps: [{ name: 'Notes', path: 'report.html' }] };
-await writeFile(file, JSON.stringify({ entities: [card, { ...card, id: 'other', title: 'Another project', category: 'game', folder: 'other' }] }));
+const page = id => ({ id, title: 'Notes', description: '', tags: ['game-idea'], created: localDay(), updated: localDay(), tabs: [{ id: 'notes', name: 'Notes', path: id + '/report.html', viewer: 'report' }] });
+const board = { id: 'sample', title: 'Character Workshop', description: 'A reviewable sample.', tags: ['research'], status: 'active', folder: 'sample', created: localDay(), updated: localDay(), pages: [{ id: 'notes', title: 'Notes', description: '', tags: ['game-idea'], created: localDay(), updated: localDay(), tabs: [{ id: 'notes', name: 'Notes', path: 'report.html', viewer: 'report' }] }] };
+void page;
+await writeFile(file, JSON.stringify({ format: 'pko-vault', version: 2, boards: [board, { ...board, id: 'other', title: 'Another project', folder: 'other', pages: [] }] }));
 await cp(path.join(root, 'public', 'assets'), path.join(root, 'dist', 'assets'), { recursive: true });
 const native = [];
 const service = await createService({ repo, uiDir: path.join(root, 'dist'), native: event => native.push(event) });
@@ -49,7 +51,7 @@ try {
   await bin.click();
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText('Character Workshop');
-  await expect(dialog).toContainText('1 — Notes');
+  await expect(dialog).toContainText('Notes');
   await expect(dialog).toContainText('sample');
   await expect(dialog).toContainText("The files in this board's folder go with it.");
   // Cancel keeps the board and its files.
@@ -60,13 +62,13 @@ try {
   // Deleting takes the board away and leaves a quiet note.
   await tile.hover();
   await inspector.getByRole('button', { name: 'Delete Character Workshop' }).click();
-  await dialog.getByRole('button', { name: 'Delete board' }).click();
+  await dialog.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await expect(tile).toHaveCount(0);
   await expect(page.locator('.deck-note')).toContainText('Character Workshop');
   await expect(page.locator('.deck-note')).toContainText('deleted');
   const registry = JSON.parse(await readFile(file, 'utf8'));
-  assert.deepEqual(registry.entities.map(item => item.id), ['other']);
+  assert.deepEqual(registry.boards.map(item => item.id), ['other']);
   // The service never removes the files itself: the folder goes to the trash.
   assert.equal(await readFile(path.join(repo, 'workspace', 'sample', 'report.html'), 'utf8'), report);
   assert.ok(native.some(event => event.type === 'recycle-file' && event.path === path.join(repo, 'workspace', 'sample')));

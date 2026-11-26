@@ -1,72 +1,65 @@
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
-import { validateCard } from './card-schema.mjs';
+import { validateTabDocument } from './vault-schema.mjs';
 
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
 
 /**
  * The chat a board remembers.
  *
- * The first hand-off opens a chat named after the board, working in the
- * board's own folder, and the board remembers it. Later hand-offs go to that
- * same chat, so a board keeps one conversation with its agent instead of
- * opening a new one every time.
- *
- * The binding lives on the board's own record in the workspace registry, so
+ * A page is a container, not an owner: the board keeps one chat, and the
+ * hand-off names the page and the tab so the agent knows where to look without
+ * being started there. The binding lives on the board's record in the Vault, so
  * it travels with the board and stays readable.
  */
 export class BoardAgents {
-  constructor({ repo, vault, cards, sessions, settings, focus = () => {} }) {
-    Object.assign(this, { cards, sessions, settings, focus });
+  constructor({ repo, vault, tabs, sessions, settings, focus = () => {} }) {
+    Object.assign(this, { tabs, sessions, settings, focus });
     this.vault = vault || { repo, root: path.join(repo, 'workspace'), file: path.join(repo, 'workspace', 'workspace.json') };
   }
 
-  async entity(entityId) {
-    const registry = await this.cards.workspace.registry();
-    return registry.entities.find(item => item.id === entityId) || null;
+  async entity(boardId) {
+    const registry = await this.tabs.workspace.registry();
+    return registry.boards.find(item => item.id === boardId) || null;
   }
 
   /** The chat this board remembers, if it has one yet. */
-  async binding(entityId) {
-    const entity = await this.entity(entityId);
-    return entity?.agent || null;
+  async binding(boardId) {
+    const board = await this.entity(boardId);
+    return board?.agent || null;
   }
 
   /**
-   * Hand an entry to the board's agent: the picture, the marks drawn over
-   * it and the feedback the user wrote, in one message.
+   * Hand a card to the board's agent: the picture, the marks drawn over it and
+   * the feedback the user wrote, in one message.
    */
-  async send({ entityId, step, entryId }) {
-    const entity = await this.entity(entityId);
-    if (!entity) fail('This board does not exist.', 404);
-    const entry = await this.entry(entity, step, entryId);
-    const chat = await this.chat(entity);
-    const message = this.message(entity, entry);
+  async send({ boardId, pageId, tabId, cardId }) {
+    const board = await this.entity(boardId);
+    if (!board) fail('This board does not exist.', 404);
+    const target = await this.tabs.resolve(boardId, pageId, tabId);
+    let document;
+    try { document = JSON.parse(await readFile(target.file, 'utf8')); }
+    catch { fail('This tab contains invalid JSON. Its original file has been kept.'); }
+    const card = validateTabDocument(document).nodes.find(node => node.kind === 'card' && node.id === cardId);
+    if (!card) fail('Choose a card on this board.');
+    const entry = {
+      title: card.title,
+      fileName: card.image ? path.basename(card.image) : null,
+      picture: card.image ? path.join(path.dirname(target.file), card.image) : null,
+      annotation: card.annotation ? path.join(path.dirname(target.file), card.annotation) : null,
+      feedback: card.feedback || '',
+      notes: card.body || '',
+    };
+    const chat = await this.chat(board);
+    const message = this.message(board, target.page, target.tab, entry);
     this.sessions.input(chat.id, message, { coordinator: true, submit: true });
     this.focus(chat.id);
     return { sessionId: chat.id, message, chat: { id: chat.id, name: chat.name, agent: chat.agent } };
   }
 
-  async entry(entity, step, entryId) {
-    const target = await this.cards.resolve(entity.id, step);
-    let document;
-    try { document = JSON.parse(await readFile(target.file, 'utf8')); }
-    catch { fail('This card contains invalid JSON. Its original file has been kept.'); }
-    const item = validateCard(document).items.find(entry => entry.id === entryId);
-    if (!item) fail('Choose an entry on this board.');
-    return {
-      title: item.title,
-      fileName: item.image ? path.basename(item.image) : null,
-      picture: item.image ? path.join(target.root, item.image) : null,
-      annotation: item.annotation ? path.join(target.root, item.annotation) : null,
-      feedback: item.feedback || '',
-      notes: item.body || '',
-    };
-  }
-
   /** The board's chat: the one it remembers, or the first one it opens. */
-  async chat(entity) {
-    const binding = entity.agent;
+  async chat(board) {
+    const binding = board.agent;
     if (binding?.chatId) {
       try {
         const session = this.sessions.get(binding.chatId);
@@ -77,29 +70,30 @@ export class BoardAgents {
     const settings = this.settings();
     const session = await this.sessions.create({
       agent: settings.defaultAgent || 'codex',
-      name: entity.title,
-      cwd: path.join(this.vault.root, entity.folder),
+      name: board.title,
+      cwd: path.join(this.vault.root, board.folder),
       effort: settings.defaultEffort,
       bypass: settings.defaultBypass === true,
     });
-    await this.bind(entity.id, { chatId: session.id, agent: session.agent, name: session.name, folder: entity.folder });
+    await this.bind(board.id, { chatId: session.id, agent: session.agent, name: session.name });
     return session;
   }
 
-  async bind(entityId, value) {
-    await this.cards.registryChange(registry => {
-      const entity = registry.entities.find(item => item.id === entityId);
-      if (entity) entity.agent = value;
+  async bind(boardId, value) {
+    await this.tabs.workspace.change(registry => {
+      const board = registry.boards.find(item => item.id === boardId);
+      if (board) board.agent = value;
+      return true;
     });
   }
 
   /** What the agent receives: the picture, the marks, and the words. */
-  message(entity, entry) {
-    const lines = [`[Pinboard · ${entity.title}]`, ''];
-    lines.push(`Chosen entry: ${entry.fileName || 'no picture'} — ${entry.title}`);
-    if (entry.picture) lines.push(`Picture: ${entry.picture}`);
-    if (entry.annotation) lines.push(`Marked picture: ${entry.annotation}`);
-    if (entry.notes) lines.push(`Notes on the entry: ${entry.notes}`);
+  message(board, page, tab, entry) {
+    const lines = ['[Board: ' + board.title + ' / ' + page.title + ' / ' + tab.name + ']', ''];
+    lines.push('Chosen card: ' + (entry.fileName || 'no picture') + ' - ' + entry.title);
+    if (entry.picture) lines.push('Picture: ' + entry.picture);
+    if (entry.annotation) lines.push('Marked picture: ' + entry.annotation);
+    if (entry.notes) lines.push('Notes on the card: ' + entry.notes);
     lines.push('', 'Feedback:', entry.feedback || '(none)');
     return lines.join('\n');
   }

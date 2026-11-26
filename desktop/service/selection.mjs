@@ -1,59 +1,57 @@
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
-import { validateCard } from './card-schema.mjs';
+import { validateTabDocument } from './vault-schema.mjs';
 
 const fail = (message, status = 400) => { throw Object.assign(new Error(message), { status }); };
 
 /**
  * What the user has chosen in a board.
  *
- * The signal is one explicit click on one entry. Nothing here watches the
- * user: no hover, no pointer position, no polling of what is on screen. The
- * service stores the choice, and an agent pulls it when it wants it.
+ * The signal is one explicit click on one card. Nothing here watches the user:
+ * no hover, no pointer position, no polling of what is on screen. The service
+ * stores the choice, and an agent pulls it when it wants it.
  *
- * The choice is live state, not a document. It is not written to the card
- * and it does not survive a restart — it points at something the user is
- * looking at right now.
+ * The choice is live state, not a document. It is not written to the tab and it
+ * does not survive a restart - it points at something the user is looking at now.
  */
 export class Selection {
-  constructor({ cards, changed = () => {} }) {
-    this.cards = cards;
+  constructor({ tabs, changed = () => {} }) {
+    this.tabs = tabs;
     this.changed = changed;
     this.current = null;
   }
 
-  /** The stored choice, without reading the card. */
+  /** The stored choice, without reading the tab. */
   state() { return this.current; }
 
   /**
-   * The compact pointer the coordinator is given with every operation, so
-   * the model knows which entry the user means before it asks for details.
+   * The compact pointer the coordinator is given with every operation, so the
+   * model knows which card the user means before it asks for details.
    */
   brief() {
     if (!this.current) return null;
-    const { boardId, boardTitle, step, entryId, title, fileName } = this.current;
-    return { boardId, boardTitle, step, entryId, title, fileName };
+    const { boardId, boardTitle, pageId, pageTitle, tab, tabName, cardId, title, fileName } = this.current;
+    return { boardId, boardTitle, pageId, pageTitle, tab, tabName, cardId, title, fileName };
   }
 
   /**
-   * The user chose an entry. The card is read to make sure the entry is
-   * really there, so the pointer never names something that is not.
+   * The user chose a card. The tab is read to make sure the card is really
+   * there, so the pointer never names something that is not.
    */
-  async choose(entityId, step, entryId) {
-    if (typeof entityId !== 'string' || !entityId || !Number.isInteger(step) || step < 0 || typeof entryId !== 'string' || !entryId) {
-      fail('Choose an entry on a board.');
+  async choose({ boardId, pageId, tabId, cardId }) {
+    if (typeof boardId !== 'string' || !boardId || typeof pageId !== 'string' || !pageId || typeof tabId !== 'string' || !tabId || typeof cardId !== 'string' || !cardId) {
+      fail('Choose a card on a board.');
     }
-    const target = await this.cards.resolve(entityId, step);
+    const target = await this.tabs.resolve(boardId, pageId, tabId);
     const document = await this.read(target.file);
-    const item = document.items.find(entry => entry.id === entryId);
-    if (!item) fail('Choose an entry on this board.');
+    const card = document.nodes.find(node => node.kind === 'card' && node.id === cardId);
+    if (!card) fail('Choose a card on this board.');
     this.current = {
-      boardId: entityId,
-      boardTitle: target.entity.title,
-      step,
-      entryId,
-      title: item.title,
-      fileName: item.image ? path.basename(item.image) : null,
+      boardId, boardTitle: target.board.title,
+      pageId, pageTitle: target.page.title,
+      tab: tabId, tabName: target.tab.name,
+      cardId, title: card.title,
+      fileName: card.image ? path.basename(card.image) : null,
       at: new Date().toISOString(),
     };
     this.changed(this.brief());
@@ -68,31 +66,36 @@ export class Selection {
   }
 
   /**
-   * The chosen entry as it stands now: the board it belongs to, the file on
-   * disk, the feedback the user wrote and the marked-up picture. Read when
-   * an agent asks for it, not when the user clicks.
+   * The chosen card as it stands now: the board it belongs to, the file on
+   * disk, the feedback the user wrote and the marked-up picture. Read when an
+   * agent asks for it, not when the user clicks.
    */
   async resolve() {
     if (!this.current) return null;
-    const { boardId, step, entryId } = this.current;
-    const target = await this.cards.resolve(boardId, step);
+    const { boardId, pageId, tab, cardId } = this.current;
+    const target = await this.tabs.resolve(boardId, pageId, tab);
     const document = await this.read(target.file);
-    const item = document.items.find(entry => entry.id === entryId);
-    if (!item) { this.clear(); return null; }
+    const card = document.nodes.find(node => node.kind === 'card' && node.id === cardId);
+    if (!card) { this.clear(); return null; }
     return {
       boardId,
-      step,
-      boardTitle: target.entity.title,
-      boardFolder: target.entity.folder,
-      cardTitle: document.title,
-      entryId,
-      title: item.title,
-      status: item.status || null,
-      fileName: item.image ? path.basename(item.image) : null,
-      picture: item.image ? path.join(target.root, item.image) : null,
-      annotation: item.annotation ? path.join(target.root, item.annotation) : null,
-      feedback: item.feedback || '',
-      notes: item.body || '',
+      boardTitle: target.board.title,
+      boardFolder: target.board.folder,
+      pageId,
+      pageTitle: target.page.title,
+      tab,
+      tabName: target.tab.name,
+      tabTitle: document.summary || target.tab.name,
+      cardId,
+      title: card.title,
+      status: card.status || null,
+      fileName: card.image ? path.basename(card.image) : null,
+      // A card's picture is relative to the document that names it, which is
+      // the page's own folder - the same base the renderer uses.
+      picture: card.image ? path.join(path.dirname(target.file), card.image) : null,
+      annotation: card.annotation ? path.join(path.dirname(target.file), card.annotation) : null,
+      feedback: card.feedback || '',
+      notes: card.body || '',
       at: this.current.at,
     };
   }
@@ -100,7 +103,7 @@ export class Selection {
   async read(file) {
     let document;
     try { document = JSON.parse(await readFile(file, 'utf8')); }
-    catch { fail('This card contains invalid JSON. Its original file has been kept.'); }
-    return validateCard(document);
+    catch { fail('This tab contains invalid JSON. Its original file has been kept.'); }
+    return validateTabDocument(document);
   }
 }

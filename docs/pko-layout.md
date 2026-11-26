@@ -98,7 +98,7 @@ you  ──▶  coordinator (Mak, in the app)
    repository carries its own `AGENTS.md`; that file is the rulebook for work
    inside it.
 3. **Work happens in the Workspace** — the code folder.
-4. **Deliverables land in the Vault.** A board, a tab, a card, the captures.
+4. **Deliverables land in the Vault.** A board, a page, a tab, the captures.
    Register the tab in `workspace.json`; do not create a second copy of the
    same work.
 5. **If a board is generated from a repository, re-run its generator** after a
@@ -188,7 +188,7 @@ links to it.
 
 | The deliverable | Goes in |
 | --- | --- |
-| A board, a card, a report, concept art | the Vault, in a board folder |
+| A board, a page, a tab, a report, concept art | the Vault, in a board folder |
 | The registry entry for a board | the Vault's `workspace.json` |
 | Game code, assets, `.uproject` | the Workspace |
 | A reusable workflow | the App's `processes/` |

@@ -1,11 +1,11 @@
 {
-  "format": "mrmak-card",
+  "format": "pko-tab",
   "version": 1,
-  "template": "gallery",
-  "title": "A small game, three directions",
+  "layout": "gallery",
   "summary": "An editable reference board for **Mr. Mak 64**. Compare the character and locations, keep notes, and save the next idea beside its image. The prompts below are suggested next iterations.",
-  "items": [
+  "nodes": [
     {
+      "kind": "card",
       "id": "gentleman",
       "title": "The gentleman",
       "body": "Keep the character small and the hat easy to recognise. Review the silhouette at gameplay size before adding more detail.",
@@ -15,6 +15,7 @@
       "status": "review"
     },
     {
+      "kind": "card",
       "id": "green-hills",
       "title": "Somewhere to begin",
       "body": "A calm first area with room to practise. Give the player a clear destination and enough space to try the first jump.",
@@ -24,6 +25,7 @@
       "status": "idea"
     },
     {
+      "kind": "card",
       "id": "sky-islands",
       "title": "A little further up",
       "body": "A second area for testing jumps between islands. Use the gaps to establish rhythm before increasing the difficulty.",

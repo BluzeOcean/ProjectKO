@@ -18,11 +18,11 @@ test('voice session keeps the English default even with a custom delivery style'
 test('quick command confirmations and empty results are English without a model', async () => {
   await mkdir(path.resolve('.cache'), { recursive: true });
   const stateDir = await mkdtemp(path.resolve('.cache/english-actions-'));
-  const card = { id: 'review', title: 'Animation Review' };
+  const board = { id: 'review', title: 'Animation Review' };
   const calls = [];
   let chats = [{ id: 'animation', name: 'Animation Work', attention: true }];
   const actions = await new QuickActions({ stateDir,
-    workspace: { list: async () => [card], activity: async date => ({ cards: date === '2026-09-10' ? [card] : [] }) },
+    workspace: { list: async () => [board], activity: async date => ({ boards: date === '2026-09-10' ? [board] : [] }) },
     context: () => ({ route: '#/review', chats }),
     execute: async (name, args) => { calls.push({ name, args }); return { name: args.name || 'Animation Work' }; },
     completed: () => {},

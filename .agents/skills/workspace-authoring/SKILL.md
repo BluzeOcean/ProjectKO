@@ -10,14 +10,15 @@ Keep authored content in English unless the user explicitly requests another
 language. Put related iterations in an existing card rather than creating
 several cards for one task. Do not reorganize unrelated projects.
 
-For a gallery, workbench or pinboard page that the owner wants to edit directly,
-use the versioned `.card.json` format in [editable cards](../../../docs/editable-cards.md).
-Register its step with `viewer: "card"`. Keep stable entry IDs, relative local
-images and Markdown notes; validate with `desktop/service/card-schema.mjs` before
-saving. Reread the source before each edit and update the registry date. The app
-provides the view, so do not create a second editable HTML copy of the same data.
+For a gallery, workbench or pinboard tab that the owner wants to edit directly,
+use the versioned `.tab.json` format in [editable cards](../../../docs/editable-cards.md).
+Register it as a tab of a page, with no `viewer` and a `path` under the page's own
+folder (`<page>/<tab>.tab.json`). Keep stable block IDs, relative local images and
+Markdown notes; validate with `desktop/service/vault-schema.mjs` before saving.
+Reread the source before each edit and update the page's and the board's dates. The
+app provides the view, so do not create a second editable HTML copy of the same data.
 Preserve existing custom HTML unless conversion was requested. Browser and phone
-previews can read these cards; the desktop Workspace provides editing controls.
+previews can read these tabs; the desktop Workspace provides editing controls.
 
 A pinboard entry can also carry `feedback` — what the user wants changed — and
 `annotation`, the marked-up picture inside the card's `media/` folder. The app
@@ -39,9 +40,10 @@ Use local output paths, meaningful alt text and lazy loading. Keep motion
 studies playable with native video controls. Wide tables must scroll within
 the report. Never cover the document close button with the Files rail.
 
-Update `workspace/workspace.json` with a stable ID, category, folder, readable
-title, creation date, last updated date and steps. `sample: true` is reserved for
-starter examples; ordinary work uses normal archiving behavior.
+Update `workspace/workspace.json` with a stable ID, tags, folder, readable title,
+creation date, last updated date and pages. A page carries its own tags and tabs,
+and the page id is the page's folder name. `sample: true` is reserved for starter
+examples; ordinary work uses normal archiving behavior.
 
 A board is deleted through the app, not by hand: the bin beside "Open board"
 takes it out of the registry and sends its folder to the system trash. Delete

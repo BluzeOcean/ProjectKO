@@ -33,7 +33,7 @@ await writeFile(path.join(repo, 'README.md'), 'repository-readme');
 await writeFile(path.join(repo, 'workspace/test/report.html'), `<!doctype html><html><head></head><body><h1>Link report</h1><a href="${external}"><span>External report link</span></a><a href="#section">Local section</a><h2 id="section">Section</h2><a href="${external}" download>Download</a>${probe}</body></html>`);
 await writeFile(path.join(repo, 'workspace/test/notes.md'), `# Link notes\n\n[Markdown web link](${external})\n`);
 await writeFile(path.join(repo, 'workspace/test/image.svg'), '<svg xmlns="http://www.w3.org/2000/svg"><text id="origin" y="20">waiting</text><script>document.getElementById("origin").textContent = self.origin</script></svg>');
-await writeFile(path.join(repo, 'workspace/workspace.json'), JSON.stringify({ entities: [{ id: 'test', folder: 'test', title: 'Links', category: 'dev', created: '2026-09-22', status: 'active', steps: [{ name: 'Report', path: 'report.html' }, { name: 'Notes', path: 'notes.md' }] }] }));
+await writeFile(path.join(repo, 'workspace/workspace.json'), JSON.stringify({ format: 'pko-vault', version: 2, boards: [{ id: 'test', folder: 'test', title: 'Links', tags: ['app-project'], created: '2026-09-22', updated: '2026-09-22', status: 'active', pages: [{ id: 'documents', title: 'Documents', tags: ['ui'], created: '2026-09-22', updated: '2026-09-22', tabs: [{ id: 'report', name: 'Report', path: 'report.html', viewer: 'report' }, { id: 'notes', name: 'Notes', path: 'notes.md', viewer: 'report' }] }] }] }));
 const service = await createService({ repo, uiDir: path.join(root, 'dist'), mcpOptions: { home: path.join(repo, 'fake-home'), env: {} } });
 const session = service.sessions.make({ id: 'links', name: 'Link fixture', agent: 'codex', cwd: repo, status: 'running', open: true, cols: 80, rows: 30 });
 service.sessions.items.set(session.id, session); await service.sessions.hydrate(session);
@@ -54,7 +54,7 @@ try {
     assert.equal(opened.url(), expected);
     await opened.close();
   }
-  await page.goto(service.urls.workspace + '#/test/0');
+  await page.goto(service.urls.workspace + '#/test/documents/report');
   const frame = page.frameLocator('iframe.report-frame');
   // The report runs on its folder's own origin. Its policy blocks every request outside that folder.
   const collected = []; await context.route('https://browser-check.example/collect**', route => { collected.push(route.request().url()); return route.fulfill({ body: 'collected' }); });

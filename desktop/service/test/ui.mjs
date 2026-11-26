@@ -17,9 +17,10 @@ for (const dir of ['workspace/test', 'knowledge', 'processes', '.claude/skills/e
 await writeFile(path.join(repo, '.claude/skills/example/SKILL.md'), '# Example skill\n\n**Read me**\n');
 const documentPath = path.join(repo, 'knowledge/notes.md');
 await writeFile(documentPath, '# A useful document\n\n| Name | State |\n| --- | --- |\n| Example | Ready |\n\n**Bold text**\n');
-const steps = Array.from({ length: 12 }, (_, index) => ({ name: `Step ${index + 1} - complete English title`, path: `step${index}.html` }));
-for (const [index, step] of steps.entries()) await writeFile(path.join(repo, 'workspace/test', step.path), `<h1>Document ${index + 1}</h1><p>Readable content.</p>`);
-await writeFile(path.join(repo, 'workspace/workspace.json'), JSON.stringify({ entities: [{ id: 'test', folder: 'test', title: 'Workspace test', category: 'test', created: '2026-09-15', status: 'active', steps }] }));
+const tabs = Array.from({ length: 12 }, (_, index) => ({ id: 'step-' + (index + 1), name: `Step ${index + 1} - complete English title`, path: `step${index}.html`, viewer: 'report' }));
+for (const [index, tab] of tabs.entries()) await writeFile(path.join(repo, 'workspace/test', tab.path), `<h1>Document ${index + 1}</h1><p>Readable content.</p>`);
+const page = { id: 'documents', title: 'Documents', tags: ['game-idea'], created: '2026-09-15', updated: '2026-09-15', tabs };
+await writeFile(path.join(repo, 'workspace/workspace.json'), JSON.stringify({ format: 'pko-vault', version: 2, boards: [{ id: 'test', title: 'Workspace test', tags: ['research'], status: 'active', folder: 'test', created: '2026-09-15', updated: '2026-09-15', pages: [page] }] }));
 await cp(path.join(root, 'public/assets'), path.join(root, 'dist/assets'), { recursive: true });
 const mcpHome = path.join(repo, 'fake-home'); await mkdir(path.join(mcpHome, '.codex'), { recursive: true });
 await writeFile(path.join(repo, '.mcp.json'), JSON.stringify({ mcpServers: { 'fixture-tools': { url: 'https://fixture.example/mcp', headers: { Authorization: 'private-ui-fixture-token' } } } }));
@@ -40,7 +41,7 @@ try {
   const context = await browser.newContext({ viewport: { width: 900, height: 800 }, permissions: clipboardPermissions });
   const page = await context.newPage(); page.setDefaultTimeout(10000);
   const errors = []; page.on('pageerror', error => errors.push(error.message));
-  await page.goto(service.urls.workspace + '#/test/0');
+  await page.goto(service.urls.workspace + '#/test/documents/step-1');
   for (let index = 0; index < 12; index++) { await page.getByRole('tab').nth(index).click(); await page.frameLocator('iframe.report-frame').getByRole('heading', { name: `Document ${index + 1}`, exact: true }).waitFor(); }
   let releaseReport;
   const delayedReport = new Promise(resolve => { releaseReport = resolve; });

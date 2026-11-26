@@ -484,3 +484,18 @@
 @container deck (max-width: 540px) {
   .deck-inspector { display: none; }
 }
+
+
+/* ── the tile's thumbnail ─────────────────────────────────────────────────
+   A board or a page with its own icon shows it in place of the glyph. The
+   mark keeps its hue behind it, so a picture with a transparent edge still
+   reads as a tile. */
+.deck-mark-image { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* The tag pills are toggles now: a board carries several tags. */
+.deck-tag-option.on {
+  border-color: var(--pink);
+  color: var(--text);
+  background: color-mix(in srgb, var(--pink) 14%, transparent);
+}
+
