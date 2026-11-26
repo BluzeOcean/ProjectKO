@@ -108,63 +108,6 @@
       "status": "active",
       "pinned": false,
       "sample": true
-    },
-    {
-      "id": "testgallery-f39538af",
-      "title": "TestGallery",
-      "description": "",
-      "type": "standalone",
-      "category": "image-gen",
-      "created": "2026-11-21",
-      "updated": "2026-11-21",
-      "folder": "2026-11-21_testgallery-f39538af",
-      "steps": [
-        {
-          "name": "Gallery",
-          "path": "content.card.json",
-          "viewer": "card"
-        }
-      ],
-      "defaultStep": 0,
-      "status": "active"
-    },
-    {
-      "id": "testresearch-d2415b60",
-      "title": "TestResearch",
-      "description": "",
-      "type": "standalone",
-      "category": "research",
-      "created": "2026-11-21",
-      "updated": "2026-11-21",
-      "folder": "2026-11-21_testresearch-d2415b60",
-      "steps": [
-        {
-          "name": "Workbench",
-          "path": "content.card.json",
-          "viewer": "card"
-        }
-      ],
-      "defaultStep": 0,
-      "status": "active"
-    },
-    {
-      "id": "test-pin-board-86282658",
-      "title": "test pin board",
-      "description": "",
-      "type": "standalone",
-      "category": "project",
-      "created": "2026-11-21",
-      "updated": "2026-11-21",
-      "folder": "2026-11-21_test-pin-board-86282658",
-      "steps": [
-        {
-          "name": "Pinboard",
-          "path": "content.card.json",
-          "viewer": "card"
-        }
-      ],
-      "defaultStep": 0,
-      "status": "active"
     }
   ]
 }
