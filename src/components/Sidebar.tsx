@@ -2,7 +2,7 @@ import type { RefObject } from 'react'
 import type { WorkspaceEntity } from '../types'
 import { entityHash } from '../lib/route'
 import { categoryIcon } from '../lib/categories'
-import { contentUrl } from '../desktop/client'
+import { boardUrl } from '../desktop/client'
 import PkoLogo from './PkoLogo'
 import MakText from './MakText'
 import { EntityStatusButton } from './EntityControls'
@@ -32,7 +32,7 @@ function Item({ entity, active }: { entity: WorkspaceEntity; active: boolean }) 
       aria-current={active ? 'page' : undefined}
     >
       <span className="item-icon" aria-hidden="true">
-        {entity.icon ? <img src={contentUrl(`/workspace/${entity.folder}/${entity.icon}`)} width="24" height="24" alt="" decoding="async" /> : categoryIcon(entity.category)}
+        {entity.icon ? <img src={boardUrl(entity.folder, entity.icon)} width="24" height="24" alt="" decoding="async" /> : categoryIcon(entity.category)}
       </span>
       <span className="item-text">{entity.title}</span>
     </a>

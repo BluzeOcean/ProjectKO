@@ -56,8 +56,9 @@ The service resolves the step to an absolute file and answers with
 `files.url(file)`. The traversal check then lives in one place, and the desktop
 and mobile sides agree by construction.
 
-**Undecided.** It is the owner's call, and the ticket asks that the choice be
-named in the commit.
+**Answered: shape A**, landed 2026-11-26. It is the smallest of the three, it
+keeps the default Vault byte-identical, and it needs no new route and no
+asynchronous report URL. See `m-2026-11-26-2037-fix-landed.md`.
 
 ---
 
@@ -84,8 +85,9 @@ this is not a new kind of exposure — but it is a new scope, and the owner
 should know that the UI would hold it. A board-scoped grant (the kind
 `scopedGrant()` mints for a report's own port) would be narrower.
 
-**Undecided:** whether the whole-Vault grant is acceptable, or whether the fix
-should mint a scoped grant per board.
+**Answered: the whole-Vault grant stands** with shape A. It is the same scope
+the repository grant already had. A per-board scoped grant remains available if
+the scope ever needs narrowing.
 
 ---
 

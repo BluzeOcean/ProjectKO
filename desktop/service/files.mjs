@@ -103,6 +103,15 @@ export class Files {
       : path.dirname(absolute);
     return `${this.origin}/view/${this.grant(root)}/${path.relative(root, absolute).split(path.sep).map(encodeURIComponent).join('/')}`;
   }
+  // The base a board's files are served from: the Vault's own place in the
+  // file tree. A board's URL is then the base, the board's folder and the
+  // file - the same answer `url()` gives for that file. A Vault inside the
+  // repository keeps the repository's grant and its `workspace/` path, so a
+  // board's URL does not change; a Vault outside it gets a grant of its own.
+  boardBase() {
+    const url = this.url(this.vault.root);
+    return url.endsWith('/') ? url.slice(0, -1) : url;
+  }
   async list(folder = this.repo, mode = 'main', query = '') {
     const actual = await realpath(path.resolve(expandHome(folder)));
     const entries = await readdir(actual, { withFileTypes: true });

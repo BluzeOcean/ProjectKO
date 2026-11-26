@@ -18,6 +18,7 @@ as a tool), `removed` (it was taken out for a reason — do not bring it back),
 | 4 | Measure the images inside a card that lives outside the repository | `measure-card-images.mjs` | **kept as evidence** — a third symptom the ticket does not mention |
 | 5 | Start a service instance of our own against the real repository and the real Vault | `createService({ repo, uiDir, stateDir })` with a temporary `stateDir` | **kept as method** — the owner's `.mrmak/settings.json` is never touched, and the running app is never disturbed |
 | 6 | Measure against the running `projectko.exe` | — | **dead** — `/api/*` needs the bearer token, which lives in the UI's memory; the instance cannot be asked |
+| 7 | Fix in shape A: the service names the Vault's base, the UI builds on it | `files.boardBase()`, `server.mjs` bootstrap, `client.ts`, `App.tsx`, `ReportViewer.tsx`, `Sidebar.tsx` | **kept** — suite green; the default Vault is unchanged |
 
 ---
 

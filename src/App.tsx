@@ -8,7 +8,7 @@ import Topbar from './components/Topbar'
 import WorkspaceDeck from './components/WorkspaceDeck'
 import EntityControls from './components/EntityControls'
 import ReportBoundary from './components/ReportBoundary'
-import { contentUrl, isDesktop } from './desktop/client'
+import { boardUrl, isDesktop } from './desktop/client'
 
 const Compare3D = lazy(() => import('./components/Compare3D'))
 const ReportViewer = lazy(() => import('./components/ReportViewer'))
@@ -62,7 +62,7 @@ export default function App() {
     ? resolveStep(entity.steps.length, route.step, entity.defaultStep)
     : -1
   const step = entity?.steps[stepIndex]
-  const reportUrl = entity && step ? contentUrl(`/workspace/${entity.folder}/${step.path}`) : null
+  const reportUrl = entity && step ? boardUrl(entity.folder, step.path) : null
   // A board is open only when it has something to show. Otherwise the
   // Workspace overview answers, and it brings its own banner.
   const showingBoard = Boolean(entity && reportUrl)
@@ -210,7 +210,7 @@ export default function App() {
               baseUrl={reportUrl.slice(0, reportUrl.lastIndexOf('/'))}
             /></Suspense>
           ) : entity && reportUrl ? (
-            <Suspense fallback={<div className="boot"><PkoLogo size={56} animated={false} /></div>}><ReportViewer key={reportUrl} url={reportUrl} title={step?.name ?? entity.title} relativePath={`workspace/${entity.folder}/${step?.path}`} /></Suspense>
+            <Suspense fallback={<div className="boot"><PkoLogo size={56} animated={false} /></div>}><ReportViewer key={reportUrl} url={reportUrl} title={step?.name ?? entity.title} relativePath={`${entity.folder}/${step?.path}`} /></Suspense>
           ) : (
             <WorkspaceDeck
               boards={deckBoards}

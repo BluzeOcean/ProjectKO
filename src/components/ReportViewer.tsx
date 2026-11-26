@@ -21,7 +21,9 @@ export default function ReportViewer({ url, title, relativePath }: { url: string
   useEffect(() => {
     const controller = new AbortController()
     if (markdown && isDesktop) {
-      api<Preview>(`/preview?path=${encodeURIComponent(`${desktopState().repo}/${relativePath}`)}`).then(value => { if (!controller.signal.aborted) setFile(value) }).catch(error => { if (!controller.signal.aborted) setError(String(error.message || error)) })
+      // The document is in the Vault, not in the repository: the path is the
+      // Vault's own root and the file's place inside the board.
+      api<Preview>(`/preview?path=${encodeURIComponent(`${desktopState().vaultRoot}/${relativePath}`)}`).then(value => { if (!controller.signal.aborted) setFile(value) }).catch(error => { if (!controller.signal.aborted) setError(String(error.message || error)) })
     } else {
       // A desktop HTML report redirects to its folder's own port; the redirect itself confirms the page exists.
       fetch(url, { method: markdown ? 'GET' : 'HEAD', redirect: markdown ? 'follow' : 'manual', signal: controller.signal }).then(async response => {

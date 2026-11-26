@@ -1,7 +1,7 @@
 # Bug: a board in a Vault outside the repository cannot open its tabs
 
-**Status:** open. The defect is confirmed and measured. The fix has not been
-designed or built.
+**Status:** fixed on 2026-11-26 in **shape A** — see
+[`m-2026-11-26-2037-fix-landed.md`](m-2026-11-26-2037-fix-landed.md).
 **Raised:** 2026-11-25 — `ticket/(open) 2026-11-25-board-files-resolve-against-the-repository-not-the-vault.md`
 **Investigated:** 2026-11-26 03:00 by Claude Code
 **Owner:** Kudavi. **Repo:** `V:\06_App\ProjectKO`. **Vault:** `V:\03_Vault\PKO`.

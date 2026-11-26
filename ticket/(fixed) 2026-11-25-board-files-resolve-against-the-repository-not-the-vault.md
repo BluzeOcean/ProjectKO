@@ -1,6 +1,7 @@
 # Bug: a board in a Vault outside the repository cannot open its Markdown or HTML tabs
 
-**Status:** open
+**Status:** fixed 2026-11-26 in shape A — see
+`.debuglog/board-files-resolve-against-the-repository-not-the-vault/m-2026-11-26-2037-fix-landed.md`
 **Raised:** 2026-11-25 by Claude Code, working on a board in this machine's
 Vault (`V:\03_Vault\PKO\2026-11-25_epic-game-jam-2026`)
 **For:** whoever owns this repository

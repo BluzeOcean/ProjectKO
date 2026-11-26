@@ -18,7 +18,7 @@ if (isDesktop && token) {
 const listeners = new Set<() => void>()
 const events = new Set<(event: ServiceEvent) => void>()
 let state: DesktopState = {
-  ready: false, connected: false, error: null, repo: '', contentBase: '', agents: [], sessions: [], selectedId: null, notices: [],
+  ready: false, connected: false, error: null, repo: '', contentBase: '', vaultRoot: '', boardBase: '', agents: [], sessions: [], selectedId: null, notices: [],
   settings: { defaultAgent: 'codex', defaultBypass: false }, dictationShortcut: null, coordinator: 'idle', coordinatorEngine: { name: 'codex', label: 'Codex', note: 'Codex subscription' }, voice: { configured: false, owner: null }, operations: [], preview: null, voiceHistory: [],
 }
 let socket: WebSocket | null = null
@@ -31,7 +31,11 @@ export const onServiceEvent = (listener: (event: ServiceEvent) => void) => { eve
 export const setPreview = (preview: Preview | null) => update({ preview })
 export const dismissError = () => update({ error: null })
 export const reportError = (error: unknown) => update({ error: error instanceof Error ? error.message : String(error) })
-export const contentUrl = (relative: string) => isDesktop ? `${state.contentBase}${relative}` : relative
+// A board's files live in the Vault. The desktop app serves them from the
+// Vault's own place, which the service names; the web build has no Vault and
+// serves the repository's `workspace/`.
+export const boardUrl = (folder: string, file: string) =>
+  isDesktop ? `${state.boardBase}/${folder}/${file}` : `/workspace/${folder}/${file}`
 
 export async function api<T>(path: string, data?: unknown, method?: string, options: { keepalive?: boolean } = {}): Promise<T> {
   const response = await fetch(`/api${path}`, {

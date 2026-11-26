@@ -40,7 +40,13 @@ export interface Preview { path: string; name: string; size: number; kind: 'docu
 /** Which program answers as Mr. KO: Claude Code, or Codex when it is not installed. */
 export interface CoordinatorEngine { name: 'claude' | 'codex'; label: string; note: string }
 export interface DesktopState {
-  ready: boolean; connected: boolean; error: string | null; repo: string; contentBase: string
+  ready: boolean; connected: boolean; error: string | null; repo: string
+  /** The repository's own content base. The service serves files from it. */
+  contentBase: string
+  /** The Vault's own folder. A board's files live here, not in the repository. */
+  vaultRoot: string
+  /** Where a board's files are served from: the Vault's place in the file tree. */
+  boardBase: string
   agents: AgentInfo[]; sessions: ChatSession[]; selectedId: string | null; notices: Notice[]
   settings: Settings; coordinator: string; coordinatorEngine: CoordinatorEngine; voice: { configured: boolean; owner: VoiceOwner | null }
   // Toxic's speech-to-text chord, read when the app connects, so the chat can
