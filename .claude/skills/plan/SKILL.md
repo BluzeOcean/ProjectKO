@@ -15,7 +15,7 @@ stage, name its output and the observation that will show it works. Separate
 mandatory work from optional extensions. Preserve the user's scope, budget,
 provider choices and restart constraints.
 
-Keep the plan in the project's existing Workspace card or project folder. If the
+Keep the plan on the board page and tab that hold it, or in the project folder. If the
 user asked for execution, proceed with authorized work after planning. Update
 the plan when evidence changes the approach. Do not call incomplete work done.
 

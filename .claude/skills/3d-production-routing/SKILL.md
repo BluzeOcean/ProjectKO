@@ -33,4 +33,5 @@ schemas; keep provider choices and accepted references from the current task.
 For a game asset, separate concept acceptance from mesh acceptance. Verify
 topology, scale, materials, rig, root motion and engine import as applicable.
 A successful API request or attractive render is not an engine handoff.
-Record the chosen route and acceptance criteria in the current project card.
+Record the chosen route and acceptance criteria as cards on the board page and
+tab that hold that work.

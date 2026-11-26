@@ -19,4 +19,5 @@ Keep visual observations separate from audio or transcript claims. URL downloads
 in this helper prefer video-only streams; do not assume they contain audio.
 For transcription, use the original audio through
 a separately configured tool. Create an English summary with evidence and links
-in the existing task card. Use `workspace-authoring` for its presentation.
+on the board page and tab that hold that task. Use `workspace-authoring` for its
+presentation.

@@ -87,7 +87,7 @@ you  ──▶  coordinator (Mak, in the app)
              │           does the work in the Workspace
              ▼
         deliverable  ──▶  a board in the Vault
-                             registry updated, tab registered,
+                             registry updated, page and tab registered,
                              captures and playtest notes kept beside it
 ```
 
@@ -99,8 +99,8 @@ you  ──▶  coordinator (Mak, in the app)
    inside it.
 3. **Work happens in the Workspace** — the code folder.
 4. **Deliverables land in the Vault.** A board, a page, a tab, the captures.
-   Register the tab in `workspace.json`; do not create a second copy of the
-   same work.
+   Register the page and the tab in `workspace.json`; do not create a second
+   copy of the same work.
 5. **If a board is generated from a repository, re-run its generator** after a
    session. The board follows the records; a figure that is not in the records
    does not go on the board.
@@ -188,7 +188,7 @@ links to it.
 
 | The deliverable | Goes in |
 | --- | --- |
-| A board, a page, a tab, a report, concept art | the Vault, in a board folder |
+| A board, a page, a tab, a report, concept art | the Vault — a board folder, then a page folder |
 | The registry entry for a board | the Vault's `workspace.json` |
 | Game code, assets, `.uproject` | the Workspace |
 | A reusable workflow | the App's `processes/` |
@@ -203,7 +203,7 @@ links to it.
 | You want | Look here |
 | --- | --- |
 | The Vault path | `.mrmak/settings.json` → `vaultPath` |
-| Every board | the Vault's `workspace.json` → `entities[]` |
+| Every board | the Vault's `workspace.json` → `boards[]` |
 | A chat's working folder | its briefing file, `.mrmak/briefing-<id>.md` |
 | The Vault's rules, the skills' rules | `desktop/modules/` — one file per domain |
 | A game project's rules | that project's own `AGENTS.md` / `CLAUDE.md` |

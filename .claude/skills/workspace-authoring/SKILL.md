@@ -1,14 +1,14 @@
 ---
 name: workspace-authoring
-description: Create or maintain Workspace cards, report tabs and Markdown deliverables with consistent styling, working media previews and clear project organization.
+description: Create or maintain Project KO boards, pages and tabs — editable card tabs, report tabs and Markdown deliverables — with consistent styling, working media previews and clear project organization.
 ---
 
 # Workspace authoring
 
 Read `AGENTS.md` and [the workflow](../../../processes/workspace-authoring.md).
 Keep authored content in English unless the user explicitly requests another
-language. Put related iterations in an existing card rather than creating
-several cards for one task. Do not reorganize unrelated projects.
+language. Put related iterations in an existing tab rather than creating
+several tabs for one task. Do not reorganize unrelated projects.
 
 For a gallery, workbench or pinboard tab that the owner wants to edit directly,
 use the versioned `.tab.json` format in [editable cards](../../../docs/editable-cards.md).
@@ -20,16 +20,16 @@ app provides the view, so do not create a second editable HTML copy of the same 
 Preserve existing custom HTML unless conversion was requested. Browser and phone
 previews can read these tabs; the desktop Workspace provides editing controls.
 
-A pinboard entry can also carry `feedback` — what the user wants changed — and
-`annotation`, the marked-up picture inside the card's `media/` folder. The app
+A card can also carry `feedback` — what the user wants changed — and
+`annotation`, the marked-up picture inside the **page's** `media/` folder. The app
 writes both when the user draws on a picture and sends it to the board's agent.
 Keep them when editing a card: an agent reads the feedback as part of the
-entry's text, and the marked picture is the picture the user annotated.
+card's text, and the marked picture is the picture the user annotated.
 
-Use `workspace/_shared/report.css` and `report.js` in every HTML report, with
-`data-mak-report="document"` on the root element. Use the shared tokens and
-layout instead of inventing another visual theme. Basic cards and media grids
-can use the sample CSS in `workspace/_shared/examples.css`.
+Use the shared report skin — `_shared/report.css` and `_shared/report.js` — in
+every HTML report, with `data-mak-report="document"` on the root element. Use the
+shared tokens and layout instead of inventing another visual theme. Basic cards
+and media grids can use the sample CSS in `_shared/examples.css`.
 Standard reports follow the reader's Dark, Light or System preference. Check
 both dark and light when adding custom styles. An intentionally independent
 design, such as a game demo, can keep its palette with `data-mak-theme="custom"`
@@ -40,10 +40,10 @@ Use local output paths, meaningful alt text and lazy loading. Keep motion
 studies playable with native video controls. Wide tables must scroll within
 the report. Never cover the document close button with the Files rail.
 
-Update `workspace/workspace.json` with a stable ID, tags, folder, readable title,
-creation date, last updated date and pages. A page carries its own tags and tabs,
-and the page id is the page's folder name. `sample: true` is reserved for starter
-examples; ordinary work uses normal archiving behavior.
+Update the Vault's `workspace.json` with a stable ID, tags, folder, readable
+title, creation date, last updated date and pages. A page carries its own tags and
+tabs, and the page id is the page's folder name. `sample: true` is reserved for
+starter examples; ordinary work uses normal archiving behavior.
 
 A board is deleted through the app, not by hand: the bin beside "Open board"
 takes it out of the registry and sends its folder to the system trash. Delete
@@ -61,7 +61,7 @@ meta tag and shared styles; keep the reading order useful in a single column.
 Test at 390 px and 768 px as well as desktop width. Verify readable text without
 zooming, wrapping tab labels, reachable close/download buttons, and working
 image previews with touch. Confine horizontal scrolling to tables and code.
-Use relative assets inside the report folder or `workspace/_shared/`.
+Use relative assets inside the report folder or the shared `_shared/` skin.
 Reports opened through Mobile Access run in an isolated, read-only preview:
 do not depend on the desktop control API, parent-window DOM, local storage or
 absolute localhost URLs. Keep a short result summary before lengthy details.

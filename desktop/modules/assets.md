@@ -13,13 +13,13 @@ decorates it.
 
 ## Where an asset lives
 
-- Inside the card that uses it: `<vault>/<board>/media/`.
+- Inside the page that uses it: `<vault>/<board>/<page>/media/`.
 - Referenced from the card or report with a **relative** path, so the board folder can
   be moved or copied whole.
 - Named after what it is (`arachne-front.png`, `arachne-front-marks.png`), not after
   the order it was made in.
-- Images the owner uploads through the app are copied into the card's `media/` folder
-  and become part of the page when the card is saved.
+- Images the owner uploads through the app are copied into the page's `media/` folder
+  and become part of the page when the tab is saved.
 
 An annotation is the marked-up picture the owner drew on: it sits beside the picture
 it marks, and the agent receives both together with the owner's feedback.

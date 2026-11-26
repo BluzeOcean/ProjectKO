@@ -51,8 +51,9 @@ connecting another machine. Each recipient uses their own account and credential
 
 Keep the prompt, source filenames or hashes, model ID, request ID, local outputs
 and review verdict together. Credentials and raw signed links do not belong in a
-shareable report. In Project KO, use the current Workspace card and its shared image
-viewer; elsewhere use the recipient's requested output directory.
+shareable report. In Project KO, use the board page and tab that hold the work,
+with its shared image viewer; elsewhere use the recipient's requested output
+directory.
 
 ## Included tools and examples
 
