@@ -26,7 +26,9 @@ export const layoutNotes = { gallery: 'a grid of cards, the picture first', work
 
 export const boardStatuses = ['active', 'done', 'archived'];
 export const cardStatuses = ['idea', 'in-progress', 'review', 'done'];
-export const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
+// The id is opaque: the app makes lowercase hyphens, an agent may write
+// Explorer_01 or a UUID. Anything that is one safe path segment is allowed.
+export const ID_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,79}$/;
 const IMAGE_PATH = /\.(png|jpe?g|gif|webp)$/i;
 
 export const localDay = (date = new Date()) => date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
@@ -82,7 +84,7 @@ export function sourceUrl(value) {
 
 function board(value) {
   if (!object(value)) fail('This board is not a record.');
-  if (typeof value.id !== 'string' || !ID_PATTERN.test(value.id)) fail('Every board needs an id of lowercase letters, numbers and hyphens.');
+  if (typeof value.id !== 'string' || !ID_PATTERN.test(value.id)) fail('Every board needs an id of letters, numbers, hyphens or underscores.');
   text(value.title, 'Board title', 200, true);
   text(value.description, 'Board description', 240);
   tagList(value.tags, boardTags, 'board');
@@ -109,7 +111,7 @@ function board(value) {
 
 function page_(value) {
   if (!object(value)) fail('This page is not a record.');
-  if (typeof value.id !== 'string' || !ID_PATTERN.test(value.id)) fail('Every page needs an id of lowercase letters, numbers and hyphens.');
+  if (typeof value.id !== 'string' || !ID_PATTERN.test(value.id)) fail('Every page needs an id of letters, numbers, hyphens or underscores.');
   text(value.title, 'Page title', 200, true);
   text(value.description, 'Page description', 240);
   tagList(value.tags, pageTags, 'page');
@@ -128,7 +130,7 @@ function page_(value) {
 
 function tab_(value) {
   keys(value, ['id', 'name', 'path', 'viewer'], 'This tab');
-  if (typeof value.id !== 'string' || !ID_PATTERN.test(value.id)) fail('Every tab needs an id of lowercase letters, numbers and hyphens.');
+  if (typeof value.id !== 'string' || !ID_PATTERN.test(value.id)) fail('Every tab needs an id of letters, numbers, hyphens or underscores.');
   text(value.name, 'Tab name', 120, true);
   if (!localPath(value.path)) fail('A tab path must stay inside its page folder.');
   if (value.viewer !== undefined && !['report', 'compare3d'].includes(value.viewer)) fail('Choose how this tab opens.');
@@ -160,14 +162,14 @@ function block(value, draft) {
   if (!object(value)) fail('Every block is an object.');
   if (value.kind === 'section') {
     keys(value, ['kind', 'id', 'title', 'note'], 'A section');
-    if (typeof value.id !== 'string' || !ID_PATTERN.test(value.id)) fail('Every section needs an id of lowercase letters, numbers and hyphens.');
+    if (typeof value.id !== 'string' || !ID_PATTERN.test(value.id)) fail('Every section needs an id of letters, numbers, hyphens or underscores.');
     text(value.title, 'Section title', 200, !draft);
     text(value.note, 'Section note', 20000);
     return value;
   }
   if (value.kind === 'card') {
     keys(value, ['kind', 'id', 'title', 'body', 'image', 'alt', 'prompt', 'url', 'linkLabel', 'status', 'feedback', 'annotation', 'wide'], 'A card');
-    if (typeof value.id !== 'string' || !ID_PATTERN.test(value.id)) fail('Every card needs an id of lowercase letters, numbers and hyphens.');
+    if (typeof value.id !== 'string' || !ID_PATTERN.test(value.id)) fail('Every card needs an id of letters, numbers, hyphens or underscores.');
     text(value.title, 'Card title', 200, !draft);
     text(value.body, 'Card notes', 40000);
     text(value.prompt, 'Prompt', 40000);

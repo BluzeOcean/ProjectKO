@@ -35,9 +35,9 @@ test('a board with pages and tabs validates', () => {
 });
 
 test('a board id, a page id and a tab id are all required and slug-shaped', () => {
-  assert.throws(() => validateRegistry(registry([board({ id: 'IronPath' })])), /lowercase letters/);
-  assert.throws(() => validateRegistry(registry([board({ pages: [page({ id: 'Game Mechanics' })] })])), /lowercase letters/);
-  assert.throws(() => validateRegistry(registry([board({ pages: [page({ tabs: [tab({ id: '' })] })] })])), /lowercase letters/);
+  assert.throws(() => validateRegistry(registry([board({ id: 'Iron Path' })])), /letters, numbers/);
+  assert.throws(() => validateRegistry(registry([board({ pages: [page({ id: 'Game Mechanics' })] })])), /letters, numbers/);
+  assert.throws(() => validateRegistry(registry([board({ pages: [page({ tabs: [tab({ id: '' })] })] })])), /letters, numbers/);
 });
 
 test('board and page tags are closed lists, and they are not interchangeable', () => {
