@@ -1,6 +1,7 @@
 # A build empties dist/assets and dist/fonts
 
-Status: verified 2026-11-20 on v0.6.4.
+Status: verified 2026-11-20 on v0.6.4. **Fixed in the build script on
+2026-11-26** — the copy runs itself now; the section below is the history.
 
 `vite.config.ts` sets `build.copyPublicDir: false` on purpose: `public/workspace`
 is a junction into `workspace/`, which holds gigabytes of reports, and the
@@ -18,7 +19,27 @@ disappears and Fraunces, Inter and JetBrains Mono fall back to system fonts. The
 page still renders, so it is easy to miss in a screenshot that was taken before
 the copy.
 
+## The fix, and where it runs
+
+`scripts/copy-brand-assets.mjs` copies `public/assets` and `public/fonts` into
+`dist`, and `npm run build` runs it after `vite build`:
+
+```
+tsc -b && vite build && node scripts/copy-brand-assets.mjs
+```
+
+So a plain `npm run build` now leaves `dist/assets` and `dist/fonts` in place,
+and the release carries them: `desktop/prepare.mjs` copies `dist` into the
+bundled runtime's `ui` folder.
+
+`copyPublicDir: false` still stands. The narrow copy of two folders is the
+fix; re-enabling the whole `public/` would drag the workspace junction into
+`dist`.
+
 ## After every build
+
+Nothing to do. The step below is what the build does on its own now, and it is
+what to run by hand if a build was interrupted before the copy.
 
 ```powershell
 Copy-Item -Path 'public\assets\*' -Destination 'dist\assets' -Recurse -Force
@@ -33,12 +54,6 @@ inside it; delete `dist/fonts` and copy the folder again to clean that up.
 
 `desktop/service/test/ui.mjs` and `desktop/service/test/theme-ui.mjs` copy
 `public/assets` into `dist/assets` before their browser runs, for the same
-reason. They do not restore `dist/fonts`, so a browser test on a fresh build
-runs on fallback fonts.
-
-## Why it is not fixed in the build script
-
-`copyPublicDir: false` protects the repository from copying gigabytes of
-reports into `dist`. The fix is therefore a narrow copy of two folders, not a
-re-enable of `copyPublicDir`, and it is left as an explicit step until that
-narrow copy is wired into `npm run build`.
+reason. They do not restore `dist/fonts`, so a browser test that runs against a
+`dist` nobody built still runs on fallback fonts; a test that follows a build
+has them, because the build copies them now.

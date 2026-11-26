@@ -7,7 +7,7 @@
     "postinstall": "npm --prefix desktop/service ci && node scripts/fix-pty-permissions.mjs",
     "predev": "node scripts/ensure-workspace-link.mjs",
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/copy-brand-assets.mjs",
     "lint": "eslint src",
     "preview": "vite preview",
     "desktop:service": "node desktop/service/main.mjs",
