@@ -9,10 +9,13 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = relative => readFile(path.join(root, relative), 'utf8');
 const { entities } = JSON.parse(await read('workspace/workspace.json'));
 const samples = entities.filter(e => e.sample === true);
-assert.equal(samples.length, 4, 'The template must retain exactly four sample cards.');
+// The onboarding board that taught the workspace was removed in 11adecd, so the
+// starter carries three sample boards. The count follows the template, not the
+// other way round.
+assert.deepEqual(samples.map(e => e.id).sort(), ['arachne-character', 'creative-mcp', 'my-dream-game'], 'The template must retain its three sample boards.');
 assert.deepEqual(samples.filter(e => e.pinned).map(e => e.title), ['My Dream Game']);
 assert.ok(samples.every(e => e.status === 'active'));
-assert.deepEqual(samples.map(e => e.category).sort(), ['dev', 'image-gen', 'project', 'research']);
+assert.deepEqual(samples.map(e => e.category).sort(), ['image-gen', 'research', 'research']);
 const images = new Set(), videos = new Set(), arachneImages = new Set();
 for (const entity of entities) {
   if (entity.defaultStep !== undefined) assert.ok(Number.isInteger(entity.defaultStep) && entity.defaultStep >= 0 && entity.defaultStep < entity.steps.length);
@@ -72,4 +75,4 @@ assert.match(await read('desktop/service/sessions.mjs'), /pinned = false, bypass
 const readme = await read('README.md');
 assert.match(readme, /Project KO is small\.\s+<img src="docs\/assets\/mr-mak\.png"[^>]+>\s*$/);
 await stat(path.join(root, 'docs/assets/mr-mak.png'));
-console.log(`Template passed: four cards, one pin, ${images.size} images, ${videos.size} videos, ${skillNames.length} shared skills, empty connections and account placeholders.`);
+console.log(`Template passed: three cards, one pin, ${images.size} images, ${videos.size} videos, ${skillNames.length} shared skills, empty connections and account placeholders.`);

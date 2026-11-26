@@ -8,6 +8,10 @@ const fail = (message, status = 400) => { throw Object.assign(new Error(message)
  * folders and one registry file, free to live on another drive, a synced
  * folder or a share. A fresh install opens `workspace/` inside the
  * repository, which stays the default until another folder is chosen.
+ *
+ * The `workspace/` name is the pre-split default and is deprecated. It now
+ * means "the default Vault location" and nothing else: "Workspace" in the app
+ * is the code project a chat works in. See docs/pko-layout.md.
  */
 export class Vault {
   constructor(repo, requested) {

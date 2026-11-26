@@ -137,7 +137,7 @@ fn start_file_drag(app: &tauri::AppHandle, paths: Vec<PathBuf>) {
 #[derive(Debug)]
 struct Cancelled;
 impl std::fmt::Display for Cancelled {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("No Workspace repository selected") }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("No Project KO folder selected") }
 }
 impl std::error::Error for Cancelled {}
 

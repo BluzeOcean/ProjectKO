@@ -6,7 +6,7 @@ const textFiles = new Set(['.md', '.markdown', '.txt']);
 const titleOf = (file, text) => text.match(/^#\s+(.+)$/m)?.[1]?.trim() || path.basename(file, path.extname(file));
 
 export class LocalKnowledgeProvider {
-  constructor(library) { this.id = 'local-repository'; this.label = 'This Workspace repository'; this.library = library; }
+  constructor(library) { this.id = 'local-repository'; this.label = 'This Project KO folder'; this.library = library; }
   async searchText(query) { return this.library.search(query); }
   async retrieve(file, offset) { return this.library.read(file, offset); }
   async skills(query) { return this.library.skills(query); }

@@ -4,6 +4,10 @@ Project KO is a local desktop app for working with several agents. Its files
 are ordinary project files, and its chats are ordinary CLI sessions. You can
 keep using the same agents outside the app.
 
+Read [pko-layout.md](pko-layout.md) for where the folders are: the **App**
+(this repository), the **Vault** (your documents) and the **Workspace** (the
+code project a chat works in). The last two live outside the app folder.
+
 **Required before setup: Codex CLI, Claude Code CLI or OpenCode, installed and
 configured with your own account.** Use at least one to guide the setup below.
 The optional voice coordinator requires Codex specifically; Kimi is another
@@ -12,9 +16,11 @@ available terminal integration.
 ## Choose a folder
 
 Create a repository from the GitHub template and clone your copy. The selected
-folder must contain `workspace/workspace.json`. Keep the application source and
-your project content together at first; this makes setup and agent handoffs easy.
-The template has no previous owner's projects, accounts or conversation history.
+folder must contain `workspace/workspace.json` or a saved Vault setting in
+`.mrmak/settings.json`. The application source and the Vault can live apart: see
+[pko-layout.md](pko-layout.md) for the three places — the **App**, the **Vault**
+and the **Workspace**. The template has no previous owner's projects, accounts
+or conversation history.
 
 ## Install the desktop app
 
@@ -42,7 +48,8 @@ additional terminal integration after the base setup.
 
 Finish the CLI's sign-in flow with your own account. In Chatspace, press **+**, choose
 the provider and a descriptive English title. Start with a task such as
-`Dream Game Plan`. Choose the repository as the workspace. The normal CLI
+`Dream Game Plan`. Choose the **workspace** — the folder the chat works in, which
+is your code project, not the application folder. The normal CLI
 permission flow is enabled by default; bypass is a deliberate per-chat choice.
 
 New Codex and Claude chats default to `xhigh` reasoning effort. Saved effort

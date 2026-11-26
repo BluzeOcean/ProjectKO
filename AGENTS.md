@@ -4,6 +4,11 @@ This repository is a desktop workspace and a starter context for its owner.
 Read `context/preferences.md`, `context/goals.md`, and the relevant project before
 working. Ask for missing personal preferences; do not invent a biography.
 
+Read `docs/pko-layout.md` before you look for a file: it maps the three places
+— the **App** (this folder), the **Vault** (the owner's documents) and the
+**Workspace** (the code project a chat works in). The Vault and the Workspace
+are outside this folder, so a board or a game project will not be found here.
+
 ## Working rules
 
 - Keep Vault content in English unless another language is explicitly
@@ -77,7 +82,8 @@ read the sample cards.
 ## Repository map
 
 `src/`, `desktop/`, `src-tauri/`: application.
-`workspace/`: reports and example cards.
+`docs/`: guides. `docs/pko-layout.md` maps the folders and the terms.
+`workspace/`: the default Vault location, deprecated once `vaultPath` is set.
 `projects/`: project specifications.
 `processes/`: repeatable work.
 `knowledge/`: lessons.

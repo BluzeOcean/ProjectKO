@@ -30,12 +30,25 @@ Project KO's MCP inspector.
 5. Keep related revisions as tabs in the same board. Archive the board when you no
    longer need it in the active list. Archiving a board preserves its files.
 
-## Two windows, one repository
+## Two windows, two folders
 
 **Chatspace** contains real terminal sessions for your chosen CLI agents.
 **Vaultspace** contains the boards, reports, previews and files they produce. You
 can minimize either window independently while continuing in a browser, Blender
 or another app.
+
+There are three places, and each has one name:
+
+| | What it holds |
+| --- | --- |
+| **App** | The application folder: its source, the skills, your working material. |
+| **Vault** | Your documents: boards, cards, reports, concept art. |
+| **Workspace** | The code project a chat works in — an Unreal, Unity or Godot project. |
+
+The Vault and the Workspace live outside the App folder, so the App folder holds
+Project KO itself and never the data of a project you are working on. A chat's
+**workspace** is the folder it works in, so a game project's chats open there and
+its deliverables land on a board in the Vault.
 
 The Vault is a folder of your own, so it can live on another drive or in a synced
 folder. Settings > **Vault folder** names it, and a new board is created there.
@@ -81,7 +94,7 @@ opens with **Preview** and **Edit** modes. Save only when you want to change the
 | --- | --- |
 | `inbox/` | References, clipboard screenshots and incoming material |
 | `projects/` | Ongoing project context and working specifications |
-| `workspace/` | Cards, reports, previews and task deliverables |
+| `workspace/` | The starter boards, and the default Vault location for an install that has not chosen a folder. Once a Vault is chosen, the cards and reports live there instead |
 | `knowledge/` | Lessons that should guide future work |
 | `processes/` | Repeatable workflows and checklists |
 | `.claude/skills/`, `.agents/skills/` | Project-local skills for the agents |
