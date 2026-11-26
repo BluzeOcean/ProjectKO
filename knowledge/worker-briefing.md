@@ -38,6 +38,31 @@ vocabulary.
 The rule lives in `AGENTS.md`: change a domain by editing its module file; never
 describe a domain in `desktop/briefing.md` or `desktop/coordinator.md`.
 
+## The one fact the briefing carries about the harness
+
+The rule above says the briefing is an index, not a description. There is one
+exception, and it is a fact about the session rather than about a domain.
+
+Claude Code's task tool is called **`Task`**. The CLI's own system prompt still
+tells the model to use `TaskCreate`, `TaskUpdate` and `TaskList` — names that
+build does not have. A worker that follows the prompt calls a tool that is not
+there, and the harness answers *"No such tool available: TaskCreate. TaskCreate
+is disabled for this session, in subagents as well as here."*
+
+Measured on 2026-11-26, Claude Code 2.1.287:
+
+- a session launched the way Project KO launches one — `--append-system-prompt-file`,
+  `--add-dir`, `--effort` — is given `Task` and none of the old names;
+- a plain interactive terminal session is given `TaskCreate`, `TaskUpdate`,
+  `TaskList` and `TaskGet`, and `TaskCreate` works there;
+- the tool list is in the `init` event of `--output-format stream-json`, so it
+  can be read without guessing.
+
+The tool list is the CLI's, not Project KO's, so it cannot be fixed by
+configuration. The briefing is the one channel that reaches every worker before
+it acts, so it carries the name (`desktop/service/briefing.mjs`, `sessionNotes`).
+The rule itself lives in `desktop/modules/rules.md`.
+
 ## The three channels, and what was measured
 
 | Harness | Channel | Measured |

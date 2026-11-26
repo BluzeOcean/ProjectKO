@@ -69,6 +69,24 @@ test('the briefing names the app, the Vault, the workspace and the board', async
   assert.match(text, /desktop.modules/, 'the module map is present');
 });
 
+test('a Claude Code chat is told the task tool by the name it really has', () => {
+  // Claude Code's task tool is `Task`. Its own prompt still names `TaskCreate`,
+  // so without this a worker follows the prompt into a call that cannot work.
+  const claude = assemble({ prose: '', modules: [], repo: 'C:\\app', agent: 'claude' });
+  assert.match(claude, /`Task`/, 'the tool that exists is named');
+  assert.match(claude, /TaskCreate/, 'the name that does not exist is named too');
+  const other = assemble({ prose: '', modules: [], repo: 'C:\\app', agent: 'dsh' });
+  assert.doesNotMatch(other, /TaskCreate/, 'another harness is not told about a tool it does not have');
+});
+
+test('the written briefing of a Claude Code chat carries the task tool', async () => {
+  const { repo, vault, stateDir } = await fixture();
+  const briefing = new Briefing({ repo, stateDir, vaultRoot: () => vault, boards: async () => [] });
+  const result = await briefing.forSession({ id: 'chat-task', agent: 'claude', cwd: repo });
+  const written = await readFile(result.file, 'utf8');
+  assert.match(written, /`Task`/);
+});
+
 test('the module map is generated: a new module file appears by itself', async () => {
   const { repo } = await fixture();
   await writeFile(path.join(repo, 'desktop', 'modules', 'assets.md'), '---\nname: assets\nlabel: raw and generated assets\ndescription: Where assets live.\n---\n\nIn the media folder.\n');

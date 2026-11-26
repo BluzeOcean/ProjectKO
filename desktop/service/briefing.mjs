@@ -55,6 +55,19 @@ const label = text => {
   return value.length > LABEL_BYTES ? `${value.slice(0, LABEL_BYTES - 1).trimEnd()}…` : value;
 };
 
+/**
+ * A fact about this session's harness, next to the live paths.
+ *
+ * Claude Code's task tool is called `Task`. The CLI's own prompt still tells the
+ * model to use `TaskCreate` and `TaskUpdate` - names this build does not have -
+ * so a worker follows the prompt into a call that fails, and says so as "no such
+ * tool available". The tool list a session gets is decided by the CLI, so this is
+ * the one place that can correct the name before the worker tries it.
+ */
+const sessionNotes = agent => agent === 'claude'
+  ? ['- Task tool: `Task`. `TaskCreate`, `TaskUpdate` and `TaskList` do not exist in a Claude Code session; a call to one of them fails.']
+  : [];
+
 const inside = (child, parent) => {
   const relative = path.relative(parent, child);
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
@@ -65,7 +78,7 @@ const inside = (child, parent) => {
  * The prose is trimmed from its tail when it is too long, so the live paths — the part
  * that changes per chat — always survive.
  */
-export function assemble({ prose = '', modules = [], repo = '', vaultRoot = '', cwd = '', board = null } = {}) {
+export function assemble({ prose = '', modules = [], repo = '', vaultRoot = '', cwd = '', board = null, agent = '' } = {}) {
   const map = modules.length
     ? [`Read the module that covers your task, in ${path.join(repo, 'desktop', 'modules')}:`, ...modules.map(item => `- ${item.name}${item.label ? ` — ${item.label}` : item.description ? ` — ${label(item.description)}` : ''}`)]
     : [];
@@ -78,6 +91,7 @@ export function assemble({ prose = '', modules = [], repo = '', vaultRoot = '', 
   const tail = [
     map.join('\n'),
     live.join('\n'),
+    sessionNotes(agent).join('\n'),
     'These paths are given; do not go hunting for Project KO.',
   ].filter(Boolean).join('\n\n');
   let head = String(prose || '').trim();
@@ -119,7 +133,7 @@ export class Briefing {
     const vaultRoot = this.vaultRoot();
     const board = await this.boardFor(session.cwd, vaultRoot);
     const prose = await readFile(path.join(this.repo, 'desktop', 'briefing.md'), 'utf8').catch(() => '');
-    const text = assemble({ prose: prose.slice(0, MAX_PROSE_BYTES), modules: await modules(this.repo), repo: this.repo, vaultRoot, cwd: session.cwd, board });
+    const text = assemble({ prose: prose.slice(0, MAX_PROSE_BYTES), modules: await modules(this.repo), repo: this.repo, vaultRoot, cwd: session.cwd, board, agent: session.agent });
     if (!text.trim()) return null;
     const file = briefingPath(this.stateDir, session.id);
     await mkdir(this.stateDir, { recursive: true });
