@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { api, isDesktop, onServiceEvent, uploadTabImage } from '../desktop/client'
 import { isDocumentLayout, layoutLabels, tabLayouts, validateTabDraft, type CardBlock, type SectionBlock, type TabDocument } from '../../desktop/service/vault-schema.mjs'
 import { statusLabels } from '../lib/card-labels'
@@ -19,8 +20,13 @@ const uid = (prefix: string) => prefix + '-' + Math.random().toString(36).slice(
  * The tab editor. A tab is a document of headings and cards, so the editor edits
  * one flat list: a section is a heading, a card is a block. Nothing here is
  * generated HTML - the document is the source of truth.
+ *
+ * The bar - how many cards, and the button that opens the editor - belongs on
+ * the topbar's row, beside the breadcrumb. The editor keeps it, because the
+ * editor is what knows the count and what owns the editing, and hands it over
+ * through a portal into the space the topbar keeps for it.
  */
-export default function TabEditor({ where, tab, baseUrl }: { where: Where; tab: Tab; baseUrl: string }) {
+export default function TabEditor({ where, tab, baseUrl, slot }: { where: Where; tab: Tab; baseUrl: string; slot?: HTMLElement | null }) {
   const route = routeOf(where), draftKey = draftKeyOf(where)
   const [state, setState] = useState<State>({ saved: null, draft: null, latest: null, editing: false, saving: false, message: '', error: '' })
   const mutation = useRef(0)
@@ -127,17 +133,21 @@ export default function TabEditor({ where, tab, baseUrl }: { where: Where; tab: 
   // otherwise scroll it a second time.
   const isDocument = isDocumentLayout(document.layout)
 
+  // The bar travels to the topbar, but it is still this component's: the
+  // count is the document's, and Edit is the door into the editor.
+  const bar = <div className="tab-editor-bar">
+    <span className="tab-editor-count">{cards} {cards === 1 ? 'card' : 'cards'} · {document.nodes.length - cards} heading{document.nodes.length - cards === 1 ? '' : 's'}</span>
+    <span className="tab-editor-message" role="status">{state.error ? '' : state.message}</span>
+    {state.latest && <span className="tab-editor-warn">The file changed on disk. <button type="button" onClick={() => setState(previous => ({ ...previous, draft: previous.latest!.document, saved: previous.latest, latest: null, message: 'Loaded the latest version.' }))}>Load latest</button></span>}
+    {isDesktop && !state.editing && <button type="button" className="card-primary" onClick={() => setState(previous => ({ ...previous, editing: true, message: '', error: '' }))}>Edit</button>}
+    {state.editing && <>
+      <button type="button" onClick={cancel} disabled={state.saving}>Cancel</button>
+      <button type="button" className="card-primary" onClick={() => void save()} disabled={state.saving || !dirty}>{state.saving ? 'Saving…' : 'Save'}</button>
+    </>}
+  </div>
+
   return <div className={'tab-editor' + (isDocument ? ' is-document' : '')}>
-    <div className="tab-editor-bar">
-      <span className="tab-editor-count">{cards} {cards === 1 ? 'card' : 'cards'} · {document.nodes.length - cards} heading{document.nodes.length - cards === 1 ? '' : 's'}</span>
-      <span className="tab-editor-message" role="status">{state.error ? '' : state.message}</span>
-      {state.latest && <span className="tab-editor-warn">The file changed on disk. <button type="button" onClick={() => setState(previous => ({ ...previous, draft: previous.latest!.document, saved: previous.latest, latest: null, message: 'Loaded the latest version.' }))}>Load latest</button></span>}
-      {isDesktop && !state.editing && <button type="button" className="card-primary" onClick={() => setState(previous => ({ ...previous, editing: true, message: '', error: '' }))}>Edit</button>}
-      {state.editing && <>
-        <button type="button" onClick={cancel} disabled={state.saving}>Cancel</button>
-        <button type="button" className="card-primary" onClick={() => void save()} disabled={state.saving || !dirty}>{state.saving ? 'Saving…' : 'Save'}</button>
-      </>}
-    </div>
+    {slot ? createPortal(bar, slot) : bar}
     {state.error && <p className="card-error" role="alert">{state.error}</p>}
 
     {!state.editing ? <TabContent document={document} baseUrl={baseUrl} title={tab.name} where={where} onSave={isDesktop ? save : undefined} /> : <div className="tab-edit-body">

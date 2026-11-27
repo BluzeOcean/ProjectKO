@@ -428,6 +428,23 @@ button:focus-visible {
   max-width: 100%;
 }
 
+/* The open tab's facts — how many cards it holds, and the button that edits
+   them — belong on the breadcrumb's row, at the right. The editor draws them
+   there through a portal; the topbar keeps the space for them. */
+.topbar-slot {
+  order: 0;
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+/* With the facts on the first row, the breadcrumb shares that row and the
+   tabs take the row below. */
+.topbar:has(.tab-editor-bar) .breadcrumb { flex: 1 1 auto; min-width: 0; }
+/* One tab means there is no strip to sit below, so the row is the breadcrumb
+   and nothing else: the new tab button, then the facts, at the right. */
+.topbar:not(:has(.step-tabs)):has(.tab-editor-bar) .topbar-right { order: 1; }
+.topbar:not(:has(.step-tabs)):has(.tab-editor-bar) .topbar-slot { order: 2; }
+
 .step-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -441,7 +458,11 @@ button:focus-visible {
 .step-tabs::-webkit-scrollbar { display: none; }
 .app-layout:not([data-entity="my-dream-game"]) .topbar:has(.step-tabs){align-items:flex-start;gap:10px 20px}
 .app-layout:not([data-entity="my-dream-game"]) .topbar:has(.step-tabs) .breadcrumb{width:100%;min-height:24px}
-.app-layout:not([data-entity="my-dream-game"]) .topbar:has(.step-tabs) .topbar-right{width:100%;margin:0;align-items:flex-start}
+.app-layout:not([data-entity="my-dream-game"]) .topbar:has(.step-tabs) .topbar-right{width:100%;margin:0;align-items:flex-start;order:1}
+/* With the tab's facts on the first row, the breadcrumb gives up the full
+   width it had and the row is centred on what stands on it. */
+.app-layout:not([data-entity="my-dream-game"]) .topbar:has(.step-tabs):has(.tab-editor-bar){align-items:center}
+.app-layout:not([data-entity="my-dream-game"]) .topbar:has(.step-tabs):has(.tab-editor-bar) .breadcrumb{width:auto;flex:1 1 auto}
 .app-layout:not([data-entity="my-dream-game"]) .step-tabs{flex:1;background:transparent;border:0;gap:5px;padding:0}
 .app-layout:not([data-entity="my-dream-game"]) .step-tab{border:1px solid #ffffff0c;padding:6px 10px;color:#a59dab;border-radius:7px}
 .app-layout:not([data-entity="my-dream-game"]) .step-tab.active{border-color:#f0a0b036;color:#f7bbca;background:#f0a0b012}

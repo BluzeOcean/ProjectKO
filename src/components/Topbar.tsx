@@ -12,9 +12,13 @@ interface TopbarProps {
   onTab: (tabId: string) => void
   onHome: () => void
   reportUrl: string | null
+  // The tab's own facts — how many cards, and the button that edits them —
+  // belong on this row, at the right of the breadcrumb. The editor draws
+  // them and hands them over; the topbar only holds the space.
+  slotRef?: (node: HTMLDivElement | null) => void
 }
 
-export default function Topbar({ board, page, tab, onTab, onHome, reportUrl }: TopbarProps) {
+export default function Topbar({ board, page, tab, onTab, onHome, reportUrl, slotRef }: TopbarProps) {
   return (
     <div className="topbar">
       <nav className="breadcrumb" aria-label="Breadcrumb">
@@ -54,6 +58,7 @@ export default function Topbar({ board, page, tab, onTab, onHome, reportUrl }: T
           {isDesktop && <NewTab boardId={board!.id} pageId={page.id} />}
         </div>
       )}
+      <div className="topbar-slot" ref={slotRef} />
     </div>
   )
 }

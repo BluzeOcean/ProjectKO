@@ -19,6 +19,10 @@ cards.
 
 ## Working with a tab
 
+The tab's facts sit on the breadcrumb's row, at the top right: how many cards and
+headings the tab holds, and the **Edit** button. The tab strip — the row of tab
+names — is below it.
+
 Choose **Edit** to change the tab: its layout, its introduction, and its blocks.
 Notes support Markdown. A card can have an image, a saved prompt, a source link and
 a status. Use the arrows on a block to move it, and the x to remove it.

@@ -150,6 +150,11 @@
 /* A document layout scrolls on its own, so the editor must not scroll it twice. */
 .tab-editor.is-document { overflow: hidden; }
 .tab-editor-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 18px; border-bottom: 1px solid var(--hairline); }
+/* In the topbar the bar is a guest: no padding of its own, no rule under it,
+   and buttons the size of the topbar's. */
+.topbar-slot .tab-editor-bar { padding: 0; border-bottom: none; gap: 12px; }
+.topbar-slot .tab-editor-bar button { height: 28px; }
+.topbar-slot .tab-editor-message { flex: 0 1 auto; min-width: 0; }
 .tab-editor-count { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-dim); }
 .tab-editor-message { flex: 1; min-width: 120px; color: var(--text-dim); font-size: 13px; }
 .tab-editor-warn { color: var(--amber); font-size: 13px; }

@@ -37,6 +37,10 @@ export default function App() {
   const [genre, setGenre] = useState('all')
   const [collapsed, setCollapsed] = useState(() => isDesktop || localStorage.getItem('mak.sidebarCollapsed') === '1')
   const searchRef = useRef<HTMLInputElement>(null)
+  // The topbar keeps a place for the open tab's own facts — how many cards
+  // it holds, and the button that edits them — on the breadcrumb's row. The
+  // editor draws them there; the topbar only holds the space.
+  const [tabSlot, setTabSlot] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => { localStorage.setItem('mak.sidebarCollapsed', collapsed ? '1' : '0') }, [collapsed])
 
@@ -151,6 +155,7 @@ export default function App() {
               onTab={selectTab}
               onHome={goHome}
               reportUrl={reportUrl}
+              slotRef={setTabSlot}
             />
           )}
 
@@ -192,6 +197,7 @@ export default function App() {
                     where={{ boardId: board.id, pageId: page.id, tabId: tab.id }}
                     tab={tab}
                     baseUrl={reportUrl}
+                    slot={tabSlot}
                   />
                 </Suspense>
               ) : null}
