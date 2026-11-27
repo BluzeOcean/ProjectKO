@@ -27,6 +27,7 @@ The skills that cover the work you are most likely to do:
 | Skill | Covers |
 | --- | --- |
 | `workspace-authoring` | boards, tabs, cards, report tabs, Markdown deliverables |
+| `questionnaire-page` | a questionnaire page: a form, one question per field, and the writer that saves the answers |
 | `character-sheet-pipeline` | a character reference sheet, then a 3D-ready image |
 | `img2threejs` | image → 3D mesh, with quality gates |
 | `fal-ai-generation` | image and video generation through fal.ai |

@@ -24,6 +24,8 @@ are outside this folder, so a board or a game project will not be found here.
 - Put project knowledge in this repository, not in global agent memory.
 - Use `.agents/skills/workspace-authoring/SKILL.md` for cards and reports. Keep
   related revisions in one card, preserve editable sources, and verify previews.
+- Use `.agents/skills/questionnaire-page/SKILL.md` for a questionnaire page: a
+  form where the owner types the answers, one question per field.
 - **Describe a domain once, in its module.** The app's own domains — the Vault and
   its boards, the skills, the assets, the MCP servers, the working rules — are
   described in `desktop/modules/`, one file per domain. Change a domain by editing
