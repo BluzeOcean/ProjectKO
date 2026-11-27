@@ -121,13 +121,18 @@ a board carrying two tags appears under both.
 
 ## Layouts
 
-Three, each doing one thing:
+Seven, in two families. The first three arrange cards; the last four read the
+tab as a document and scroll on their own.
 
 | `layout` | Section renders as | Cards render as |
 | --- | --- | --- |
 | `gallery` | header band | responsive grid, image-led |
 | `workbench` | header band | full-width rows, image left, long text |
 | `pinboard` | header band | thumbnails only; click opens large with the pen and hand-off |
+| `codex` | heading in a measured column | a title and its Markdown notes; the rail carries the contents |
+| `margin` | heading in a measured column | a title and its notes; a `WARNING` or `QUESTION` aside floats into the gutter |
+| `ppt` | one slide per section | a title and its notes; the keyboard moves between slides |
+| `folio` | one sheet per section, on A4 | a title and its notes; the sheet is the page |
 
 ## Disk
 

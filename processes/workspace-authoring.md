@@ -5,11 +5,14 @@
    output media local to that task or its project folder.
 3. Write the result in English by default. Use stable tab names and relative
    paths. Keep one main project pinned when it is the user's working hub.
-   For directly editable gallery, workbench or pinboard tabs, follow
+   For directly editable gallery, workbench, pinboard, codex, margin, ppt or folio
+   tabs, follow
    [the editable card format](../docs/editable-cards.md). Store content in a
    `.tab.json` file under its page's folder, and register the tab with no
    `viewer`. Preserve stable block IDs and validate before saving. Keep custom
-   HTML when a task needs its own layout.
+   HTML when a task needs its own layout. In a document layout — codex, margin,
+   ppt or folio — a card's notes are Markdown, and an aside is a blockquote that
+   opens with `> [!WARNING]`, `> [!QUESTION]` and the like.
 4. Add the shared report CSS and script; use `data-mak-report="document"`.
    Markdown requires no HTML wrapper and opens in the formatted document view.
 5. Make every image clickable and downloadable. Videos need native controls.

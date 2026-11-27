@@ -1,6 +1,7 @@
 export type BoardTag = 'research' | 'game-project' | 'gallery' | 'app-project';
 export type PageTag = 'game-mechanics' | 'game-idea' | 'ui' | 'sound' | '3d' | '2d' | 'animation';
-export type TabLayout = 'gallery' | 'workbench' | 'pinboard';
+export type TabLayout = 'gallery' | 'workbench' | 'pinboard' | 'codex' | 'margin' | 'ppt' | 'folio';
+export type DocumentLayout = 'codex' | 'margin' | 'ppt' | 'folio';
 export type CardStatus = 'idea' | 'in-progress' | 'review' | 'done';
 export type BoardStatus = 'active' | 'done' | 'archived';
 export type TabViewer = 'report' | 'compare3d';
@@ -103,6 +104,8 @@ export const pageTagLabels: Record<PageTag, string>;
 export const tabLayouts: TabLayout[];
 export const layoutLabels: Record<TabLayout, string>;
 export const layoutNotes: Record<TabLayout, string>;
+export const documentLayouts: DocumentLayout[];
+export function isDocumentLayout(layout: string): boolean;
 export const boardStatuses: BoardStatus[];
 export const cardStatuses: CardStatus[];
 export const ID_PATTERN: RegExp;

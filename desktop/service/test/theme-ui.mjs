@@ -52,6 +52,19 @@ try {
     { id: 'a1', role: 'assistant', text: '## A comfortable place to focus\n\nReadable text, quiet surfaces and a little personality.\n\n- A distinct accent for actions\n- Clear **hierarchy** and balanced contrast\n\n```ts\nconst nextStep = "Make something useful"\n```', at: '2026-10-20T12:00:01Z' },
   ] } }));
   const errors = []; for (const view of [page, second, chats]) { view.setDefaultTimeout(12000); view.on('pageerror', error => errors.push(error.message)); }
+  // The settings panel is a list of rows and the theme is one level down:
+  // open the panel, then open Appearance. The helper is idempotent, so it
+  // does not matter whether the panel was open, and on which page.
+  const openAppearance = async () => {
+    if (await page.getByLabel('Vaultspace theme', { exact: true }).count()) return
+    if (await page.locator('.workspace-settings').count()) {
+      const back = page.getByRole('button', { name: 'All settings' })
+      if (await back.count()) await back.click()
+    } else {
+      await page.getByRole('button', { name: 'Toggle settings', exact: true }).click()
+    }
+    await page.getByRole('button', { name: /^Appearance/ }).click()
+  }
   await page.goto(service.urls.workspace + '#/test/documents/report');
   await second.goto(service.urls.workspace);
   await chats.goto(service.urls.chats);
@@ -61,7 +74,7 @@ try {
   const mountId = await report().locator('html').evaluate(() => window.mountId);
   await report().getByRole('textbox', { name: 'Keep my draft' }).fill('Keep this edit');
   await report().locator('body').evaluate(() => scrollTo(0, 400));
-  await page.getByRole('button', { name: 'Toggle settings', exact: true }).click();
+  await openAppearance();
   await page.getByLabel('Vaultspace theme', { exact: true }).selectOption('light');
   await expect(page.locator('html')).toHaveAttribute('data-workspace-theme', 'light');
   await expect(second.locator('html')).toHaveAttribute('data-workspace-theme', 'light');
@@ -88,6 +101,7 @@ try {
   const terminalElement = await chats.locator('.terminal-host .xterm').elementHandle();
   await chats.getByRole('button', { name: 'Chat appearance', exact: true }).click();
   for (const theme of themes) {
+    await openAppearance();
     await page.getByLabel('Vaultspace theme', { exact: true }).selectOption(theme.id);
     await expect(page.locator('html')).toHaveAttribute('data-workspace-theme', theme.id);
     await expect(second.locator('html')).toHaveAttribute('data-workspace-theme', theme.id);
@@ -144,12 +158,13 @@ try {
   await page.locator('.file-preview').getByRole('button', { name: 'Edit', exact: true }).click();
   assert.equal(await page.locator('.markdown-editor').evaluate(node => getComputedStyle(node).backgroundColor), 'rgb(255, 255, 255)');
   await page.getByRole('button', { name: 'Close file preview', exact: true }).click();
-  await page.getByRole('button', { name: 'Toggle settings', exact: true }).click();
+  await openAppearance();
   await page.getByLabel('Vaultspace theme', { exact: true }).selectOption('system');
   await expect(page.locator('html')).toHaveAttribute('data-workspace-theme', 'dark');
   await page.bringToFront();
   await page.emulateMedia({ colorScheme: 'light' });
   await expect(page.locator('html')).toHaveAttribute('data-workspace-theme', 'light');
+  await openAppearance();
   await page.getByLabel('Vaultspace theme', { exact: true }).selectOption('light');
   await page.getByRole('button', { name: 'Close settings', exact: true }).click();
   await page.getByRole('tab', { name: 'Custom game', exact: true }).click();

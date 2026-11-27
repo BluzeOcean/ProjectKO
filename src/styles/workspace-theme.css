@@ -59,11 +59,11 @@ html[data-workspace-theme] .mak-lightbox .mak-lightbox-note{color:var(--text-dim
 
 /* Files, Settings, Skills and MCP share the same readable panel surfaces. */
 html[data-workspace-theme] .files-rail,html[data-workspace-theme] .files-panel{background:var(--surface-solid);border-color:var(--hairline-strong);color:var(--text)}
-html[data-workspace-theme] :is(.rail-tool,.file-row,.settings-row-name,.mcp-server h3,.mcp-summary strong){color:var(--text)}
+html[data-workspace-theme] :is(.rail-tool,.file-row,.settings-row-name,.settings-row-link-name,.mcp-server h3,.mcp-summary strong){color:var(--text)}
 html[data-workspace-theme] .rail-tool.active,html[data-workspace-theme] .rail-tool:hover{background:var(--pink-dim);color:var(--pink)}
-html[data-workspace-theme] .settings-fold.open .settings-fold-head{color:var(--text-bright)}
+html[data-workspace-theme] .settings-row-link:hover .settings-row-link-name{color:var(--text-bright)}
 html[data-workspace-theme] :is(.settings-scroll p,.skill-locations p,.file-tree-note,.file-filter,.file-row small,.files-panel footer,.mcp-summary p,.mcp-note,.mcp-state,.mcp-subtitle,.mcp-endpoint,.mcp-sources,.mcp-check>span,.mcp-check-time,.mcp-footer p){color:var(--text-dim)}
-html[data-workspace-theme] :is(.settings-fold,.mcp-sources>div,.mcp-footer){border-color:var(--hairline)}
+html[data-workspace-theme] :is(.mcp-sources>div,.mcp-footer){border-color:var(--hairline)}
 html[data-workspace-theme] :is(.file-path,.mcp-filters select){background:var(--surface-2);color:var(--text);border-color:var(--hairline-strong)}
 html[data-workspace-theme] :is(.settings-select,.settings-text){background-color:transparent;color:var(--text)}
 html[data-workspace-theme] :is(.file-mode,.mcp-server){background:var(--surface-2);border-color:var(--hairline)}

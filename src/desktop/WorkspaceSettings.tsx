@@ -5,7 +5,7 @@ import { defaultEffort, efforts } from './effort'
 import { Icon } from './Icons'
 import { DictationRows } from '../components/DictationSettings'
 import { useDictation } from './useDictation'
-import { ThemeRow } from '../components/ThemePicker'
+import { ThemePage, ThemeRow } from '../components/ThemePicker'
 import { fileManager, isMac, shellName } from './platform'
 import { quotaIntervalLabel, quotaIntervalNote, quotaIntervals } from '../lib/quota'
 import { themes } from '../../desktop/service/appearance.mjs'
@@ -31,30 +31,47 @@ const pathTail = (path: string, segments: number) => {
 const effortName = (effort?: string) => efforts.find(([value]) => value === effort)?.[1] || 'Extra high'
 const agentName = (agent: string) => agents.find(([value]) => value === agent)?.[1] || 'Claude'
 
-/* A fold: the header states what the section holds, and opening it puts the
-   controls where the header was, in the panel's one row grammar. Searching
-   the panel opens every section that still has a matching row. */
-function Section({ id, label, summary, rows, foot, open, query, onToggle }: {
-  id: string; label: string; summary: string; rows: SettingsRow[]; foot?: ReactNode
-  open: boolean; query: string; onToggle: (id: string) => void
+/* A group of settings: a name, the value it holds, and the rows that make
+   that value true. The `detail` is what the page shows instead of the
+   rows, for a group that draws its own page. */
+type SettingsSection = { id: string; label: string; summary: string; rows: SettingsRow[]; foot?: ReactNode; detail?: ReactNode }
+
+/* The panel is a list of rows. A row names a group and states the value
+   that group holds; the control itself is one level down, so the panel
+   never shows a widget before it is asked for one. */
+function RowsList({ sections, blocks, onOpen }: {
+  sections: SettingsSection[]; blocks: string[][]; onOpen: (id: string) => void
 }) {
+  return <div className="settings-rows">
+    {blocks.map((block, index) => <div className="settings-rows-block" key={index}>
+      {block.map(id => {
+        const section = sections.find(item => item.id === id)
+        if (!section) return null
+        return <button type="button" className="settings-row-link" key={id} onClick={() => onOpen(id)}>
+          <span className="settings-row-link-name">{section.label}</span>
+          <span className="settings-row-link-value">{section.summary}</span>
+          <span className="settings-row-link-chev"><Icon name="chevron" size={15} /></span>
+        </button>
+      })}
+    </div>)}
+  </div>
+}
+
+/* One level down. The sentence that explains a row is always here, because
+   the reader asked for this page. */
+function RowsPage({ section, query }: { section: SettingsSection; query: string }) {
   const needle = query.trim().toLowerCase()
-  const shown = needle ? rows.filter(row => (row.name + ' ' + (row.search || '')).toLowerCase().includes(needle)) : rows
-  if (needle && !shown.length) return null
-  const expanded = needle.length > 0 || open
-  return <section className={'settings-fold' + (expanded ? ' open' : '')} data-settings-section={id}>
-    <button type="button" className="settings-fold-head" aria-expanded={expanded} onClick={() => onToggle(id)}>
-      <span className="settings-fold-label">{label}</span>
-      <span className="settings-fold-end">
-        <span className="settings-fold-summary">{summary}</span>
-        <span className="settings-fold-chev"><Icon name="down" size={15} /></span>
-      </span>
-    </button>
-    <div className="settings-fold-body">
-      {shown.map(row => <div className="settings-item" key={row.key}>{row.node}</div>)}
-      {foot && !needle ? foot : null}
-    </div>
-  </section>
+  const shown = needle
+    ? section.rows.filter(row => (row.name + ' ' + (row.search || '')).toLowerCase().includes(needle))
+    : section.rows
+  return <div className="settings-detail">
+    {section.detail
+      ? section.detail
+      : <div className="settings-rows-block">
+          {shown.map(row => <div className="settings-item" key={row.key}>{row.node}</div>)}
+        </div>}
+    {section.foot && !needle ? section.foot : null}
+  </div>
 }
 
 export default function WorkspaceSettings({ onClose }: { onClose: () => void }) {
@@ -65,10 +82,9 @@ export default function WorkspaceSettings({ onClose }: { onClose: () => void }) 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
-  /* Appearance is open because it is the one section whose labels do not say
-     what it holds. Everything else states its value in the header. */
-  const [open, setOpen] = useState<string[]>(['workspace-directory', 'appearance'])
-  const toggle = (id: string) => setOpen(current => current.includes(id) ? current.filter(name => name !== id) : [...current, id])
+  /* Which group is open. The drill-down is one level, so there is no stack
+     to keep: null is the list, a group's id is its page. */
+  const [page, setPage] = useState<string | null>(null)
   useEffect(() => {
     void api<ReadAloud>('/read-aloud').then(setSpeech).catch(() => setSpeech(null))
     const refresh = () => api<NativeSettings>('/native/settings').then(setNative).catch(failure => setError(String(failure.message || failure)))
@@ -123,7 +139,7 @@ export default function WorkspaceSettings({ onClose }: { onClose: () => void }) 
   const toggleSwitch = (checked: boolean, onPick: (value: boolean) => void, disabled = busy) =>
     <><input type="checkbox" checked={checked} disabled={disabled} onChange={event => onPick(event.target.checked)} /><span className="settings-switch" /></>
 
-  const sections: { id: string; label: string; summary: string; rows: SettingsRow[]; foot?: ReactNode }[] = [
+  const sections: SettingsSection[] = [
     {
       id: 'workspace-directory', label: 'Vault', summary: pathTail(workspaceDir, 2),
       rows: [{
@@ -145,6 +161,9 @@ export default function WorkspaceSettings({ onClose }: { onClose: () => void }) 
         { key: 'workspace-theme', name: 'Vaultspace theme', search: 'palette colour color', node: <ThemeRow target="workspace" /> },
         { key: 'chat-theme', name: 'Chatspace theme', search: 'palette colour color', node: <ThemeRow target="chat" /> },
       ],
+      /* The Appearance page draws itself: one theme at a time, one preview,
+         and the whole catalogue as swatches. */
+      detail: <ThemePage />,
     },
     {
       id: 'window', label: isMac ? 'Shortcut' : 'Windows', summary: native.winKey ? 'On' : 'Off',
@@ -207,13 +226,40 @@ export default function WorkspaceSettings({ onClose }: { onClose: () => void }) 
     },
   ]
 
-  return <div className="files-panel workspace-settings"><header><h2>Settings</h2><button className="desk-icon" onClick={onClose} aria-label="Close settings"><Icon name="close" size={17} /></button></header>
+  /* The panel at rest: blocks of two. The Vault is first because it is the
+     app's own folder, not one of the user's settings, and it reads better
+     at the top than at the bottom of a list of choices. */
+  const blocks = [
+    ['workspace-directory', 'appearance'],
+    ['window', 'chats'],
+    ['read-aloud', 'quota'],
+    ['speech', 'project-ko'],
+    ['project'],
+  ]
+  const needle = query.trim().toLowerCase()
+  const section = page ? sections.find(item => item.id === page) : undefined
+  const matches = (item: SettingsSection) => !needle
+    || item.label.toLowerCase().includes(needle)
+    || item.rows.some(row => (row.name + ' ' + (row.search || '')).toLowerCase().includes(needle))
+  const visible = needle ? sections.filter(matches) : sections
+  const blocksShown = blocks
+    .map(block => block.filter(id => visible.some(item => item.id === id)))
+    .filter(block => block.length)
+
+  return <div className="files-panel workspace-settings">
+    <header>
+      <div className="settings-head">
+        {section && <button className="desk-icon" onClick={() => setPage(null)} aria-label="All settings"><Icon name="back" size={17} /></button>}
+        <h2>{section ? section.label : 'Settings'}</h2>
+      </div>
+      <button className="desk-icon" onClick={onClose} aria-label="Close settings"><Icon name="close" size={17} /></button>
+    </header>
     <div className="settings-search"><Icon name="search" size={13} /><input type="search" value={query} placeholder="Search settings" aria-label="Search settings" onChange={event => setQuery(event.target.value)} /></div>
     <div className="settings-scroll">
-      {sections.map(section => <Section key={section.id} {...section} open={open.includes(section.id)} query={query} onToggle={toggle} />)}
-      {query.trim() && !sections.some(section => section.rows.some(item => (item.name + ' ' + (item.search || '')).toLowerCase().includes(query.trim().toLowerCase())))
-        ? <p className="settings-empty">No setting matches that.</p>
-        : null}
+      {section
+        ? <RowsPage section={section} query={query} />
+        : <RowsList sections={sections} blocks={blocksShown} onOpen={setPage} />}
+      {needle && !visible.length ? <p className="settings-empty">No setting matches that.</p> : null}
       {error && <p className="settings-status" role="alert">{error}</p>}
     </div>
   </div>

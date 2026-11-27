@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   VAULT_FORMAT, VAULT_VERSION, TAB_FORMAT, TAB_VERSION, TAB_MAX_BLOCKS,
-  boardTags, pageTags, tabLayouts, cardStatuses,
+  boardTags, pageTags, tabLayouts, cardStatuses, documentLayouts, isDocumentLayout,
   localDay, slugify, folderFor, localPath, sourceUrl,
   validateRegistry, validateTabDocument, validateTabDraft, isLegacyRegistry, tabText, emptyDocument,
 } from '../vault-schema.mjs';
@@ -25,7 +25,9 @@ const card = (over = {}) => ({ kind: 'card', id: 'explorer', title: 'The explore
 test('the vocabularies are the ones the panels offer', () => {
   assert.deepEqual(boardTags, ['research', 'game-project', 'gallery', 'app-project']);
   assert.deepEqual(pageTags, ['game-mechanics', 'game-idea', 'ui', 'sound', '3d', '2d', 'animation']);
-  assert.deepEqual(tabLayouts, ['gallery', 'workbench', 'pinboard']);
+  assert.deepEqual(tabLayouts, ['gallery', 'workbench', 'pinboard', 'codex', 'margin', 'ppt', 'folio']);
+  assert.deepEqual(documentLayouts, ['codex', 'margin', 'ppt', 'folio']);
+  assert.deepEqual(tabLayouts.filter(value => documentLayouts.includes(value)), documentLayouts);
   assert.deepEqual(cardStatuses, ['idea', 'in-progress', 'review', 'done']);
 });
 
@@ -117,9 +119,15 @@ test('a draft keeps an unfinished title, a saved document does not', () => {
   assert.throws(() => validateTabDocument(doc([section({ title: '  ' })])), /Section title/);
 });
 
-test('the layout must be one of the three', () => {
-  assert.throws(() => validateTabDocument({ ...doc(), layout: 'grid' }), /Gallery, Workbench or Pinboard/);
+test('the layout must be one of the seven', () => {
+  assert.throws(() => validateTabDocument({ ...doc(), layout: 'grid' }), /Gallery, Workbench, Pinboard, Codex, Margin, PPT or Folio/);
   assert.equal(validateTabDraft({ ...doc(), layout: 'pinboard' }).layout, 'pinboard');
+  for (const layout of documentLayouts) {
+    assert.equal(validateTabDraft({ ...doc(), layout }).layout, layout);
+    assert.equal(isDocumentLayout(layout), true);
+  }
+  assert.equal(isDocumentLayout('gallery'), false);
+  assert.equal(isDocumentLayout('pinboard'), false);
 });
 
 test('a tab is capped at the block limit', () => {

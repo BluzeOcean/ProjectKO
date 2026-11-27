@@ -10,7 +10,8 @@ Keep authored content in English unless the user explicitly requests another
 language. Put related iterations in an existing tab rather than creating
 several tabs for one task. Do not reorganize unrelated projects.
 
-For a gallery, workbench or pinboard tab that the owner wants to edit directly,
+For a gallery, workbench, pinboard, codex, margin, ppt or folio tab that the owner
+wants to edit directly,
 use the versioned `.tab.json` format in [editable cards](../../../docs/editable-cards.md).
 Register it as a tab of a page, with no `viewer` and a `path` under the page's own
 folder (`<page>/<tab>.tab.json`). Keep stable block IDs, relative local images and
@@ -19,6 +20,20 @@ Reread the source before each edit and update the page's and the board's dates. 
 app provides the view, so do not create a second editable HTML copy of the same data.
 Preserve existing custom HTML unless conversion was requested. Browser and phone
 previews can read these tabs; the desktop Workspace provides editing controls.
+
+In a **document layout** — codex, margin, ppt or folio — a card's notes are read
+as Markdown, so a table or a fenced code block in a card is a table or a code
+block on the page. An aside is a blockquote that opens with a marker:
+
+```markdown
+> [!WARNING]
+> The thing that is not settled yet.
+```
+
+The markers are `NOTE`, `TIP`, `DECISION`, `WARNING`, `QUESTION` and `CAUTION`.
+In the **margin** layout a `WARNING` or a `QUESTION` leaves the text and floats
+into the gutter beside the paragraph it belongs to, so put one at the end of the
+paragraph it is about rather than at the top of the card.
 
 A card can also carry `feedback` — what the user wants changed — and
 `annotation`, the marked-up picture inside the **page's** `media/` folder. The app

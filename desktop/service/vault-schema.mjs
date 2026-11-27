@@ -20,9 +20,14 @@ export const pageTags = ['game-mechanics', 'game-idea', 'ui', 'sound', '3d', '2d
 export const boardTagLabels = { research: 'Research', 'game-project': 'Game Project', gallery: 'Gallery', 'app-project': 'App Project' };
 export const pageTagLabels = { 'game-mechanics': 'Game Mechanics', 'game-idea': 'Game Idea', ui: 'UI', sound: 'Sound', '3d': '3D', '2d': '2D', animation: 'Animation' };
 
-export const tabLayouts = ['gallery', 'workbench', 'pinboard'];
-export const layoutLabels = { gallery: 'Gallery', workbench: 'Workbench', pinboard: 'Pinboard' };
-export const layoutNotes = { gallery: 'a grid of cards, the picture first', workbench: 'one card per row, the notes beside the picture', pinboard: 'a wall of thumbnails, one opened large' };
+export const tabLayouts = ['gallery', 'workbench', 'pinboard', 'codex', 'margin', 'ppt', 'folio'];
+export const layoutLabels = { gallery: 'Gallery', workbench: 'Workbench', pinboard: 'Pinboard', codex: 'Codex', margin: 'Margin', ppt: 'PPT', folio: 'Folio' };
+export const layoutNotes = { gallery: 'a grid of cards, the picture first', workbench: 'one card per row, the notes beside the picture', pinboard: 'a wall of thumbnails, one opened large', codex: 'a reading room — a contents that follows you down the page', margin: 'an editorial spread — the asides sit in the margin', ppt: 'one section per screen, moved by the keyboard', folio: 'sheets of paper, printed' };
+
+// The layouts that read a tab as a document rather than as a grid of cards.
+// They are drawn differently, and they scroll on their own.
+export const documentLayouts = ['codex', 'margin', 'ppt', 'folio'];
+export const isDocumentLayout = layout => documentLayouts.includes(layout);
 
 export const boardStatuses = ['active', 'done', 'archived'];
 export const cardStatuses = ['idea', 'in-progress', 'review', 'done'];
@@ -194,7 +199,7 @@ function block(value, draft) {
 function document_(value, draft) {
   keys(value, ['format', 'version', 'layout', 'summary', 'nodes'], 'This tab');
   if (value.format !== TAB_FORMAT || value.version !== TAB_VERSION) fail('This tab document version is not supported. Update Project KO before editing it.');
-  if (!tabLayouts.includes(value.layout)) fail('Choose the Gallery, Workbench or Pinboard layout.');
+  if (!tabLayouts.includes(value.layout)) fail('Choose the Gallery, Workbench, Pinboard, Codex, Margin, PPT or Folio layout.');
   text(value.summary, 'Tab introduction', 20000);
   if (!Array.isArray(value.nodes) || value.nodes.length > TAB_MAX_BLOCKS) fail('A tab holds up to ' + TAB_MAX_BLOCKS + ' blocks.');
   const ids = new Set();

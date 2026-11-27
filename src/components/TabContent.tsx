@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { sourceUrl, type CardBlock, type TabDocument } from '../../desktop/service/vault-schema.mjs'
+import { isDocumentLayout, sourceUrl, type CardBlock, type TabDocument } from '../../desktop/service/vault-schema.mjs'
 import { MarkdownView } from './MarkdownDocument'
 import { ZoomImage } from './ImagePreview'
 import { statusLabels } from '../lib/card-labels'
 import { cardStarts, runsOf, type Where } from '../lib/blocks'
 import Pinboard from './Pinboard'
+import DocumentLayout from './DocumentLayout'
 import '../styles/editable-cards.css'
 export type { Where }
 
@@ -35,9 +36,11 @@ function findScroller(node: HTMLElement): HTMLElement | null {
   return null
 }
 
-export default function TabContent({ document, baseUrl, where, onFeedback, onSave }: {
+export default function TabContent({ document, baseUrl, title, where, onFeedback, onSave }: {
   document: TabDocument
   baseUrl: string
+  /** The tab's name — a document layout puts it in the head. */
+  title?: string
   where?: Where
   onFeedback?: (cardId: string, text: string) => void
   onSave?: (document: TabDocument) => Promise<boolean>
@@ -89,6 +92,11 @@ export default function TabContent({ document, baseUrl, where, onFeedback, onSav
     <Pinboard document={document} baseUrl={base} where={where} onFeedback={onFeedback} onSave={onSave} />
   </article>
 
+  /* The document layouts read the tab as a document, and they scroll on
+     their own — so the editor's scroller stays out of their way. */
+  if (isDocumentLayout(document.layout)) return <article className="card-content doc-content">
+    <DocumentLayout document={document} baseUrl={base} title={title} />
+  </article>
 
   return <article className={'card-content card-template-' + document.layout + (withIndex ? ' has-index' : '')}>
     {head}

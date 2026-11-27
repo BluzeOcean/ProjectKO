@@ -41,7 +41,7 @@ local recovery copies and are excluded from Git. Use Git for longer history.
 
 ## The Pinboard
 
-The Pinboard is one of the three layouts: a wall of the tab's cards as thumbnails,
+The Pinboard is one of the card layouts: a wall of the tab's cards as thumbnails,
 one picture chosen, and a view where the picture is the point.
 
 Choose a thumbnail and the picture opens large, with a pen over it. The pen has
@@ -138,7 +138,7 @@ The document:
 Required tab fields: `format`, `version`, `layout`, `nodes`.
 Required block fields: `kind` and `id`; a section also needs `title`, a card too.
 
-- Layouts: `gallery`, `workbench`, `pinboard`.
+- Layouts: `gallery`, `workbench`, `pinboard`, `codex`, `margin`, `ppt`, `folio`.
 - Statuses: `idea`, `in-progress`, `review`, `done`; omit for no status.
 - Feedback: `feedback` holds what the user wants the agent to change about the
   card, up to 4,000 characters. It is written by the Pinboard and read by agents

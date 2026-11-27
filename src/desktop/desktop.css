@@ -182,18 +182,43 @@
 .settings-search input:focus,.settings-search input:focus-visible{outline:none!important;box-shadow:none!important}
 .settings-search:focus-within{color:var(--text)}
 .settings-scroll{overflow:auto;padding:0 0 26px;min-height:0}
-.settings-fold{border-bottom:1px solid color-mix(in srgb,var(--text) 7%,transparent)}
-.settings-fold-head{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;padding:0 16px;border:0;background:none;color:var(--text);font:12px var(--font-body);text-align:left}
-.settings-fold-head:hover{background:color-mix(in srgb,var(--text) 2.5%,transparent)}
-.settings-fold.open .settings-fold-head{color:var(--text-bright)}
-.settings-fold-label{flex-shrink:0}
-.settings-fold-end{display:flex;align-items:center;gap:8px;margin-left:auto;min-width:0}
-.settings-fold-summary{min-width:0;font-size:10.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.settings-fold.open .settings-fold-summary{display:none}
-.settings-fold-chev{display:flex;color:var(--text-muted);transform:rotate(-90deg);transition:transform var(--t-fast) var(--ease)}
-.settings-fold.open .settings-fold-chev{transform:rotate(0)}
-.settings-fold-body{display:none;padding:0 16px 11px}
-.settings-fold.open .settings-fold-body{display:block}
+/* The panel is a list of rows. A row names a group and states the value
+   that group holds; the control itself is one level down, so the panel
+   never shows a widget before it is asked for one. */
+.settings-rows{display:flex;flex-direction:column;gap:10px;padding:14px 14px 24px}
+.settings-rows-block{border-radius:10px;overflow:hidden;background:color-mix(in srgb,var(--text) 3.5%,transparent)}
+.settings-row-link{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:0 12px;border:0;background:none;color:inherit;font:inherit;text-align:left;transition:background var(--t-fast) var(--ease)}
+.settings-row-link+.settings-row-link{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--text) 6%,transparent)}
+.settings-row-link:hover{background:color-mix(in srgb,var(--text) 3%,transparent)}
+.settings-row-link:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+.settings-row-link-name{flex-shrink:0;font-size:12px;color:var(--text)}
+.settings-row-link-value{margin-left:auto;min-width:0;font-size:11px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.settings-row-link-chev{display:flex;color:var(--text-muted);margin-right:-3px;flex-shrink:0}
+/* One level down. The sentence that explains a row is always here, because
+   the reader asked for this page. */
+.settings-detail{display:flex;flex-direction:column;gap:10px;padding:14px 14px 24px}
+.settings-detail .settings-row-help{display:block}
+.settings-detail .settings-item+.settings-item{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--text) 6%,transparent)}
+.settings-head{display:flex;align-items:center;gap:5px;min-width:0}
+.settings-head h2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* The Appearance page: which one is being changed, what it looks like, and
+   the whole catalogue as swatches. */
+.settings-theme-page{display:flex;flex-direction:column;gap:12px}
+.settings-theme-targets{display:flex;gap:4px;padding:3px;border-radius:8px;background:var(--bg-deep)}
+.settings-theme-targets button{flex:1;border:0;border-radius:6px;padding:7px 0;background:transparent;color:var(--text-dim);font:11px var(--font-body);cursor:pointer}
+.settings-theme-targets button.on{background:color-mix(in srgb,var(--text) 5%,transparent);color:var(--text)}
+.settings-theme-select{display:flex;align-items:center;gap:10px;min-height:30px;font-size:11.5px;color:var(--text)}
+.settings-theme-preview{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid;border-radius:9px;overflow:hidden}
+.settings-theme-preview .tp-name{font:500 8.5px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;opacity:.7}
+.settings-theme-preview .tp-line{font-size:10.5px;opacity:.75}
+.settings-theme-preview strong{font-size:12.5px;font-weight:550}
+.settings-theme-preview .tp-aa{font-size:13px;letter-spacing:2px;margin-top:1px}
+.settings-theme-dots{display:flex;flex-wrap:wrap;gap:9px;padding:2px 0 0}
+.settings-theme-dot{position:relative;width:26px;height:26px;padding:0;border:0;border-radius:8px;cursor:pointer;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text) 10%,transparent)}
+.settings-theme-dot i{position:absolute;inset:0;margin:auto;width:10px;height:10px;border-radius:50%}
+.settings-theme-dot[aria-pressed=true]{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--text) 10%,transparent),0 0 0 2px var(--surface-solid),0 0 0 3.5px var(--pink)}
+.settings-theme-dot:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+.settings-theme-dot:disabled{opacity:.6;cursor:default}
 .settings-item+.settings-item{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--text) 6%,transparent)}
 .settings-row{display:flex;align-items:center;gap:10px;min-height:30px;position:relative;font-size:11.5px;color:var(--text)}
 .settings-row-name{flex-shrink:0}

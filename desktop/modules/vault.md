@@ -96,8 +96,15 @@ edit it when you register new work, and you must keep its shape:
 }
 \`\`\`
 
-- \`layout\` is \`gallery\`, \`workbench\` or \`pinboard\`. Gallery draws a grid of cards,
-  workbench one row per card, pinboard a wall of thumbnails with one opened large.
+- \`layout\` is one of \`gallery\`, \`workbench\`, \`pinboard\`, \`codex\`, \`margin\`, \`ppt\`
+  or \`folio\`. The first three arrange cards: gallery a grid of cards, workbench
+  one row per card, pinboard a wall of thumbnails with one opened large. The last
+  four read the tab as a document: codex a reading room with a contents that
+  follows the reader, margin an editorial spread whose asides float into a
+  gutter, ppt one section per screen, folio sheets of paper. In a document
+  layout a card's notes are Markdown, and an aside is a blockquote opening with
+  \`> [!WARNING]\`, \`> [!NOTE]\`, \`> [!TIP]\`, \`> [!DECISION]\`, \`> [!QUESTION]\` or
+  \`> [!CAUTION]\`.
 - \`kind\` is required on every block and is \`section\` or \`card\`.
 - Sections carry \`id\`, \`title\` and an optional \`note\`.
 - Cards carry \`id\`, \`title\`, and optionally \`body\`, \`image\`, \`alt\`, \`prompt\`,

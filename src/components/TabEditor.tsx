@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, isDesktop, onServiceEvent, uploadTabImage } from '../desktop/client'
-import { layoutLabels, tabLayouts, validateTabDraft, type CardBlock, type SectionBlock, type TabDocument } from '../../desktop/service/vault-schema.mjs'
+import { isDocumentLayout, layoutLabels, tabLayouts, validateTabDraft, type CardBlock, type SectionBlock, type TabDocument } from '../../desktop/service/vault-schema.mjs'
 import { statusLabels } from '../lib/card-labels'
 import TabContent, { type Where } from './TabContent'
 import type { Tab } from '../types'
@@ -123,8 +123,11 @@ export default function TabEditor({ where, tab, baseUrl }: { where: Where; tab: 
   if (!document) return <div className="report-loading">Opening tab…</div>
 
   const cards = document.nodes.filter(node => node.kind === 'card').length
+  // A document layout scrolls on its own; the editor's scroller would
+  // otherwise scroll it a second time.
+  const isDocument = isDocumentLayout(document.layout)
 
-  return <div className="tab-editor">
+  return <div className={'tab-editor' + (isDocument ? ' is-document' : '')}>
     <div className="tab-editor-bar">
       <span className="tab-editor-count">{cards} {cards === 1 ? 'card' : 'cards'} · {document.nodes.length - cards} heading{document.nodes.length - cards === 1 ? '' : 's'}</span>
       <span className="tab-editor-message" role="status">{state.error ? '' : state.message}</span>
@@ -137,11 +140,16 @@ export default function TabEditor({ where, tab, baseUrl }: { where: Where; tab: 
     </div>
     {state.error && <p className="card-error" role="alert">{state.error}</p>}
 
-    {!state.editing ? <TabContent document={document} baseUrl={baseUrl} where={where} onSave={isDesktop ? save : undefined} /> : <div className="tab-edit-body">
+    {!state.editing ? <TabContent document={document} baseUrl={baseUrl} title={tab.name} where={where} onSave={isDesktop ? save : undefined} /> : <div className="tab-edit-body">
       <div className="tab-editor-fields">
         <label className="tab-editor-field"><span>Layout</span>
           <select value={document.layout} onChange={event => edit(value => ({ ...value, layout: event.target.value as TabDocument['layout'] }))}>
-            {tabLayouts.map(value => <option key={value} value={value}>{layoutLabels[value]}</option>)}
+            <optgroup label="Cards">
+              {tabLayouts.filter(value => !isDocumentLayout(value)).map(value => <option key={value} value={value}>{layoutLabels[value]}</option>)}
+            </optgroup>
+            <optgroup label="Documents">
+              {tabLayouts.filter(value => isDocumentLayout(value)).map(value => <option key={value} value={value}>{layoutLabels[value]}</option>)}
+            </optgroup>
           </select>
         </label>
         <label className="tab-editor-field tab-editor-wide"><span>Introduction <em>Markdown supported</em></span>
