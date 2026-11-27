@@ -64,8 +64,18 @@ try {
 
   // The week stands first and the five-hour window last, against its countdown.
   assert.deepEqual(await quota.locator('.qf-pct').allTextContents(), ['5%', '100%']);
-  assert.deepEqual(await quota.locator('.qb-track').evaluateAll(nodes => nodes.map(node => node.dataset.tone)), ['low', 'ok']);
+  assert.deepEqual(await quota.locator('.qb-track').evaluateAll(nodes => nodes.map(node => node.dataset.window)), ['week', 'session']);
   await expect(quota.locator('.qf-reset')).toHaveAttribute('title', /five-hour window resets in 1h 45m/i);
+
+  // Each bar is named, and each keeps its own colour whatever is left of it: the
+  // week is red because it is the window that runs out, the five-hour one is
+  // green because it is the one that comes back.
+  assert.deepEqual(await quota.locator('.qf-tag').allTextContents(), ['W', '5H']);
+  const fillColours = () => quota.locator('.qb-fill').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor));
+  const weekColour = await fillColours();
+  assert.notEqual(weekColour[0], weekColour[1], 'the two bars are told apart by colour');
+  await page.locator('.chat-status').screenshot({ path: path.join(repo, 'quota-footer.png') });
+
 
   // Focus does not spend a read before the interval is up: the window is only
   // looked at, not asked.
@@ -80,13 +90,14 @@ try {
   await patch({ quotaRefreshMinutes: 3 });
   await expect(quota).toContainText('42%');
   await expect(quota).toContainText('12%');
-  assert.deepEqual(await quota.locator('.qb-track').evaluateAll(nodes => nodes.map(node => node.dataset.tone)), ['warm', 'warm']);
+  assert.deepEqual(await quota.locator('.qb-track').evaluateAll(nodes => nodes.map(node => node.dataset.window)), ['week', 'session']);
 
   answer = reading(0, 0);
   await patch({ quotaRefreshMinutes: 5 });
   await expect(quota).toContainText('0%');
-  assert.deepEqual(await quota.locator('.qb-track').evaluateAll(nodes => nodes.map(node => node.dataset.tone)), ['low', 'low']);
+  assert.deepEqual(await quota.locator('.qb-track').evaluateAll(nodes => nodes.map(node => node.dataset.window)), ['week', 'session']);
   await expect(quota.locator('.qb-fill').first()).toHaveAttribute('style', /width: 0%/);
+  assert.deepEqual(await fillColours(), weekColour, 'the bars keep their colour as they empty');
 
   // The line holds at every width the window is allowed to take, and gives up
   // its countdown before it gives up a meter.

@@ -4,10 +4,11 @@ import { api, useDesktop } from './client'
 type QuotaWindow = { left: number; resetMs: number }
 type Reading = { ok: boolean; session?: QuotaWindow; week?: QuotaWindow; error?: string }
 
-// quota.ps1's threshold colour, left view: green above 70, amber to 10, red at
-// 10 and below. The bar's track takes the tone too, so a spent window still
-// reads as spent when there is no fill left to colour.
-const tone = (left: number) => left > 70 ? 'ok' : left > 10 ? 'warm' : 'low'
+// The two windows keep their own colour. The week is the one that runs
+// out, so it is red; the five-hour window is the one that comes back, so
+// it is green. Neither changes with what is left of it - the length of
+// the bar and the number beside it say that, and a bar that changed
+// colour as it emptied read as an alarm rather than as a measurement.
 
 // The script's TimeSpan, without its habit of showing 26h as 2h.
 function turnover(ms: number) {
@@ -68,14 +69,19 @@ export default function QuotaMeters({ connected }: { connected: boolean }) {
   const week = current?.week
   if (!session || !week) return null
 
-  const meter = (left: number, label: string) => <span className="qf-meter" role="img" aria-label={label}>
-    <span className="qb-track" data-tone={tone(left)}><span className="qb-fill" style={{ width: fill(left) + '%' }} /></span>
+  // Two bars in a row say nothing about themselves. Each carries the short
+  // name of the window it measures - W for the week, 5H for the five-hour
+  // one - so the reader can tell them apart at a glance, and the full name
+  // in the title for anyone who wants it.
+  const meter = (left: number, short: string, label: string, window: 'week' | 'session') => <span className="qf-meter" role="img" aria-label={label} title={label}>
+    <span className="qf-tag">{short}</span>
+    <span className="qb-track" data-window={window}><span className="qb-fill" style={{ width: fill(left) + '%' }} /></span>
     <span className="qf-pct">{share(left)}</span>
   </span>
 
   return <>
-    {meter(week.left, 'Week: ' + share(week.left) + ' left')}
-    {meter(session.left, 'Five-hour window: ' + share(session.left) + ' left')}
+    {meter(week.left, 'W', 'Week: ' + share(week.left) + ' left', 'week')}
+    {meter(session.left, '5H', 'Five-hour window: ' + share(session.left) + ' left', 'session')}
     <span className="qf-reset" title={'The five-hour window resets in ' + turnover(session.resetMs)}>{turnover(session.resetMs)}</span>
   </>
 }
