@@ -143,6 +143,10 @@ Required tab fields: `format`, `version`, `layout`, `nodes`.
 Required block fields: `kind` and `id`; a section also needs `title`, a card too.
 
 - Layouts: `gallery`, `workbench`, `pinboard`, `codex`, `margin`, `ppt`, `folio`.
+- `summary` is the tab's introduction. A document layout opens its column with
+  it, in full, and in a **codex** tab the rail takes its opening as the
+  abstract — two sentences and twenty words at most. See
+  [the codex page](codex-page.md).
 - Statuses: `idea`, `in-progress`, `review`, `done`; omit for no status.
 - Feedback: `feedback` holds what the user wants the agent to change about the
   card, up to 4,000 characters. It is written by the Pinboard and read by agents

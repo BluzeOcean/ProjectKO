@@ -24,6 +24,17 @@ await mkdir(path.join(repo, 'workspace', boardFolder, pageFolder), { recursive: 
 
 const LAYOUTS = ['codex', 'margin', 'ppt', 'folio'];
 
+/* An introduction, written the way an introduction is written: the first
+   sentence says what the page is, and the rest says what is in it. The
+   rail takes the first breath of it and no more. */
+const SUMMARY = [
+  '# The design document',
+  '',
+  'A first storyline draft, written to the decided design rather than over it.',
+  'Every beat below has to be playable with the rules on the Game Design page,',
+  'and every proper noun is a proposal until the owner says otherwise.',
+].join('\n');
+
 /* A document worth reading: three sections, a table, an aside, and
    enough prose to make the page taller than the pane. */
 function document(layout) {
@@ -45,7 +56,7 @@ function document(layout) {
       nodes.push({ kind: 'card', id: 'card-' + index + '-' + card, title: 'Card ' + index + '.' + card, body });
     }
   }
-  return { format: 'pko-tab', version: 1, layout, summary: 'The introduction to the document, in one paragraph.', nodes };
+  return { format: 'pko-tab', version: 1, layout, summary: SUMMARY, nodes };
 }
 
 for (const layout of LAYOUTS) {
@@ -87,6 +98,16 @@ try {
   // The document must scroll in its own pane.
   const pane = await page.locator('.doc-viewport').evaluate(node => ({ scrollHeight: node.scrollHeight, clientHeight: node.clientHeight }));
   assert.ok(pane.scrollHeight > pane.clientHeight, `the document must overflow its pane: ${JSON.stringify(pane)}`);
+  // The dot rail replaces the scrollbar: the page shows none of its own.
+  const bar = await page.locator('.doc-viewport').evaluate(node => ({ offset: node.offsetWidth, client: node.clientWidth }));
+  assert.equal(bar.client, bar.offset, `the codex page shows no scrollbar: ${JSON.stringify(bar)}`);
+  // The rail's abstract is a breath: the opening of the summary, and no more.
+  const abstract = (await page.locator('.doc-rail-abstract').textContent()) || '';
+  const words = abstract.trim().split(/\s+/).filter(Boolean);
+  assert.ok(words.length > 0, 'the rail carries an abstract');
+  assert.ok(words.length <= 20, `the rail abstract is at most twenty words: ${abstract}`);
+  assert.ok(!abstract.includes('Game Design page'), `the rail abstract stops at the first breath: ${abstract}`);
+  assert.ok(!abstract.includes('design document'), `the rail abstract skips a leading heading: ${abstract}`);
   // The scroll spy must mark a section.
   await page.locator('#doc-section-1').scrollIntoViewIfNeeded();
   await page.waitForTimeout(400);
@@ -100,6 +121,9 @@ try {
   /* ── Margin ──────────────────────────────────────────────────── */
   await open('margin');
   await expect(page.locator('.doc-margin')).toHaveCount(1);
+  // The margin layout has the dot rail too, so it has no scrollbar either.
+  const marginBar = await page.locator('.doc-viewport').evaluate(node => ({ offset: node.offsetWidth, client: node.clientWidth }));
+  assert.equal(marginBar.client, marginBar.offset, `the margin page shows no scrollbar: ${JSON.stringify(marginBar)}`);
   const floated = page.locator('.doc-callout[data-float="true"]').first();
   await expect(floated).toHaveCount(1);
   // The aside must sit to the right of the text, not under it.

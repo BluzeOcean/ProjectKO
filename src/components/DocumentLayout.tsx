@@ -46,6 +46,36 @@ function plainText(markdown?: string): string {
     .trim()
 }
 
+/** The rail's abstract: the opening of the summary, in a breath.
+ *
+ *  A reading room's rail says what the page is before the contents
+ *  begin; a paragraph there is a wall in front of them. The cap is two
+ *  sentences and twenty words, and an author who writes the opening as
+ *  a whole sentence never sees it bite. */
+const ABSTRACT_WORDS = 20;
+
+function abstractFrom(markdown?: string): string {
+  if (!markdown) return ''
+  /* A summary that opens with a heading is introducing the document,
+     not describing it: the heading has no place in the abstract. */
+  const text = plainText(markdown.replace(/^\s*#{1,6}[^\n]*\n+/, ''))
+  if (!text) return ''
+  const sentences = text.split(/(?<=[.!?])\s+(?=["'“]?[A-Z0-9])/)
+  const words = (value: string) => value.split(/\s+/).filter(Boolean)
+  const kept: string[] = []
+  let count = 0
+  for (const sentence of sentences) {
+    const size = words(sentence).length
+    if (kept.length && count + size > ABSTRACT_WORDS) break
+    kept.push(sentence)
+    count += size
+    if (count >= ABSTRACT_WORDS) break
+  }
+  const abstract = words(kept.join(' '))
+  if (abstract.length <= ABSTRACT_WORDS) return abstract.join(' ')
+  return abstract.slice(0, ABSTRACT_WORDS).join(' ') + '…'
+}
+
 const CALLOUT_MARKER = /^\[!(NOTE|TIP|DECISION|WARNING|QUESTION|CAUTION)\]\s*(.*)$/i
 const CALLOUT_TITLES: Record<string, string> = {
   note: 'Note', tip: 'Tip', decision: 'Decision',
@@ -164,7 +194,7 @@ function DocRail({ sections, active, title, note, summary }: {
   note: string
   summary?: string
 }) {
-  const abstract = plainText(summary)
+  const abstract = abstractFrom(summary)
   return <aside className="doc-rail">
     <div className="doc-rail-title">{title}</div>
     <div className="doc-rail-sub">{note}</div>

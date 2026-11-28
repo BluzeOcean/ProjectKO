@@ -35,6 +35,20 @@ In the **margin** layout a `WARNING` or a `QUESTION` leaves the text and floats
 into the gutter beside the paragraph it belongs to, so put one at the end of the
 paragraph it is about rather than at the top of the card.
 
+A **codex** tab is a reading room, and its shape is the app's: a rail on the
+left with the tab's name, a short abstract and the contents; one measured
+column of prose; a dotted track on the right that marks the section the reader
+is in and jumps on click. Follow [the codex page](../../../docs/codex-page.md)
+when you build one. Two things are the agent's to get right:
+
+- The **abstract** is the opening of the tab's `summary`, and it is capped at
+  two sentences and twenty words. Write that opening as a whole sentence that
+  stands on its own, open the summary with prose rather than with a heading,
+  and keep the summary itself an introduction — a paragraph or two, because the
+  column shows all of it.
+- The dotted track is the page's **scroll affordance**: the page shows no
+  scrollbar of its own. Never put HTML in a card that brings one back.
+
 A card can also carry `feedback` — what the user wants changed — and
 `annotation`, the marked-up picture inside the **page's** `media/` folder. The app
 writes both when the user draws on a picture and sends it to the board's agent.

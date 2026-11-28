@@ -12,7 +12,11 @@
    `viewer`. Preserve stable block IDs and validate before saving. Keep custom
    HTML when a task needs its own layout. In a document layout — codex, margin,
    ppt or folio — a card's notes are Markdown, and an aside is a blockquote that
-   opens with `> [!WARNING]`, `> [!QUESTION]` and the like.
+   opens with `> [!WARNING]`, `> [!QUESTION]` and the like. For a **codex** tab
+   follow [the codex page](../docs/codex-page.md): the rail's abstract is the
+   opening of the tab's `summary` and is capped at two sentences and twenty
+   words, and the page's dotted track is its scroll affordance, so nothing in a
+   card may bring a scrollbar back.
 4. Add the shared report CSS and script; use `data-mak-report="document"`.
    Markdown requires no HTML wrapper and opens in the formatted document view.
 5. Make every image clickable and downloadable. Videos need native controls.

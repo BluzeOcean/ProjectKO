@@ -1,8 +1,8 @@
 # Tab layouts (the card layouts and the document layouts)
 
 Status: rewritten 2026-11-26 with the page layer; the four document layouts
-added 2026-11-27. The layout is a field of a **tab document**, and each layout
-does one thing.
+added 2026-11-27; the codex rules enforced 2026-11-28. The layout is a field of
+a **tab document**, and each layout does one thing.
 
 ## Where the layout lives
 
@@ -71,6 +71,31 @@ page. An aside is a blockquote that opens with a marker:
 
 `NOTE`, `TIP`, `DECISION`, `WARNING`, `QUESTION` and `CAUTION` are the markers.
 `WARNING` and `QUESTION` are the ones that float into the margin.
+
+## What the codex page owes its reader
+
+The app draws the codex room; the content has to fit it. Three rules, and the
+app enforces the first two, so a page written by an agent holds the same shape
+as one written by hand:
+
+- **The dot rail replaces the scrollbar.** It says where the reader is *and*
+  it navigates, and a scrollbar only says one of those. The viewport's
+  scrollbar is hidden wherever the dot rail is; a narrow window keeps the
+  scrollbar and drops the dot rail, because a replacement that is not there is
+  worse than the thing it replaces. This is the rule the layout mock
+  (`lab/layouts/01-codex/layout.css`) was drawn with, and the app had not
+  caught up with it.
+- **The abstract is a breath.** The rail's abstract is the opening of the tab's
+  `summary`, capped at **two sentences and twenty words**; a leading heading is
+  skipped. A rail is 250 px wide, and a paragraph there is a wall in front of
+  the contents. The summary itself stays an introduction - a paragraph or two -
+  because the column shows all of it.
+- **One measure of prose.** A heading, its note, then its cards. Nothing in a
+  card may bring a second scrollbar back.
+
+The rules an agent writes against are in `docs/codex-page.md`; the skill
+`.agents/skills/workspace-authoring/SKILL.md` points at them, and the process
+`processes/workspace-authoring.md` repeats them.
 
 ## Sections and cards
 
