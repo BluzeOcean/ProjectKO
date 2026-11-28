@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isPeak, messagesFrom, priceUsage, usageFrom } from '../dsh.mjs';
+import { isPeak, messagesFrom, priceUsage, processFrom, toolCategory, toolDetail, usageFrom } from '../dsh.mjs';
 
 // The harness reports inputTokens as the uncached part of the prompt and puts
 // cache reads beside it, so the two are priced apart.
@@ -77,4 +77,116 @@ test('a failed tool is reported as failed', () => {
     { at, event: { type: 'tool/result', data: { message: { toolCallId: 'c2', isError: true, content: [] } } } },
   ]);
   assert.equal(activity[0].status, 'failed');
+});
+
+// ── The work behind the answer ───────────────────────────────────────────────
+
+// The harness's own shapes, taken from a real log: a turn opens, a step opens,
+// the model thinks, tools fire and answer.
+const turn = [
+  { at, event: { type: 'turn/start', data: { turn: 1 } } },
+  { at, event: { type: 'step/start', data: { turn: 1, step: 1 } } },
+  { at, event: { type: 'assistant/message', data: { turn: 1, step: 1, message: { content: [
+    { type: 'reasoning', text: 'The user says pre-warm. Let me read the module docs first.' },
+    { type: 'text', text: 'Reading now.' },
+  ] } } } },
+  { at, event: { type: 'tool/call', data: { turn: 1, step: 1, callId: 'c1', name: 'read', arguments: '{"file_path":"V:/modules/rules.md"}' } } },
+  { at, event: { type: 'tool/call', data: { turn: 1, step: 1, callId: 'c2', name: 'pwsh', arguments: '{"command":"Get-ChildItem V:/Vault"}' } } },
+  { at, event: { type: 'tool/result', data: { turn: 1, step: 1, message: { toolCallId: 'c1', isError: false, content: [] } } } },
+  { at, event: { type: 'step/end', data: { turn: 1, step: 1 } } },
+];
+
+test('the thinking is kept, not thrown away with the text blocks', () => {
+  const { turns } = processFrom(turn);
+  const thinking = turns[0].rows.filter(row => row.kind === 'reasoning');
+  assert.equal(thinking.length, 1);
+  assert.equal(thinking[0].text, 'The user says pre-warm. Let me read the module docs first.');
+  // The reply is the chat's business; the process carries the work.
+  assert.equal(turns[0].rows.some(row => row.kind === 'reasoning' && row.text.includes('Reading now')), false);
+});
+
+test("a tool's arguments become the one line that says what it did", () => {
+  const { turns } = processFrom(turn);
+  const read = turns[0].rows.find(row => row.name === 'read');
+  assert.equal(read.detail, 'V:/modules/rules.md');
+  assert.equal(read.category, 'read');
+  const shell = turns[0].rows.find(row => row.name === 'pwsh');
+  assert.equal(shell.detail, 'Get-ChildItem V:/Vault');
+  assert.equal(shell.category, 'commands');
+});
+
+test('a tool that answered is done, and one that failed says so', () => {
+  const { turns } = processFrom([...turn, { at, event: { type: 'tool/call', data: { callId: 'c3', name: 'write', arguments: '{}' } } },
+    { at, event: { type: 'tool/result', data: { message: { toolCallId: 'c3', isError: true, content: [] } } } }]);
+  const rows = turns[0].rows;
+  assert.equal(rows.find(row => row.id === 'c1').status, 'completed');
+  assert.equal(rows.find(row => row.id === 'c3').status, 'failed');
+  // The one still running is the one the harness is waiting on.
+  assert.equal(rows.find(row => row.id === 'c2').status, 'running');
+});
+
+test('the summary counts the tools by category, in the harness\'s words', () => {
+  const { turns } = processFrom(turn);
+  assert.deepEqual(turns[0].counts, [{ category: 'read', count: 1 }, { category: 'commands', count: 1 }]);
+  assert.deepEqual(turns[0].rows.filter(row => row.kind === 'tool').map(row => row.category), ['read', 'commands']);
+});
+
+test('the panel says what is happening right now', () => {
+  // A tool in flight says what it is doing in its own row, so the line is
+  // only for the times between them.
+  assert.equal(processFrom(turn).turns[0].now, '');
+  // With no tool in flight the model is the one working.
+  assert.equal(processFrom(turn.slice(0, 3)).turns[0].now, 'Thinking');
+  // And when the turn is over, there is nothing to say.
+  const over = processFrom([...turn, { at, event: { type: 'turn/end', data: { turn: 1, reason: 'completed' } } }]);
+  assert.equal(over.turns[0].now, '');
+});
+
+test('a turn that ended is done, and the next turn is the one that counts', () => {
+  const { turns } = processFrom([...turn, { at, event: { type: 'turn/end', data: { turn: 1, reason: 'completed' } } },
+    { at, event: { type: 'turn/start', data: { turn: 2 } } }]);
+  assert.equal(turns.length, 2);
+  // The newest turn comes first: the panel shows the one that is happening.
+  assert.equal(turns[0].turn, 2);
+  assert.equal(turns[0].status, 'working');
+  assert.equal(turns[1].status, 'done');
+});
+
+test('the process travels bounded: two turns, thirty tools, four thousand characters of thinking', () => {
+  const many = [];
+  for (let turnNumber = 1; turnNumber <= 4; turnNumber += 1) {
+    many.push({ at, event: { type: 'turn/start', data: { turn: turnNumber } } });
+    many.push({ at, event: { type: 'assistant/message', data: { turn: turnNumber, message: { content: [{ type: 'reasoning', text: 'x'.repeat(9000) }] } } } });
+    for (let call = 0; call < 40; call += 1) many.push({ at, event: { type: 'tool/call', data: { turn: turnNumber, callId: `t${turnNumber}-${call}`, name: 'read', arguments: '{}' } } });
+  }
+  const { turns } = processFrom(many);
+  assert.equal(turns.length, 2, 'only the last two turns travel');
+  assert.equal(turns[0].turn, 4, 'the newest turn comes first');
+  const tools = turns[0].rows.filter(row => row.kind === 'tool');
+  assert.equal(tools.length, 30, 'thirty tools a turn');
+  // A burst of tools never pushes the thinking out of the panel.
+  const thinking = turns[0].rows.filter(row => row.kind === 'reasoning');
+  assert.equal(thinking.length, 1);
+  assert.equal(thinking[0].text.length, 4000, 'the thinking is cut to four thousand characters');
+});
+
+test('a tool the harness does not know is still a tool', () => {
+  assert.equal(toolCategory('read'), 'read');
+  assert.equal(toolCategory('grep'), 'search');
+  assert.equal(toolCategory('glob'), 'search');
+  assert.equal(toolCategory('apply_patch'), 'edit');
+  assert.equal(toolCategory('exec_command'), 'commands');
+  assert.equal(toolCategory('run_code'), 'code');
+  assert.equal(toolCategory('todo_write'), 'plan');
+  assert.equal(toolCategory('subagent_fork'), 'subagents');
+  assert.equal(toolCategory('fs_inspect'), 'search');
+  assert.equal(toolCategory('mystery'), 'tools');
+});
+
+test('a tool with nothing worth saying says nothing', () => {
+  assert.equal(toolDetail('{}'), '');
+  assert.equal(toolDetail('not json'), '');
+  assert.equal(toolDetail('{"count":3}'), '');
+  assert.equal(toolDetail('{"pattern":"**/*"}'), '**/*');
+  assert.equal(toolDetail('{"query":"the footer"}'), 'the footer');
 });

@@ -236,6 +236,15 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
       send(ws, 'output', output);
     }
   });
+  // The work behind a chat: what the harness is thinking and calling. It goes
+  // to the window watching that chat, on the same road as the terminal bytes.
+  sessions.on('dsh-process', payload => {
+    for (const ws of clients) {
+      if (ws.sessionId !== payload.id) continue;
+      if (ws.bufferedAmount > 2 * 1024 * 1024) { ws.close(1013, 'Reconnect to restore the terminal screen'); continue; }
+      send(ws, 'dsh-process', payload);
+    }
+  });
   sessions.on('notice', notice => { notices.push(notice); if (notices.length > 100) notices.shift(); broadcast('notice', { notice }); if (notice.kind === 'turn-completed' || notice.kind === 'exit') integrations.publish('completion', notice).catch(() => {}); });
 
   const contentServer = http.createServer(async (request, response) => {
@@ -636,6 +645,11 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
         }
         if (message.type === 'subscribe') {
           ws.sessionId = message.id;
+          // A window that arrives late must still see the work: the harness
+          // may be idle, and an idle harness writes nothing, so the process
+          // would never be pushed again.
+          const work = sessions.get(message.id)?.dshProcess;
+          if (work) send(ws, 'dsh-process', { id: message.id, process: work });
           const snapshot = await sessions.snapshot(message.id);
           if (ws.sessionId === message.id) send(ws, 'snapshot', snapshot);
         } else if (message.type === 'input') sessions.input(message.id, message.data);

@@ -27,6 +27,24 @@ export interface ContextUsage {
   usedTokens: number | null; limitTokens: number | null; source: AgentId | 'dsh'
   updatedAt: string | null; reason: 'waiting' | 'compacted' | 'unavailable'
 }
+// The work behind a DeepSeek Harness chat: what it is thinking and calling.
+// One entry per turn, the newest first.
+export interface DshProcessRow {
+  id: string; kind: 'reasoning' | 'tool'; at: string
+  /** The thinking, for a reasoning row. */
+  text?: string
+  /** The tool's name, category and one line of what it was asked to do. */
+  name?: string; category?: string; detail?: string
+  status?: 'running' | 'completed' | 'failed'
+}
+export interface DshProcessTurn {
+  turn: number; status: 'working' | 'done'; step: number; at: string
+  rows: DshProcessRow[]
+  counts: { category: string; count: number }[]
+  /** What it is doing right now. */
+  now: string
+}
+export interface DshProcess { turns: DshProcessTurn[] }
 export interface RecentProject { path: string; name: string; sources: ('workspace' | 'mrmak' | 'claude' | 'codex')[]; pinned: boolean; lastUsedAt: string | null }
 export interface Handoff { status: 'summarizing' | 'opening' | 'done' | 'failed'; error?: string | null; sessionId?: string | null; file?: string | null; at: string }
 export interface Notice { id: string; sessionId: string; name: string; kind: string; text: string; at: string }
@@ -60,6 +78,8 @@ export interface ServiceEvent {
   selectedId?: string; sessionId?: string; state?: string; error?: string; notice?: Notice
   operation?: Operation; settings?: Settings; owner?: VoiceOwner | null; window?: string; route?: string; preview?: Preview; handoff?: Handoff
   coordinatorEngine?: CoordinatorEngine
+  /** The work behind a harness chat. */
+  process?: DshProcess
   /** The entry the user chose in a Pinboard. The service holds it; the wall only shows it. */
   selection?: { boardId: string; boardTitle: string; step: number; entryId: string; title: string; fileName: string | null } | null
 }

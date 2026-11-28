@@ -1,8 +1,8 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { api, pickFiles, reportError, speakDesktopText, uploadImage, useDesktop } from './client'
-import type { ChatSession, SystemEventsMode } from './types'
+import { api, onServiceEvent, pickFiles, reportError, speakDesktopText, uploadImage, useDesktop } from './client'
+import type { ChatSession, DshProcess as DshProcessValue, SystemEventsMode } from './types'
 import SystemEvent, { type SystemEventData } from '../mobile/SystemEvent'
 import BackgroundWork, { type BackgroundCommand, type WorkingAgent } from '../mobile/BackgroundWork'
 import { AgentLogo, Icon } from './Icons'
@@ -16,6 +16,7 @@ import { commandToken, completeCommand, matchingCommands, terminalCommand, type 
 import TerminalPrompt, { type PromptChoice, type TerminalPromptData } from '../components/TerminalPrompt'
 import PermissionPicker from './PermissionPicker'
 import ReadAloudBar from './ReadAloudBar'
+import DshProcess from './DshProcess'
 import './conversation.css'
 import { keepUrl, linkTarget } from '../components/messageLinks'
 
@@ -78,6 +79,17 @@ export default function Conversation({ session, connected, agentLabel, openTermi
     const [answering, setAnswering] = useState(false)
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null), [rewinding, setRewinding] = useState(false), [editError, setEditError] = useState('')
   const [commands, setCommands] = useState<ChatCommand[]>([]), [caret, setCaret] = useState(0), [picked, setPicked] = useState(0), [dismissed, setDismissed] = useState('')
+  // The harness reports what it is thinking and calling as it works. The
+  // service pushes it; the panel shows it. The chat it belongs to is kept with
+  // it, so a panel never outlives the chat that earned it.
+  const [dshProcess, setDshProcess] = useState<{ id: string; process: DshProcessValue } | null>(null)
+  useEffect(() => {
+    if (session.agent !== 'dsh') return
+    return onServiceEvent(event => {
+      if (event.type !== 'dsh-process' || event.id !== session.id || !event.process) return
+      setDshProcess({ id: session.id, process: event.process })
+    })
+  }, [session.agent, session.id])
   useEffect(() => { api<{ commands: ChatCommand[] }>(`/sessions/${session.id}/commands`).then(value => setCommands(value.commands)).catch(() => setCommands([])) }, [session.id])
   const token = commandToken(draft.text, caret, session.agent === 'codex')
   const tokenKey = token ? `${token.start}:${token.trigger}${token.query}` : ''
@@ -140,7 +152,7 @@ export default function Conversation({ session, connected, agentLabel, openTermi
     catch (error) { reportError(error) }
     finally { setAnswering(false); void reload.current() }
   }
-  useLayoutEffect(() => { const box = scroller.current; if (box && follow.current) box.scrollTop = box.scrollHeight }, [messages.length, transcript, working])
+  useLayoutEffect(() => { const box = scroller.current; if (box && follow.current) box.scrollTop = box.scrollHeight }, [messages.length, transcript, working, dshProcess])
   useEffect(() => { input.current?.focus() }, [session.id])
   useLayoutEffect(() => {
     const box = input.current
@@ -254,11 +266,14 @@ export default function Conversation({ session, connected, agentLabel, openTermi
           <AgentLogo agent={session.agent} size={34} />
           <h2>{!transcript ? 'Loading conversation…' : unreadable ? 'This conversation is in the terminal' : 'Ready when you are'}</h2>
           <p>{unreadable ? 'Its history could not be read here. The terminal shows everything.'
-      : session.agent === 'dsh' ? 'Messages appear here as the harness answers. Permission requests are answered in the terminal.'
+      : session.agent === 'dsh' ? 'Messages appear here as the harness answers, with the work it does shown beneath. Permission requests are answered in the terminal.'
       : `Messages appear here as ${agentLabel} writes them. If the CLI asks a startup question, such as trusting this folder or signing in, answer it in the terminal.`}</p>
           <button type="button" onClick={openTerminal}><Icon name="terminal" size={15} />Open terminal</button>
         </div>}
-        {!!transcript?.activity?.length && <details className="conversation-activity"><summary>Recent tool activity</summary>{transcript.activity.map(item => <div key={item.id}><Icon name={item.status === 'running' ? 'terminal' : item.status === 'failed' ? 'bell' : 'history'} size={13} /><span>{item.name}</span><small>{item.status === 'running' && !running ? 'interrupted' : item.status}{item.at && ` · ${time(item.at)}`}</small></div>)}</details>}
+        {/* The harness panel carries the same tools, and more, so the old block
+            would only say it twice. */}
+        {session.agent !== 'dsh' && !!transcript?.activity?.length && <details className="conversation-activity"><summary>Recent tool activity</summary>{transcript.activity.map(item => <div key={item.id}><Icon name={item.status === 'running' ? 'terminal' : item.status === 'failed' ? 'bell' : 'history'} size={13} /><span>{item.name}</span><small>{item.status === 'running' && !running ? 'interrupted' : item.status}{item.at && ` · ${time(item.at)}`}</small></div>)}</details>}
+        {session.agent === 'dsh' && dshProcess?.id === session.id && <DshProcess process={dshProcess.process} working={running} />}
         {transcript?.prompt && <TerminalPrompt prompt={transcript.prompt} answering={answering} onAnswer={choice => void answer(transcript.prompt!, choice)} onOpenTerminal={openTerminal} />}
         {working && <p className="conversation-working"><i />{agentLabel} is working…</p>}
         {!transcript?.prompt && (session.activity === 'waiting' || stale || readError) && <div className="conversation-notice" role="status"><p>{readError || (session.activity === 'waiting' ? `${agentLabel} is waiting for you in the terminal.` : 'No new messages for a while. A permission prompt or question may be waiting in the terminal.')}</p><button type="button" onClick={openTerminal}><Icon name="terminal" size={14} />Open terminal</button></div>}

@@ -133,6 +133,144 @@ export function readRecords(file) {
   } catch { return []; }
 }
 
+// ── The process behind the answer ────────────────────────────────────────────
+//
+// The harness reports what it is doing while it does it: a turn opens, a step
+// opens, the model thinks, tools fire and answer, the step closes. The chat
+// reads the answers out of the same log; this reads the work.
+//
+// The thinking arrives with the step that produced it, and the tools arrive as
+// they run. The categories and the live detail are the harness's own
+// vocabulary, so a summary here reads the way the harness's own chat reads:
+// "read 2 · commands 1".
+
+const TOOL_CATEGORIES = {
+  read: 'read', read_image: 'readImage',
+  grep: 'search', glob: 'search',
+  write: 'write', edit: 'edit', apply_patch: 'edit',
+  bash: 'commands', pwsh: 'commands', exec_command: 'commands', write_stdin: 'commands',
+  run_code: 'code',
+  web_search: 'webSearch', web_fetch: 'webFetch',
+  todo_write: 'plan', create_goal: 'plan', update_goal: 'plan', get_goal: 'plan',
+  ask_user_question: 'questions', request_user_input: 'questions',
+};
+
+// The argument worth showing for a tool, in the harness's order of preference.
+const DETAIL_KEYS = ['title', 'description', 'objective', 'task', 'task_name', 'name', 'question', 'questions', 'prompt', 'message', 'command', 'cmd', 'queries', 'query', 'pattern', 'url', 'uri', 'file_path', 'path', 'target', 'action', 'status'];
+
+// How much of the story travels to the window: two turns, thirty tools and six
+// steps of thinking each, and four thousand characters of thinking per turn.
+// The full text stays on disk in the log; this is what the chat needs to show.
+const PROCESS_TURNS = 2;
+const PROCESS_ROWS = 30;
+const PROCESS_THINKING = 6;
+const PROCESS_REASONING = 4000;
+const DETAIL_LIMIT = 160;
+
+/** The category a tool belongs to, in the harness's terms. */
+export function toolCategory(name) {
+  const key = String(name || '');
+  if (TOOL_CATEGORIES[key]) return TOOL_CATEGORIES[key];
+  if (key === 'subagent' || key.startsWith('subagent_')) return 'subagents';
+  if (key.startsWith('terminal_')) return 'commands';
+  if (key.endsWith('_inspect')) return 'search';
+  return 'tools';
+}
+
+const oneLine = (text, max) => {
+  const flat = String(text || '').replace(/\s+/g, ' ').trim();
+  return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat;
+};
+
+/** The one line of a tool call that says what it is doing. */
+export function toolDetail(args) {
+  let parsed;
+  try { parsed = typeof args === 'string' ? JSON.parse(args) : args; } catch { return ''; }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return '';
+  for (const key of DETAIL_KEYS) {
+    const value = parsed[key];
+    if (typeof value === 'string' && value.trim()) return oneLine(value, DETAIL_LIMIT);
+    if (Array.isArray(value) && value.length && value.every(item => typeof item === 'string')) return oneLine(value.join(', '), DETAIL_LIMIT);
+  }
+  return '';
+}
+
+/**
+ * The work behind the chat, read off the same log the chat itself is read
+ * from. One entry per turn: the thinking it wrote, the tools it called, what
+ * each tool answered, and what it is doing right now.
+ */
+export function processFrom(records) {
+  const turns = [];
+  let current = null;
+  for (const record of records || []) {
+    const event = record && record.event;
+    if (!event) continue;
+    const data = event.data || {};
+    const at = record.at || new Date().toISOString();
+    if (event.type === 'turn/start') {
+      current = { turn: Number(data.turn) || turns.length + 1, status: 'working', step: 0, rows: [], calls: new Map(), at };
+      turns.push(current);
+      continue;
+    }
+    if (!current) continue;
+    if (event.type === 'step/start') { current.step = Number(data.step) || current.step; continue; }
+    if (event.type === 'turn/end') { current.status = 'done'; continue; }
+    if (event.type === 'assistant/message') {
+      // The thinking of this step, whole. It is the one thing the harness
+      // reports that the answer itself never says.
+      for (const block of data.message?.content || []) {
+        if (block?.type !== 'reasoning') continue;
+        const text = String(block.text || '').trim();
+        if (text) current.rows.push({ id: `r-${current.turn}-${current.rows.length}`, kind: 'reasoning', at, text: text.slice(0, PROCESS_REASONING) });
+      }
+      continue;
+    }
+    if (event.type === 'tool/call') {
+      const id = String(data.callId || `t-${current.rows.length}`);
+      const row = { id, kind: 'tool', at, name: String(data.name || 'tool'), category: toolCategory(data.name), detail: toolDetail(data.arguments), status: 'running' };
+      current.rows.push(row);
+      current.calls.set(id, row);
+      continue;
+    }
+    if (event.type === 'tool/result') {
+      const row = current.calls.get(String(data.message?.toolCallId || ''));
+      if (row) row.status = data.message?.isError ? 'failed' : 'completed';
+    }
+  }
+  return { turns: turns.slice(-PROCESS_TURNS).reverse().map(turn => {
+    // The tools and the thinking are kept apart, so a burst of tool calls can
+    // never push the thinking out of the panel.
+    const tools = new Set(turn.rows.filter(row => row.kind === 'tool').slice(-PROCESS_ROWS));
+    const thinking = turn.rows.filter(row => row.kind === 'reasoning').slice(-PROCESS_THINKING);
+    // The newest thinking is the one that matters; older thinking gives way to it.
+    let budget = PROCESS_REASONING;
+    const kept = [];
+    for (let index = thinking.length - 1; index >= 0; index -= 1) {
+      const row = thinking[index];
+      if (budget <= 0) break;
+      if (row.text.length > budget) { row.text = row.text.slice(0, budget); budget = 0; }
+      else budget -= row.text.length;
+      kept.unshift(row);
+    }
+    const keptThinking = new Set(kept);
+    const rows = turn.rows.filter(row => tools.has(row) || keptThinking.has(row));
+    const counts = [];
+    for (const row of rows) {
+      if (row.kind !== 'tool') continue;
+      const found = counts.find(item => item.category === row.category);
+      if (found) found.count += 1;
+      else counts.push({ category: row.category, count: 1 });
+    }
+    const running = [...rows].reverse().find(row => row.kind === 'tool' && row.status === 'running');
+    // What it is doing right now. A tool in flight says so in its own row, so
+    // the line is only for the times between them: the model is working.
+    const now = running ? '' : (turn.status === 'working' ? 'Thinking' : '');
+    return { turn: turn.turn, status: turn.status, step: turn.step, at: turn.at, rows, counts, now };
+  }) };
+}
+
+
 export const dshLogPath = (stateDir, id) => path.join(stateDir, 'dsh', `${id}.jsonl`);
 
 // ── The briefing channel ────────────────────────────────────────────────────

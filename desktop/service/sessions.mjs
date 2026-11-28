@@ -17,7 +17,7 @@ import { composerText, terminalPrompt } from './terminal-prompt.mjs';
 import { opencodeVersion, opencodeEnvironment, readOpencodeState, watchOpencode } from './opencode.mjs';
 import { antigravityTranscript, prepareAntigravityLog, readAntigravityConversation, validAntigravityId, watchAntigravity, watchAntigravityContext } from './antigravity.mjs';
 import { unknownContext } from './native-context.mjs';
-import { dshBriefingChannel, dshLogPath, permissionModes, usageFrom, writeBriefingOverlay } from './dsh.mjs';
+import { dshBriefingChannel, dshLogPath, permissionModes, processFrom, usageFrom, writeBriefingOverlay } from './dsh.mjs';
 
 const { Terminal } = headless;
 // Native CLIs record getcwd(): symlinks resolved (/tmp -> /private/tmp, cloud
@@ -78,7 +78,7 @@ export class Sessions extends EventEmitter {
   }
 
   make(metadata) {
-    return { activity: 'idle', unread: false, completionVersion: 0, tabOrder: this.items.size, tabColor: null, group: null, ...metadata, contextUsage: unknownContext(metadata.agent), effort: ['codex', 'claude', 'antigravity'].includes(metadata.agent) ? metadata.effort || defaultWorkerEffort : undefined, terminal: null, serializer: null, process: null, sequence: 0, pendingOutput: '', outputTimer: null, usage: null, dshOffset: 0, dshRecords: [], permissionMode: metadata.permissionMode ?? null };
+    return { activity: 'idle', unread: false, completionVersion: 0, tabOrder: this.items.size, tabColor: null, group: null, ...metadata, contextUsage: unknownContext(metadata.agent), effort: ['codex', 'claude', 'antigravity'].includes(metadata.agent) ? metadata.effort || defaultWorkerEffort : undefined, terminal: null, serializer: null, process: null, sequence: 0, pendingOutput: '', outputTimer: null, usage: null, dshOffset: 0, dshRecords: [], dshProcess: null, permissionMode: metadata.permissionMode ?? null };
   }
 
   async hydrate(session) {
@@ -332,6 +332,11 @@ export class Sessions extends EventEmitter {
         reason: usage.limit ? undefined : 'unavailable',
       };
       session.hasConversation = true;
+      // The work behind the answer: what the harness is thinking and calling,
+      // read off the records already in hand. It goes to the window as its own
+      // event; it is far too big to ride along with the session.
+      session.dshProcess = processFrom(session.dshRecords);
+      this.emit('dsh-process', { id: session.id, process: session.dshProcess });
       this.changed(session);
     };
     const timer = setInterval(read, 700);
