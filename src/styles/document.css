@@ -135,7 +135,10 @@
 .doc-section-note p:last-child { margin-bottom: 0; }
 
 /* ── Cards, as document blocks ─────────────────────────────────── */
-.doc-card { margin: 0 0 30px; max-width: 68ch; }
+/* The card and its prose give up their own measure. The body's width is
+   the measure; the text keeps a reading width inside it, and the tables
+   and the code are free to use all of it. */
+.doc-card { margin: 0 0 30px; }
 .doc-card:last-child { margin-bottom: 0; }
 .doc-card-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .doc-card-title {
@@ -164,8 +167,16 @@
   font-size: 16px;
   line-height: 1.68;
   color: var(--text);
-  max-width: 68ch;
 }
+/* The reading measure belongs to the text, not to the box it sits in. */
+.doc-prose > p,
+.doc-prose > ul,
+.doc-prose > ol,
+.doc-prose > h1,
+.doc-prose > h2,
+.doc-prose > h3,
+.doc-prose > h4,
+.doc-prose > blockquote { max-width: 68ch; }
 .doc-prose p { margin: 0 0 1em; }
 .doc-prose p:last-child { margin-bottom: 0; }
 .doc-prose strong { color: var(--text-bright); font-weight: 600; }
@@ -191,6 +202,8 @@
   border-radius: 5px;
   padding: 0.1em 0.34em;
   color: var(--pink-bright);
+  /* A word in prose may break; a word in a table may not. */
+  overflow-wrap: break-word;
 }
 .doc-prose a { color: var(--pink); }
 
@@ -251,9 +264,19 @@
   background: var(--surface-2);
   white-space: nowrap;
 }
-.doc-table tbody td { padding: 11px 14px; border-bottom: 1px solid var(--hairline); color: var(--text-dim); vertical-align: top; line-height: 1.5; }
+/* An identifier is one word, and a table is not prose: a word is never
+   split to fit a column. `white-space: nowrap` alone is not enough — it
+   stops the line breaking at spaces, but `overflow-wrap` still breaks
+   inside the word. Both have to say no, and the column then takes the
+   width its longest word needs.
+   A slash belongs to the word before it: a folder reference is one word,
+   slash and all, so `Character/` never leaves its slash on the next
+   line. */
+.doc-table tbody td { padding: 11px 14px; border-bottom: 1px solid var(--hairline); color: var(--text-dim); vertical-align: top; line-height: 1.5; overflow-wrap: normal; }
 .doc-table tbody tr:last-child td { border-bottom: none; }
-.doc-table tbody td:first-child { color: var(--text); font-weight: 500; }
+.doc-table .doc-inline-code { white-space: nowrap; overflow-wrap: normal; }
+/* The first column is a label column, and a label is never split. */
+.doc-table tbody td:first-child { color: var(--text); font-weight: 500; min-width: 8em; }
 
 /* ── Code ──────────────────────────────────────────────────────── */
 .doc-code {
@@ -405,7 +428,10 @@
 .doc-codex .doc-rail { width: 250px; flex: 0 0 250px; }
 .doc-codex .doc-column { flex: 1 1 auto; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .doc-codex .doc-viewport { padding: 0 40px 90px; }
-.doc-codex .doc-body { max-width: 760px; margin: 0 auto; }
+/* The body is wider than the text. The paragraphs keep their own reading
+   measure inside it; the tables get the rest, because a table that has to
+   wrap its own headings is a table nobody can read. */
+.doc-codex .doc-body { max-width: 1400px; margin: 0 auto; }
 
 /* ── No scrollbar ────────────────────────────────────────────────
    The dot rail replaces it: it says where the reader is in the
