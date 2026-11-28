@@ -31,8 +31,9 @@ export interface ContextUsage {
 // One entry per turn, the newest first.
 export interface DshProcessRow {
   id: string; kind: 'reasoning' | 'tool'; at: string
-  /** The thinking, for a reasoning row. */
-  text?: string
+  /** The thinking, for a reasoning row, and the one line of it that says what
+   * the step was thinking about. */
+  text?: string; preview?: string
   /** The tool's name, category and one line of what it was asked to do. */
   name?: string; category?: string; detail?: string
   status?: 'running' | 'completed' | 'failed'
@@ -41,7 +42,9 @@ export interface DshProcessTurn {
   turn: number; status: 'working' | 'done'; step: number; at: string
   rows: DshProcessRow[]
   counts: { category: string; count: number }[]
-  /** What it is doing right now. */
+  /** The category of the tool in flight, if one is. */
+  running: string | null
+  /** The last line of the panel: what is happening now. */
   now: string
 }
 export interface DshProcess { turns: DshProcessTurn[] }

@@ -77,21 +77,51 @@ harness's map, taken from `dsh-client-ui-chat`'s `process-activity`:
 
 So a summary reads the way the harness's own chat reads: `read 2 · commands 1`.
 
+## Where the harness's own chat lives
+
+Its source is in the app's `app.asar`, under
+`/dsh/node_modules/@deepseek-ai/dsh-client-ui-chat/`. The files that matter
+for the look of the chat:
+
+| file | what it holds |
+| --- | --- |
+| `src/client/conversation-nodes/README.md` | the rules of the chat: how a turn folds, what a group is, what is visible when |
+| `src/client/conversation-nodes/process-activity.ts` | the categories, the live detail, and the running/preparing states |
+| `src/client/conversation-nodes/turn-process.ts` | the control that owns a turn's process |
+| `src/client/conversation-nodes/turn-tail.ts` | the completed-turn footer: facts at the end of a turn |
+
+The asar is readable with a small script: the header is a JSON index at
+offset 16, and a file's bytes sit at `8 + readUInt32LE(4) + offset`. Name the
+helper `.cjs` — a `package.json` with `"type": "module"` up the tree makes a
+`.js` helper an ES module and `module.exports` disappears.
+
 ## The panel
 
 `src/desktop/DshProcess.tsx`, drawn in the conversation column above the
-composer.
+composer. It follows the harness's own chat:
 
-- While the agent works, the panel is open: the newest thinking is open, the
-  tools are one row each with their state (running, completed, failed), and
-  the header counts the categories.
-- When the turn ends, the panel folds into a `<details>`, in the manner of the
+- **The last line is the live detail.** The harness's `processActivity` puts
+  the running tool's category and its one line there, and when no tool is in
+  flight it falls back to the last paragraph of the running reasoning. This
+  panel does the same, and says **Done** when the turn has ended.
+- **The working state is on that last line**, not on the head of the box. The
+  head carries the counts and nothing else.
+- **The thinking folds** to one line that says what the step was thinking
+  about - the last paragraph, in the harness's own terms. Opened, it is the
+  whole of it: the thinking is not cut short. A real turn's thinking runs to
+  about two hundred thousand characters across its steps, and the largest
+  single block seen in a real session was sixty-eight thousand.
+- **The tools are one row each**, with the one line that says what they were
+  asked to do, and their state.
+- **The counts are in the harness's order**: the busiest category first, ties
+  by first use.
+- When the turn ends the panel folds into a `<details>`, in the manner of the
   existing `conversation-activity` block.
-- The last two turns travel; each carries thirty tools, six steps of thinking
-  and four thousand characters of thinking. The full text stays in the log.
 
-The reasoning and the tool details are **plain text**, never Markdown: they
-are the model's own words, and nothing in them should be read as markup.
+The last two turns travel; each carries thirty tools and six steps of
+thinking. The reasoning and the tool details are **plain text**, never
+Markdown: they are the model's own words, and nothing in them should be read
+as markup.
 
 ## Tests
 

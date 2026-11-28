@@ -159,12 +159,14 @@ const TOOL_CATEGORIES = {
 const DETAIL_KEYS = ['title', 'description', 'objective', 'task', 'task_name', 'name', 'question', 'questions', 'prompt', 'message', 'command', 'cmd', 'queries', 'query', 'pattern', 'url', 'uri', 'file_path', 'path', 'target', 'action', 'status'];
 
 // How much of the story travels to the window: two turns, thirty tools and six
-// steps of thinking each, and four thousand characters of thinking per turn.
-// The full text stays on disk in the log; this is what the chat needs to show.
+// steps of thinking each. The thinking is not cut short - a real turn's whole
+// thinking runs to a couple of hundred thousand characters - and the full text
+// stays on disk in the log either way.
 const PROCESS_TURNS = 2;
 const PROCESS_ROWS = 30;
 const PROCESS_THINKING = 6;
-const PROCESS_REASONING = 4000;
+const PROCESS_REASONING = 200000;
+const PROCESS_BLOCK = 100000;
 const DETAIL_LIMIT = 160;
 
 /** The category a tool belongs to, in the harness's terms. */
@@ -196,6 +198,16 @@ export function toolDetail(args) {
 }
 
 /**
+ * One line of what a step was thinking about: its last paragraph, in the
+ * harness's own terms. It is the line the panel shows for the thinking, where
+ * the whole of it is one click away.
+ */
+export function thinkingPreview(text) {
+  const paragraphs = String(text || '').replaceAll('**', '').split(/\r?\n[\t ]*\r?\n/);
+  return oneLine(paragraphs.filter(part => part.trim()).pop() || '', DETAIL_LIMIT);
+}
+
+/**
  * The work behind the chat, read off the same log the chat itself is read
  * from. One entry per turn: the thinking it wrote, the tools it called, what
  * each tool answered, and what it is doing right now.
@@ -222,7 +234,7 @@ export function processFrom(records) {
       for (const block of data.message?.content || []) {
         if (block?.type !== 'reasoning') continue;
         const text = String(block.text || '').trim();
-        if (text) current.rows.push({ id: `r-${current.turn}-${current.rows.length}`, kind: 'reasoning', at, text: text.slice(0, PROCESS_REASONING) });
+        if (text) current.rows.push({ id: `r-${current.turn}-${current.rows.length}`, kind: 'reasoning', at, text: text.slice(0, PROCESS_BLOCK), preview: thinkingPreview(text) });
       }
       continue;
     }
@@ -249,8 +261,9 @@ export function processFrom(records) {
     for (let index = thinking.length - 1; index >= 0; index -= 1) {
       const row = thinking[index];
       if (budget <= 0) break;
-      if (row.text.length > budget) { row.text = row.text.slice(0, budget); budget = 0; }
-      else budget -= row.text.length;
+      const room = Math.min(budget, PROCESS_BLOCK);
+      if (row.text.length > room) row.text = row.text.slice(0, room);
+      budget -= row.text.length;
       kept.unshift(row);
     }
     const keptThinking = new Set(kept);
@@ -262,11 +275,18 @@ export function processFrom(records) {
       if (found) found.count += 1;
       else counts.push({ category: row.category, count: 1 });
     }
+    // The harness's own order: the busiest category first, ties by first use.
+    counts.sort((left, right) => right.count - left.count);
+    // The live line, in the harness's shape: what is running, and the one
+    // line that says what it is doing. With no tool in flight the model is the
+    // one working, and the last thing it thought is the closest thing to a
+    // live detail the SDK profile carries.
     const running = [...rows].reverse().find(row => row.kind === 'tool' && row.status === 'running');
-    // What it is doing right now. A tool in flight says so in its own row, so
-    // the line is only for the times between them: the model is working.
-    const now = running ? '' : (turn.status === 'working' ? 'Thinking' : '');
-    return { turn: turn.turn, status: turn.status, step: turn.step, at: turn.at, rows, counts, now };
+    const thought = [...rows].reverse().find(row => row.kind === 'reasoning');
+    const now = turn.status !== 'working' ? ''
+      : running ? `${running.category} — ${running.detail || running.name}`
+        : `thinking${thought?.preview ? ` — ${thought.preview}` : ''}`;
+    return { turn: turn.turn, status: turn.status, step: turn.step, at: turn.at, rows, counts, running: running?.category || null, now };
   }) };
 }
 

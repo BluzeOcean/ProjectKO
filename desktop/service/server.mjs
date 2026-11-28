@@ -238,10 +238,12 @@ export async function createService({ repo, uiDir, stateDir, token = secret(), n
   });
   // The work behind a chat: what the harness is thinking and calling. It goes
   // to the window watching that chat, on the same road as the terminal bytes.
+  // A window that is behind skips this one: the process is a snapshot, and the
+  // next push carries the newer state.
   sessions.on('dsh-process', payload => {
     for (const ws of clients) {
       if (ws.sessionId !== payload.id) continue;
-      if (ws.bufferedAmount > 2 * 1024 * 1024) { ws.close(1013, 'Reconnect to restore the terminal screen'); continue; }
+      if (ws.bufferedAmount > 2 * 1024 * 1024) continue;
       send(ws, 'dsh-process', payload);
     }
   });

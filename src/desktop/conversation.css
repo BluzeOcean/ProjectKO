@@ -109,18 +109,23 @@
    only: the text keeps its colour and its weight. */
 ::highlight(read-aloud){background-color:color-mix(in srgb,var(--pink) 26%,transparent);border-radius:3px}
 
-/* The work behind a harness chat: what it is thinking and calling. While the
-   agent works the panel is open and the thinking is plain to read; when the
-   turn ends it folds, and the older turns keep their own folds. */
+/* The work behind a harness chat: what it is thinking and calling. The
+   harness's own chat puts the live detail on the last line and folds the work
+   away above it, so this does the same. The rows sit in the box, the thinking
+   folds to one line that says what the step was thinking about, and the last
+   line says whether the turn is running or done - and stays in sight while
+   the work above it is read. */
 .dsh-process{margin:0 0 18px;font-size:11px;color:var(--text-dim)}
-.dsh-process-turn{margin:0 0 10px;padding:9px 12px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent);border-radius:9px}
+.dsh-process-turn{margin:0 0 10px;border:1px solid color-mix(in srgb,var(--text) 12%,transparent);border-radius:9px;background:color-mix(in srgb,var(--text) 2%,transparent)}
 .dsh-process-turn.is-live{border-color:color-mix(in srgb,var(--pink) 22%,transparent)}
-.dsh-process-turn>header,.dsh-process-turn>summary{display:flex;align-items:center;gap:9px;cursor:pointer;font-weight:600;color:var(--text)}
-.dsh-process-label{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);font-weight:600}
-.dsh-process-live{display:inline-flex;align-items:center;gap:6px;font-size:10px;color:var(--green);font-weight:400}
-.dsh-process-live i{width:6px;height:6px;border-radius:50%;background:var(--green);animation:conversation-pulse 1.2s ease-in-out infinite}
+.dsh-process-turn>summary{display:block;cursor:pointer;list-style:none}
+.dsh-process-turn>summary::-webkit-details-marker{display:none}
+.dsh-process-head{display:flex;align-items:center;gap:9px;padding:8px 12px 6px}
+.dsh-process-head>svg{flex-shrink:0;color:var(--text-muted);transition:transform .15s}
+.dsh-process-turn[open]>summary .dsh-process-head>svg{transform:rotate(90deg)}
+.dsh-process-label{flex-shrink:0;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);font-weight:600}
 .dsh-process-counts{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--text-dim);font-weight:400}
-.dsh-process-rows{margin-top:8px}
+.dsh-process-rows{padding:0 12px 2px}
 .dsh-process-tool{display:flex;align-items:center;gap:8px;padding:2px 0;color:var(--text-dim)}
 .dsh-process-tool svg{flex-shrink:0;color:var(--text-dim)}
 .dsh-process-tool-name{flex-shrink:0;font-family:var(--font-mono);font-size:11px;color:var(--text)}
@@ -128,9 +133,14 @@
 .dsh-process-tool small{flex-shrink:0;font-size:9.5px;text-transform:uppercase;letter-spacing:.3px}
 .dsh-process-tool.running small{color:var(--amber)}
 .dsh-process-tool.failed small,.dsh-process-tool.failed .dsh-process-tool-name{color:var(--red)}
-.dsh-process-thinking{margin:0 0 6px}
-.dsh-process-thinking>summary{cursor:pointer;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);font-weight:600}
-.dsh-process-thinking-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);margin-bottom:4px;font-weight:600}
-.dsh-process-thinking p{margin:0;padding:8px 10px;border-left:2px solid color-mix(in srgb,var(--pink) 34%,transparent);background:color-mix(in srgb,var(--text) 3%,transparent);border-radius:0 7px 7px 0;font-size:11.5px;line-height:1.6;color:var(--text);white-space:pre-wrap;overflow-wrap:anywhere}
-.dsh-process-now{display:flex;align-items:center;gap:8px;margin:8px 0 0;font-size:10.5px;color:var(--text-dim)}
-.dsh-process-now i{flex-shrink:0;width:5px;height:5px;border-radius:50%;background:var(--pink)}
+.dsh-process-thinking{margin:0 0 4px}
+.dsh-process-thinking>summary{display:flex;align-items:center;gap:8px;cursor:pointer;padding:2px 0;list-style:none}
+.dsh-process-thinking>summary::-webkit-details-marker{display:none}
+.dsh-process-thinking>summary>svg{flex-shrink:0;color:var(--text-muted);transition:transform .15s}
+.dsh-process-thinking[open]>summary>svg{transform:rotate(90deg)}
+.dsh-process-thinking-label{flex-shrink:0;font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-dim);font-weight:600}
+.dsh-process-preview{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--text-muted);font-style:italic}
+.dsh-process-thinking p{margin:4px 0 6px;padding:8px 10px;border-left:2px solid color-mix(in srgb,var(--pink) 34%,transparent);background:color-mix(in srgb,var(--text) 3%,transparent);border-radius:0 7px 7px 0;font-size:11.5px;line-height:1.6;color:var(--text);white-space:pre-wrap;overflow-wrap:anywhere}
+.dsh-process-status{position:sticky;bottom:0;display:flex;align-items:center;gap:8px;margin:6px 0 0;padding:6px 12px;border-top:1px solid color-mix(in srgb,var(--text) 10%,transparent);background:var(--bg);font-size:10.5px;color:var(--text-dim)}
+.dsh-process-status i{flex-shrink:0;width:6px;height:6px;border-radius:50%;background:var(--pink);animation:conversation-pulse 1.2s ease-in-out infinite}
+.dsh-process-status b{color:var(--green);font-weight:600}

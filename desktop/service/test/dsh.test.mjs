@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isPeak, messagesFrom, priceUsage, processFrom, toolCategory, toolDetail, usageFrom } from '../dsh.mjs';
+import { isPeak, messagesFrom, priceUsage, processFrom, thinkingPreview, toolCategory, toolDetail, usageFrom } from '../dsh.mjs';
 
 // The harness reports inputTokens as the uncached part of the prompt and puts
 // cache reads beside it, so the two are priced apart.
@@ -131,15 +131,45 @@ test('the summary counts the tools by category, in the harness\'s words', () => 
   assert.deepEqual(turns[0].rows.filter(row => row.kind === 'tool').map(row => row.category), ['read', 'commands']);
 });
 
-test('the panel says what is happening right now', () => {
-  // A tool in flight says what it is doing in its own row, so the line is
-  // only for the times between them.
-  assert.equal(processFrom(turn).turns[0].now, '');
-  // With no tool in flight the model is the one working.
-  assert.equal(processFrom(turn.slice(0, 3)).turns[0].now, 'Thinking');
+test('the busiest category comes first, as the harness orders them', () => {
+  const records = [{ at, event: { type: 'turn/start', data: { turn: 1 } } }];
+  for (const [index, name] of ['read', 'read', 'read', 'pwsh', 'pwsh', 'grep'].entries()) {
+    records.push({ at, event: { type: 'tool/call', data: { turn: 1, callId: `c${index}`, name, arguments: '{}' } } });
+  }
+  const { turns } = processFrom(records);
+  assert.deepEqual(turns[0].counts, [{ category: 'read', count: 3 }, { category: 'commands', count: 2 }, { category: 'search', count: 1 }]);
+});
+
+test('the last line says what is happening now', () => {
+  // A tool in flight: its category and the one line that says what it is doing.
+  const busy = processFrom(turn).turns[0];
+  assert.equal(busy.now, 'commands — Get-ChildItem V:/Vault');
+  assert.equal(busy.running, 'commands');
+  // With no tool in flight the model is the one working, and the last thing it
+  // thought is the closest thing to a live detail the SDK profile carries.
+  const thinking = processFrom(turn.slice(0, 3)).turns[0];
+  assert.equal(thinking.now, 'thinking — The user says pre-warm. Let me read the module docs first.');
+  assert.equal(thinking.running, null);
   // And when the turn is over, there is nothing to say.
   const over = processFrom([...turn, { at, event: { type: 'turn/end', data: { turn: 1, reason: 'completed' } } }]);
   assert.equal(over.turns[0].now, '');
+  assert.equal(over.turns[0].status, 'done');
+});
+
+test('the thinking is not cut short', () => {
+  const long = 'x'.repeat(90000);
+  const { turns } = processFrom([
+    { at, event: { type: 'turn/start', data: { turn: 1 } } },
+    { at, event: { type: 'assistant/message', data: { turn: 1, message: { content: [{ type: 'reasoning', text: long }] } } } },
+  ]);
+  assert.equal(turns[0].rows[0].text.length, 90000, 'the thinking travels whole');
+});
+
+test('the thinking folds to one line of what it was about', () => {
+  assert.equal(thinkingPreview('First thought.\n\nThe last thought, in one line.'), 'The last thought, in one line.');
+  assert.equal(thinkingPreview('Only one paragraph.'), 'Only one paragraph.');
+  assert.equal(thinkingPreview('**bold** stays plain'), 'bold stays plain');
+  assert.equal(thinkingPreview(''), '');
 });
 
 test('a turn that ended is done, and the next turn is the one that counts', () => {
@@ -152,7 +182,7 @@ test('a turn that ended is done, and the next turn is the one that counts', () =
   assert.equal(turns[1].status, 'done');
 });
 
-test('the process travels bounded: two turns, thirty tools, four thousand characters of thinking', () => {
+test('the process travels bounded: two turns, thirty tools, and the thinking whole', () => {
   const many = [];
   for (let turnNumber = 1; turnNumber <= 4; turnNumber += 1) {
     many.push({ at, event: { type: 'turn/start', data: { turn: turnNumber } } });
@@ -167,7 +197,7 @@ test('the process travels bounded: two turns, thirty tools, four thousand charac
   // A burst of tools never pushes the thinking out of the panel.
   const thinking = turns[0].rows.filter(row => row.kind === 'reasoning');
   assert.equal(thinking.length, 1);
-  assert.equal(thinking[0].text.length, 4000, 'the thinking is cut to four thousand characters');
+  assert.equal(thinking[0].text.length, 9000, 'the thinking is not cut short');
 });
 
 test('a tool the harness does not know is still a tool', () => {
