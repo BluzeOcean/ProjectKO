@@ -60,6 +60,12 @@ title, creation date, last updated date and pages. A page carries its own tags a
 tabs, and the page id is the page's folder name. `sample: true` is reserved for
 starter examples; ordinary work uses normal archiving behavior.
 
+A page's title is the topic on its own, with **no `Page` suffix** — `Game Design`,
+`Sound`, `Asset Prep`, `Studio Board`, not `Game Design Page`. The page picker
+already shows every entry as a page, so the suffix only adds clutter, and it
+wraps titles onto a second line. The rule applies to new pages and to renames of
+existing ones.
+
 A board is deleted through the app, not by hand: the bin beside "Open board"
 takes it out of the registry and sends its folder to the system trash. Delete
 boards that way so the registry and the files stay in step. Keep a board's

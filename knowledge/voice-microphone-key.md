@@ -1,6 +1,6 @@
 # The microphone key
 
-Status: verified 2026-11-20 on v0.6.4.
+Status: verified 2026-11-20 on v0.6.4; the control moved again on 2026-11-28.
 
 The microphone and the conversation are two different accounts, and only one of
 them needs a key.
@@ -26,15 +26,20 @@ microphone, but nothing about the conversation needed it, and the banner was
 displayed as a fault of the whole feature. It also asked for microphone
 permission that could not be used for anything.
 
-## Where the nose lives
+## Where the microphone lives
 
-The nose **starts** the microphone; the bubble beside it only **opens** the
-conversation that the microphone produces. Chatspace has its own dictation
-(the Toxic chord and the microphone in the composer), so on 2026-11-24 the nose
-moved out of the Chatspace header and into Vaultspace alone, where the voice
-conversation is started. The Chatspace header keeps the conversation toggle,
-and the button that opens Vaultspace carries the pink mark that used to sit
-in the header.
+The microphone **starts** the voice conversation; the conversation itself is
+the text one. Chatspace has its own dictation (the Toxic chord and the
+microphone in the composer), so on 2026-11-24 the control moved out of the
+Chatspace header and into Vaultspace alone, where the voice conversation is
+started.
+
+On 2026-11-28 the foot of the window changed again. The pink mark with the
+expanding "Talk to Mr.KO" label - the nose - is gone. There is **one** round
+button at the foot of the window now, the chat bubble, and pressing it opens
+the conversation. The microphone is a button in that conversation's own head,
+so the window carries one control instead of two and nothing has to pull out
+of the footer to be reached. Chatspace has no microphone button at all.
 
 The Chatspace and Vaultspace are two windows of one app, so the voice is still
 reachable from either side - but the control lives in one place.

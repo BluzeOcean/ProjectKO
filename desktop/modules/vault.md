@@ -68,6 +68,9 @@ edit it when you register new work, and you must keep its shape:
 - \`folder\` is a plain folder name inside the Vault, never a path. It keeps the
   \`YYYY-MM-DD_slug\` form.
 - A page's folder is its \`id\`, so a page id is also a folder name.
+- A page's \`title\` is the topic on its own, with **no \`Page\` suffix** — \`Game
+  Design\`, \`Sound\`, \`Asset Prep\`, not \`Game Design Page\`. The page grid already
+  shows every entry as a page, so the suffix is clutter and it wraps the title.
 - A tab's \`path\` is **relative to the board's folder**. A tab document lives under
   its page's folder (\`<page>/<tab>.tab.json\`); an existing report keeps the path it
   was written with, so every relative link beside it still resolves.

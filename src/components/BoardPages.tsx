@@ -109,7 +109,7 @@ export default function BoardPages({ board }: { board: Board }) {
     image: page.icon ? pageUrl(board.folder, page.id, page.icon) : undefined,
     tags: page.tags,
   }))
-  const tabs = board.pages.reduce((total, page) => total + page.tabs.length, 0)
+  const tabs = shown.reduce((total, page) => total + page.tabs.length, 0)
 
   return <TileDeck
     bannerTitle={board.title}
@@ -119,6 +119,7 @@ export default function BoardPages({ board }: { board: Board }) {
     activeTag={activeTag}
     onTag={setActiveTag}
     stageLabel="Pages"
+    stageFacts={<>· {tabs} tab{tabs === 1 ? '' : 's'}</>}
     tiles={tiles}
     emptyText={board.pages.length ? 'No page carries this tag.' : 'No page yet. A page is a folder for one topic - make the first one.'}
     note={note}
@@ -127,6 +128,5 @@ export default function BoardPages({ board }: { board: Board }) {
       if (!page) return <p className="deck-empty">No page to describe.</p>
       return <PageInspector key={board.id + '/' + page.id} board={board} page={page} onDeleted={value => setNote(<><b>{value.title}</b> deleted. Its folder went with it.</>)} />
     }}
-    status={<><b>{board.pages.length}</b> page{board.pages.length === 1 ? '' : 's'} · <b>{tabs}</b> tab{tabs === 1 ? '' : 's'}</>}
   />
 }

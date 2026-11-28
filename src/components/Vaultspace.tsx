@@ -157,7 +157,7 @@ export default function Vaultspace({
     }
   })
 
-  const pages = boards.reduce((total, board) => total + board.pages.length, 0)
+  const pages = shown.reduce((total, board) => total + board.pages.length, 0)
 
   return <TileDeck
     bannerTitle="Vaultspace"
@@ -177,6 +177,7 @@ export default function Vaultspace({
       </button>
     ) : undefined}
     stageLabel={archiveOpen ? 'Archive' : 'Boards'}
+    stageFacts={<>· {pages} page{pages === 1 ? '' : 's'}</>}
     tiles={tiles}
     emptyText={boards.length ? 'No board carries this tag.' : 'Nothing here yet. New work will appear as boards, sir.'}
     searching={searching}
@@ -194,6 +195,5 @@ export default function Vaultspace({
         onNote={setNote}
       />
     }}
-    status={<><b>{boards.length}</b> board{boards.length === 1 ? '' : 's'} · <b>{pages}</b> page{pages === 1 ? '' : 's'}</>}
   />
 }

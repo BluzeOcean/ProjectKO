@@ -86,7 +86,7 @@ html[data-workspace-theme] :is(.voice-welcome>span,.caption.user,.caption>span,.
 html[data-workspace-theme] :is(.voice-settings select,.voice-compose button){background:var(--surface-2);color:var(--pink);border-color:var(--hairline-strong)}
 html[data-workspace-theme] :is(.voice-panel header,.voice-settings,.voice-compose,.voice-tabs,.mak-exchange,.activity-item){border-color:var(--hairline)}
 html[data-workspace-theme] .voice-tabs>button.selected{color:var(--pink);border-color:var(--pink)}
-html[data-workspace-theme] .voice-caption-toggle{color:var(--pink)!important;background:var(--surface-solid);border-color:var(--hairline-strong)}
+html[data-workspace-theme] .voice-caption-toggle{color:var(--pink)!important;background:var(--surface-solid);border-color:color-mix(in srgb,var(--pink) 34%,transparent)}
 html[data-workspace-theme] .desktop-error{background:var(--surface-solid);color:var(--red);border-color:var(--red)}
 
 /* Semantic surfaces cover both independent windows and every named palette. */

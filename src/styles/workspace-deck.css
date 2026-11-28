@@ -196,8 +196,9 @@
   flex-direction: column;
   overflow-y: auto;
   /* The foot of the stage clears the voice dock, which floats over the
-     bottom-left corner of the window. */
-  padding: 28px 34px 84px;
+     bottom-left corner of the window. It is one button, so it asks for
+     one button's worth of room and no more. */
+  padding: 28px 34px 64px;
 }
 .deck-stage-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
 .deck-label {
@@ -207,21 +208,11 @@
   color: var(--text-muted);
 }
 .deck-stage-count { font-size: 10.5px; color: var(--text-muted); }
+/* The rest of the level's facts, on the head with the count: "· 11 tabs". */
+.deck-stage-facts { font-size: 10.5px; color: var(--text-muted); }
 .deck-stage-note { font-size: 10.5px; color: var(--text-muted); }
 .deck-offline { font-size: 10.5px; color: var(--red); }
 .deck-empty { margin-top: 40px; font-size: 12.5px; color: var(--text-muted); }
-
-/* ── The bottom band: the workspace's own facts ──────────────── */
-/* About the boards, not about what is inside them. It sits at the
-   foot of the stage, so the room above it stays deliberate. */
-.deck-status {
-  margin-top: auto;
-  padding-top: 14px;
-  border-top: 1px solid var(--hairline);
-  font-size: 10.5px;
-  color: var(--text-muted);
-}
-.deck-status b { color: var(--text-dim); font-weight: 500; }
 
 /* ── The inspector: a thin column that holds facts, not cards ─── */
 /* The column takes a share of the deck rather than a fixed 400px, so the

@@ -18,7 +18,9 @@
 5. Make every image clickable and downloadable. Videos need native controls.
    Keep source links near claims and label historical model runs as historical.
 6. Update the registry's `updated` date after meaningful changes. Preserve the
-   original `created` date. Do not mark personal work `sample: true`.
+   original `created` date. Do not mark personal work `sample: true`. A page's
+   title is the topic on its own, with no `Page` suffix — `Game Design`, `Sound`,
+   `Asset Prep`.
 7. Open every changed tab at wide and narrow widths, test links and media,
    then report the outcome. A built installer is not an installed update.
 

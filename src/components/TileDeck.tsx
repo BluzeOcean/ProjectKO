@@ -8,6 +8,10 @@ import '../styles/workspace-deck.css'
  *
  * The caller supplies the tiles, the tag vocabulary and the inspector, because
  * a board and a page do not carry the same facts.
+ *
+ * The counts live on the head of the wall - the level, how many are on screen,
+ * and what is inside them. There is no band at the foot of the stage: the same
+ * number twice, in two places, is noise.
  */
 
 export interface Tile {
@@ -32,6 +36,8 @@ export interface TileDeckProps {
   onTag: (tag: string) => void
   bannerBottomExtra?: ReactNode
   stageLabel: string
+  /** The rest of the level's facts, beside the count: "· 11 tabs". */
+  stageFacts?: ReactNode
   tiles: Tile[]
   emptyText: string
   searching?: boolean
@@ -39,12 +45,11 @@ export interface TileDeckProps {
   offline?: boolean
   inspector: (focus: Tile | null) => ReactNode
   note?: ReactNode
-  status: ReactNode
 }
 
 export default function TileDeck({
   bannerTitle, bannerRight, tags, labels, activeTag, onTag, bannerBottomExtra,
-  stageLabel, tiles, emptyText, searching, query, offline, inspector, note, status,
+  stageLabel, stageFacts, tiles, emptyText, searching, query, offline, inspector, note,
 }: TileDeckProps) {
   const [focusId, setFocusId] = useState<string | null>(null)
   // The tile being described. A tag that hides the focused tile hands the
@@ -89,6 +94,7 @@ export default function TileDeck({
           <div className="deck-stage-head">
             <span className="deck-label">{stageLabel}</span>
             <span className="deck-stage-count">{tiles.length}</span>
+            {stageFacts && <span className="deck-stage-facts">{stageFacts}</span>}
             {searching && <span className="deck-stage-note">matching “{query?.trim()}”</span>}
             {offline && <span className="deck-offline">workspace.json unreachable</span>}
           </div>
@@ -118,7 +124,6 @@ export default function TileDeck({
 
           {!tiles.length && <p className="deck-empty">{emptyText}</p>}
           {note && <p className="deck-note">{note}</p>}
-          <div className="deck-status">{status}</div>
         </section>
 
         <aside className="deck-inspector" aria-label="Details" data-card={focus?.id}>

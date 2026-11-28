@@ -46,16 +46,17 @@ try {
     // The interface mounts after the bootstrap; the conversation toggle is in
     // both windows, so it is the marker that the app is there.
     await page.getByRole('button', { name: 'Toggle conversation' }).waitFor();
-    // Chatspace has no nose: the conversation is opened there, not started.
-    const nose = page.getByRole('button', { name: 'Talk to Mr.KO', exact: true });
-    if (await nose.count()) {
-      await nose.click();
+    // The microphone lives inside the conversation, so the conversation is
+    // opened first. Chatspace has no microphone of its own.
+    await page.getByRole('button', { name: 'Toggle conversation' }).click();
+    const mic = page.getByRole('button', { name: 'Talk to Mr.KO', exact: true });
+    if (await mic.count()) {
+      await mic.click();
       await page.getByRole('alert').filter({ hasText: 'Permission denied' }).waitFor();
       await page.getByRole('button', { name: 'Dismiss voice error' }).click();
       assert.equal(await page.getByRole('alert').count(), 0);
     } else {
       assert.equal(surface, 'chats');
-      await page.getByRole('button', { name: 'Toggle conversation' }).click();
     }
     assert.equal(await page.evaluate(() => window.fixtureMicRequests), surface === 'chats' ? 0 : 1);
     const input = page.getByRole('textbox', { name: 'Message Project KO' });
@@ -102,17 +103,18 @@ try {
     await attached.getByRole('button', { name: /^Remove / }).click();
     assert.equal(await attached.count(), 0);
   }
-  // Without a key the microphone cannot work. The nose must say so quietly and
-  // never open the microphone.
+  // Without a key the microphone cannot work. The microphone must say so
+  // quietly and never open the microphone.
   delete process.env.OPENAI_API_KEY;
   await page.goto(service.urls.workspace);
+  await page.getByRole('button', { name: 'Toggle conversation' }).click();
   await page.getByRole('button', { name: 'Talk to Mr.KO', exact: true }).click();
   await page.locator('.voice-note').waitFor();
   assert.equal(await page.evaluate(() => window.fixtureMicRequests), 0);
   assert.equal(await page.getByRole('alert').count(), 0);
   assert.deepEqual(errors, []);
   console.log('Talk to Mr.KO: newline/send/IME, dismissable errors, image paste/upload/preview/removal, retry and hidden-panel draft retention passed in both windows.');
-  console.log('Without a microphone key the nose shows a muted note, opens no microphone and raises no error.');
+  console.log('Without a microphone key the microphone shows a muted note, opens no microphone and raises no error.');
   console.log(`Screenshots: ${repo}`);
 } finally {
   if (originalKey === undefined) delete process.env.OPENAI_API_KEY; else process.env.OPENAI_API_KEY = originalKey;
