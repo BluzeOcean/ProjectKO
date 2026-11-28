@@ -4,8 +4,10 @@
 //
 // The DeepSeek Harness reports what it is thinking and calling as it works.
 // The service tails the harness's event log and projects that into a process;
-// the window shows it. This check drives the whole road: a log on disk, the
-// tailer, the projection, the websocket, and the panel that draws it.
+// the window puts it in front of the answer its turn produced, as a hamburger:
+// a bar on top, a bar at the foot, and the work between them. This check
+// drives the whole road: a log on disk, the tailer, the projection, the
+// websocket, and the block that draws it.
 import { expect } from '@playwright/test';
 import assert from 'node:assert/strict';
 import { appendFile, mkdir, mkdtemp, writeFile } from 'node:fs/promises';
@@ -45,8 +47,13 @@ try {
   for (const session of service.sessions.items.values()) {
     await service.sessions.hydrate(session); service.sessions.launch(session);
   }
+  // The answer of turn 1. The window must put the work of turn 1 in front of
+  // it, not at the foot of the conversation.
   service.mobile.transcripts.read = async () => ({
-    supported: true, messages: [{ id: 'user-1', role: 'user', text: 'Pre-warm the project.', at: '2026-11-28T08:00:00Z' }], activity: [],
+    supported: true, messages: [
+      { id: 'user-1', role: 'user', text: 'Pre-warm the project.', at: '2026-11-28T08:00:00Z' },
+      { id: 'reply-1', role: 'assistant', text: 'The project is warm.', at: '2026-11-28T08:00:30Z', turn: 1 },
+    ], activity: [],
   });
   // The tailer the service uses for a harness chat, pointed at the log.
   const session = service.sessions.get(id);
@@ -61,32 +68,34 @@ try {
   await page.getByRole('button', { name: 'Conversation', exact: true }).click();
   await expect(page.getByRole('combobox', { name: 'Message DeepSeek Harness' })).toBeVisible();
 
-  /* ── The harness thinks: the panel opens with the thinking in it ──────── */
+  /* ── The harness works: the block opens with the thinking in it ──────── */
   await write([
     { type: 'turn/start', data: { turn: 1 } },
     { type: 'step/start', data: { turn: 1, step: 1 } },
-    { type: 'assistant/message', data: { turn: 1, step: 1, message: { content: [
+    { type: 'assistant/message', data: { turn: 1, step: 1, usage: { outputTokens: 1200 }, message: { content: [
       { type: 'reasoning', text: 'The user says pre-warm.\n\nLet me read the module docs first.' },
       { type: 'text', text: 'Reading now.' },
     ] } } },
   ]);
 
-  const panel = page.locator('.dsh-process');
-  await expect(panel).toBeVisible();
-  await expect(panel.locator('.dsh-process-turn.is-live')).toHaveCount(1);
-  // The thinking folds to one line that says what the step was thinking about.
-  const thinking = panel.locator('.dsh-process-thinking');
-  await expect(thinking).toHaveCount(1);
-  await expect(thinking.locator('.dsh-process-preview')).toHaveText('Let me read the module docs first.');
-  // Folded, the thinking is there but not on the screen.
-  await expect(thinking.locator('p')).toHaveCount(1);
-  await expect(thinking.locator('p')).not.toBeVisible();
-  // The last line of the box is the status: the model is the one working.
-  await expect(panel.locator('.dsh-process-status')).toHaveText('thinking — Let me read the module docs first.');
-  // Open it, and the whole of it is there.
-  await thinking.locator('summary').click();
-  await expect(thinking.locator('p')).toBeVisible();
-  await expect(thinking.locator('p')).toHaveText('The user says pre-warm.\n\nLet me read the module docs first.');
+  const block = page.locator('.dsh-process');
+  await expect(block).toHaveCount(1);
+  // The work of the turn stands in front of the answer that turn produced.
+  const order = await page.locator('.conversation-column').evaluate(node => [...node.children].map(child => child.className));
+  assert.ok(order.findIndex(name => name.includes('dsh-process')) < order.findIndex(name => name.includes('conversation-message assistant')), 'the work comes before the answer: ' + order.join(' | '));
+
+  // A turn that is working opens itself: the top bar and the foot bar, and
+  // the work between them.
+  const top = block.locator('.dsh-process-bar.top');
+  const bottom = block.locator('.dsh-process-bar.bottom');
+  await expect(top).toHaveAttribute('aria-expanded', 'true');
+  await expect(bottom).toHaveCount(1);
+  await expect(block.locator('.dsh-process-thinking p')).toHaveText('The user says pre-warm.\n\nLet me read the module docs first.');
+  // Both bars carry the status.
+  await expect(top.locator('.dsh-process-state')).toHaveText(/running · 1.2K tok/);
+  await expect(bottom.locator('.dsh-process-state-text')).toContainText('running · 1.2K tok');
+  await expect(bottom.locator('.dsh-process-now')).toHaveText('thinking — Let me read the module docs first.');
+  await page.screenshot({ path: path.join(repo, 'working.png') });
 
   /* ── The tools fire: each one shows what it was asked to do ──────────── */
   await write([
@@ -94,7 +103,7 @@ try {
     { type: 'tool/result', data: { turn: 1, step: 1, message: { toolCallId: 'c1', isError: false, content: [] } } },
     { type: 'tool/call', data: { turn: 1, step: 1, callId: 'c2', name: 'pwsh', arguments: '{"command":"Get-ChildItem V:/Vault"}' } },
   ]);
-  const tools = panel.locator('.dsh-process-tool');
+  const tools = block.locator('.dsh-process-tool');
   await expect(tools).toHaveCount(2);
   await expect(tools.nth(0).locator('.dsh-process-tool-name')).toHaveText('read');
   await expect(tools.nth(0).locator('.dsh-process-tool-detail')).toHaveText('V:/modules/rules.md');
@@ -103,25 +112,33 @@ try {
   await expect(tools.nth(0).locator('small')).toHaveText('completed');
   await expect(tools.nth(1).locator('small')).toHaveText('running');
   // The summary counts the tools the way the harness counts them.
-  await expect(panel.locator('.dsh-process-counts')).toHaveText('read 1 · commands 1');
-  // The last line now names the tool in flight, not the thinking.
-  await expect(panel.locator('.dsh-process-status')).toHaveText('commands — Get-ChildItem V:/Vault');
-  await page.screenshot({ path: path.join(repo, 'working.png') });
+  await expect(top.locator('.dsh-process-counts')).toHaveText('read 1 · commands 1');
+  // The foot bar now names the tool in flight.
+  await expect(bottom.locator('.dsh-process-now')).toHaveText('commands — Get-ChildItem V:/Vault');
 
-  /* ── The turn ends: the panel folds, and the work stays readable ─────── */
+  /* ── The hamburger: either bar folds the work into one row ───────────── */
+  await bottom.click();
+  await expect(top).toHaveAttribute('aria-expanded', 'false');
+  await expect(bottom).toHaveCount(0);
+  await expect(block.locator('.dsh-process-body')).toHaveCount(0);
+  await expect(top.locator('.dsh-process-state')).toHaveText('running · 1.2K tok');
+  await page.screenshot({ path: path.join(repo, 'folded.png') });
+  await top.click();
+  await expect(bottom).toHaveCount(1);
+  await expect(block.locator('.dsh-process-body')).toHaveCount(1);
+
+  /* ── The turn ends: the block folds itself, and says it is done ──────── */
   await write([
     { type: 'tool/result', data: { turn: 1, step: 1, message: { toolCallId: 'c2', isError: false, content: [] } } },
     { type: 'turn/end', data: { turn: 1, reason: 'completed' } },
   ]);
-  await expect(panel.locator('.dsh-process-turn.is-live')).toHaveCount(0);
-  await expect(panel.locator('details.dsh-process-turn')).toHaveCount(1);
-  // Folded, but the work is still there to open.
-  await expect(panel.locator('.dsh-process-tool')).toHaveCount(2);
-  await panel.locator('details.dsh-process-turn > summary').click();
-  await expect(panel.locator('.dsh-process-tool').first()).toBeVisible();
-  // And the last line says the turn is done.
-  await expect(panel.locator('.dsh-process-status')).toHaveText('✓ Done');
-  await page.screenshot({ path: path.join(repo, 'folded.png') });
+  await expect(top).toHaveAttribute('aria-expanded', 'false');
+  await expect(top.locator('.dsh-process-state')).toHaveText('✓ done · 1.2K tok');
+  // Open it, and the foot bar says how long it took.
+  await top.click();
+  await expect(bottom.locator('.dsh-process-state-text')).toContainText('done · 1.2K tok');
+  await expect(block.locator('.dsh-process-tool')).toHaveCount(2);
+  await expect(block.locator('.dsh-process-thinking p')).toBeVisible();
 
   /* ── A window that arrives late still sees the work ──────────────────── */
   // The harness is idle now and writes nothing, so the process is not pushed
@@ -131,10 +148,13 @@ try {
   await late.goto(service.urls.chats);
   await late.getByRole('button', { name: 'Conversation', exact: true }).click();
   await expect(late.locator('.dsh-process')).toBeVisible();
-  await expect(late.locator('.dsh-process-tool')).toHaveCount(2);
-  await expect(late.locator('.dsh-process-preview')).toHaveText('Let me read the module docs first.');
+  // The turn is done, so the block is folded: one row that says so.
+  await expect(late.locator('.dsh-process-bar.top')).toHaveAttribute('aria-expanded', 'false');
+  await expect(late.locator('.dsh-process-state')).toHaveText('✓ done · 1.2K tok');
+  await late.locator('.dsh-process-bar.top').click();
+  await expect(late.locator('.dsh-process-thinking p')).toHaveText('The user says pre-warm.\n\nLet me read the module docs first.');
   await late.close();
 
   assert.deepEqual(errors, []);
-  console.log('DSH process passed: the harness\'s thinking and tools reach the window while it works, the thinking folds to one line, and the last line says whether the turn is running or done. Screenshots: ' + repo);
+  console.log('DSH process passed: the work stands in front of the answer, and the block is a hamburger whose two bars both carry the status. Screenshots: ' + repo);
 } finally { await browser?.close(); await service.close(); }

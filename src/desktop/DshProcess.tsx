@@ -1,12 +1,21 @@
+import { useState } from 'react'
 import { Icon } from './Icons'
-import type { DshProcess as DshProcessValue, DshProcessRow, DshProcessTurn } from './types'
+import type { DshProcessRow, DshProcessTurn } from './types'
 
 // The work behind a harness chat: what it is thinking, and what it is calling.
 //
-// The harness's own chat puts the live detail on the last line and folds the
-// work away above it. This does the same: the rows sit in the box, the thinking
-// folds down to one line that says what the step was thinking about, and the
-// last line always says whether the turn is running or done.
+// It is a hamburger: a bar on top, a bar at the foot, and the work between
+// them. Clicking either bar folds the whole thing into one row. Both bars
+// carry the status, so the fold is never a blank - the reader can always see
+// whether the turn is running or done, and what it has spent.
+
+const tokens = (value: number) => value >= 1_000_000 ? `${(value / 1_000_000).toFixed(1)}M` : value >= 1000 ? `${(value / 1000).toFixed(1)}K` : String(value)
+
+const duration = (ms: number) => {
+  if (ms <= 0) return ''
+  if (ms >= 60000) return `${Math.floor(ms / 60000)}m ${String(Math.round((ms % 60000) / 1000)).padStart(2, '0')}s`
+  return `${Math.max(1, Math.round(ms / 1000))}s`
+}
 
 // The tool's state, in the icons the chat already uses for a tool's state.
 const toolIcon = (status?: string) => status === 'running' ? 'terminal' : status === 'failed' ? 'bell' : 'history'
@@ -20,57 +29,39 @@ function Tool({ row }: { row: DshProcessRow }) {
   </div>
 }
 
-// The thinking of one step. It folds to a single line that says what the step
-// was thinking about; opened, it is the whole of it, unabridged.
-function Thinking({ row }: { row: DshProcessRow }) {
-  return <details className="dsh-process-thinking">
-    <summary><Icon name="chevron" size={11} /><span className="dsh-process-thinking-label">Thinking</span>{row.preview && <span className="dsh-process-preview">{row.preview}</span>}</summary>
-    <p>{row.text}</p>
-  </details>
-}
-
-function Rows({ turn }: { turn: DshProcessTurn }) {
-  return <div className="dsh-process-rows">{turn.rows.map(row => row.kind === 'reasoning'
-    ? <Thinking key={row.id} row={row} />
+function Body({ block }: { block: DshProcessTurn }) {
+  return <div className="dsh-process-body">{block.rows.map(row => row.kind === 'reasoning'
+    ? <div key={row.id} className="dsh-process-thinking">
+        <span className="dsh-process-thinking-label">Step {row.step}</span>
+        <p>{row.text}</p>
+      </div>
     : <Tool key={row.id} row={row} />)}</div>
 }
 
-// The last line of the box: what is happening now, and whether it is running
-// or done. It stays in sight while the work above it is read.
-function Status({ turn }: { turn: DshProcessTurn }) {
-  if (turn.status === 'done') return <p className="dsh-process-status done"><b>✓</b> Done</p>
-  return <p className="dsh-process-status working"><i />{turn.now || 'thinking'}</p>
-}
-
-function Counts({ turn }: { turn: DshProcessTurn }) {
-  if (!turn.counts.length) return null
-  return <span className="dsh-process-counts">{turn.counts.map(item => `${item.category} ${item.count}`).join(' · ')}</span>
-}
-
-function Head({ turn, chevron }: { turn: DshProcessTurn; chevron?: boolean }) {
-  return <span className="dsh-process-head">
-    {chevron && <Icon name="chevron" size={12} />}
-    <span className="dsh-process-label">Process</span>
-    <Counts turn={turn} />
-  </span>
-}
-
-export default function DshProcess({ process, working }: { process: DshProcessValue; working: boolean }) {
-  const turns = process?.turns || []
-  if (!turns.length) return null
-  return <div className="dsh-process">
-    {turns.map((turn, index) => {
-      const live = index === 0 && turn.status === 'working' && working
-      if (live) return <div key={turn.turn} className="dsh-process-turn is-live">
-        <Head turn={turn} />
-        <Rows turn={turn} />
-        <Status turn={turn} />
-      </div>
-      return <details key={turn.turn} className="dsh-process-turn">
-        <summary><Head turn={turn} chevron /></summary>
-        <Rows turn={turn} />
-        <Status turn={turn} />
-      </details>
-    })}
+export default function DshProcess({ block }: { block: DshProcessTurn }) {
+  // A turn that is working opens itself: that is the one the reader is
+  // watching. A finished turn folds away, and the reader opens it if they
+  // want the work behind the answer.
+  const [open, setOpen] = useState(block.status === 'working')
+  const toggle = () => setOpen(value => !value)
+  const live = block.status === 'working'
+  const spent = tokens(block.tokens)
+  const took = duration(block.duration)
+  return <div className={`dsh-process ${live ? 'is-live' : ''}`}>
+    <button type="button" className="dsh-process-bar top" onClick={toggle} aria-expanded={open}>
+      <Icon name="chevron" size={12} />
+      <span className="dsh-process-label">Process</span>
+      {!!block.counts.length && <span className="dsh-process-counts">{block.counts.map(item => `${item.category} ${item.count}`).join(' · ')}</span>}
+      <span className={`dsh-process-state ${live ? 'running' : 'done'}`}>{live ? <i /> : <b>✓</b>} {live ? 'running' : 'done'}{block.tokens > 0 && ` · ${spent} tok`}</span>
+    </button>
+    {open && <>
+      <Body block={block} />
+      <button type="button" className="dsh-process-bar bottom" onClick={toggle} aria-expanded={open}>
+        <span className="dsh-process-state-text">
+          {live ? 'running' : 'done'}{block.tokens > 0 && ` · ${spent} tok`}{took && ` · ${took}`}{block.steps > 0 && ` · ${block.steps} step${block.steps === 1 ? '' : 's'}`}
+        </span>
+        {block.now && <span className="dsh-process-now">{block.now}</span>}
+      </button>
+    </>}
   </div>
 }

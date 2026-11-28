@@ -102,6 +102,8 @@ export function usageFrom(records) {
 }
 
 // The chat's own transcript: what was asked, what was answered, what ran.
+// The work of each turn travels with it, so the window can put the thinking
+// in front of the answer it produced.
 export function messagesFrom(records) {
   const messages = [], activity = [];
   for (const record of records) {
@@ -112,7 +114,8 @@ export function messagesFrom(records) {
       messages.push({ id: `u-${messages.length}`, role: 'user', text: String(event.data?.text || ''), at });
     } else if (event.type === 'assistant/message') {
       const text = (event.data?.message?.content || []).filter(block => block.type === 'text').map(block => block.text).join('\n').trim();
-      if (text) messages.push({ id: `a-${messages.length}`, role: 'assistant', text, at });
+      const turn = event.data?.turn;
+      if (text) messages.push({ id: `a-${messages.length}`, role: 'assistant', text, at, ...(turn === undefined ? {} : { turn }) });
     } else if (event.type === 'tool/call') {
       activity.push({ id: String(event.data?.callId || `t-${activity.length}`), name: String(event.data?.name || 'tool'), status: 'running', at });
     } else if (event.type === 'tool/result') {
@@ -121,7 +124,7 @@ export function messagesFrom(records) {
       if (entry) entry.status = event.data?.message?.isError ? 'failed' : 'completed';
     }
   }
-  return { messages, activity: activity.slice(-12) };
+  return { messages, activity: activity.slice(-12), processes: processFrom(records).turns };
 }
 
 export function readRecords(file) {
@@ -158,11 +161,11 @@ const TOOL_CATEGORIES = {
 // The argument worth showing for a tool, in the harness's order of preference.
 const DETAIL_KEYS = ['title', 'description', 'objective', 'task', 'task_name', 'name', 'question', 'questions', 'prompt', 'message', 'command', 'cmd', 'queries', 'query', 'pattern', 'url', 'uri', 'file_path', 'path', 'target', 'action', 'status'];
 
-// How much of the story travels to the window: two turns, thirty tools and six
-// steps of thinking each. The thinking is not cut short - a real turn's whole
-// thinking runs to a couple of hundred thousand characters - and the full text
-// stays on disk in the log either way.
-const PROCESS_TURNS = 2;
+// How much of the story travels to the window: three turns, thirty tools and
+// six steps of thinking each. The thinking is not cut short - a real turn's
+// whole thinking runs to a couple of hundred thousand characters - and the
+// full text stays on disk in the log either way.
+const PROCESS_TURNS = 3;
 const PROCESS_ROWS = 30;
 const PROCESS_THINKING = 6;
 const PROCESS_REASONING = 200000;
@@ -221,20 +224,23 @@ export function processFrom(records) {
     const data = event.data || {};
     const at = record.at || new Date().toISOString();
     if (event.type === 'turn/start') {
-      current = { turn: Number(data.turn) || turns.length + 1, status: 'working', step: 0, rows: [], calls: new Map(), at };
+      current = { turn: Number(data.turn) || turns.length + 1, status: 'working', step: 0, steps: 0, tokens: 0, rows: [], calls: new Map(), at, endedAt: '' };
       turns.push(current);
       continue;
     }
     if (!current) continue;
-    if (event.type === 'step/start') { current.step = Number(data.step) || current.step; continue; }
-    if (event.type === 'turn/end') { current.status = 'done'; continue; }
+    if (event.type === 'step/start') { current.step = Number(data.step) || current.step; current.steps += 1; continue; }
+    if (event.type === 'turn/end') { current.status = 'done'; current.endedAt = at; continue; }
     if (event.type === 'assistant/message') {
+      // What the model made of this step. The reasoning is counted with the
+      // answer: DeepSeek reports no bucket of its own for it.
+      current.tokens += Number(data.usage?.outputTokens || 0);
       // The thinking of this step, whole. It is the one thing the harness
       // reports that the answer itself never says.
       for (const block of data.message?.content || []) {
         if (block?.type !== 'reasoning') continue;
         const text = String(block.text || '').trim();
-        if (text) current.rows.push({ id: `r-${current.turn}-${current.rows.length}`, kind: 'reasoning', at, text: text.slice(0, PROCESS_BLOCK), preview: thinkingPreview(text) });
+        if (text) current.rows.push({ id: `r-${current.turn}-${current.rows.length}`, kind: 'reasoning', at, step: current.step, text: text.slice(0, PROCESS_BLOCK), preview: thinkingPreview(text) });
       }
       continue;
     }
@@ -286,7 +292,10 @@ export function processFrom(records) {
     const now = turn.status !== 'working' ? ''
       : running ? `${running.category} — ${running.detail || running.name}`
         : `thinking${thought?.preview ? ` — ${thought.preview}` : ''}`;
-    return { turn: turn.turn, status: turn.status, step: turn.step, at: turn.at, rows, counts, running: running?.category || null, now };
+    // How long the turn took, from the moment it opened to the moment it
+    // closed. A turn still running has no end yet.
+    const duration = turn.endedAt ? Math.max(0, new Date(turn.endedAt).getTime() - new Date(turn.at).getTime()) : 0;
+    return { turn: turn.turn, status: turn.status, step: turn.step, steps: turn.steps, tokens: turn.tokens, duration, at: turn.at, rows, counts, running: running?.category || null, now };
   }) };
 }
 

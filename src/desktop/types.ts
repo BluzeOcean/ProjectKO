@@ -31,6 +31,8 @@ export interface ContextUsage {
 // One entry per turn, the newest first.
 export interface DshProcessRow {
   id: string; kind: 'reasoning' | 'tool'; at: string
+  /** The step the thinking belongs to, for a reasoning row. */
+  step?: number
   /** The thinking, for a reasoning row, and the one line of it that says what
    * the step was thinking about. */
   text?: string; preview?: string
@@ -39,12 +41,17 @@ export interface DshProcessRow {
   status?: 'running' | 'completed' | 'failed'
 }
 export interface DshProcessTurn {
-  turn: number; status: 'working' | 'done'; step: number; at: string
+  turn: number; status: 'working' | 'done'; step: number; steps: number; at: string
+  /** What the model made of the turn. DeepSeek counts the reasoning with the
+   * answer: it reports no bucket of its own for it. */
+  tokens: number
+  /** How long the turn took, in milliseconds. Zero while it is still running. */
+  duration: number
   rows: DshProcessRow[]
   counts: { category: string; count: number }[]
   /** The category of the tool in flight, if one is. */
   running: string | null
-  /** The last line of the panel: what is happening now. */
+  /** The last line of the block: what is happening now. */
   now: string
 }
 export interface DshProcess { turns: DshProcessTurn[] }

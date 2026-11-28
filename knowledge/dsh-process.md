@@ -95,47 +95,63 @@ offset 16, and a file's bytes sit at `8 + readUInt32LE(4) + offset`. Name the
 helper `.cjs` — a `package.json` with `"type": "module"` up the tree makes a
 `.js` helper an ES module and `module.exports` disappears.
 
-## The panel
+## The block
 
-`src/desktop/DshProcess.tsx`, drawn in the conversation column above the
-composer. It follows the harness's own chat:
+`src/desktop/DshProcess.tsx`. It stands **in front of the answer** its turn
+produced - the thinking, then the report - and it is a **hamburger**: a bar on
+top, a bar at the foot, and the work between them. Clicking either bar folds
+the whole thing into one row, and **both bars carry the status**, so the fold
+is never a blank.
 
-- **The last line is the live detail.** The harness's `processActivity` puts
-  the running tool's category and its one line there, and when no tool is in
-  flight it falls back to the last paragraph of the running reasoning. This
-  panel does the same, and says **Done** when the turn has ended.
-- **The working state is on that last line**, not on the head of the box. The
-  head carries the counts and nothing else.
-- **The thinking folds** to one line that says what the step was thinking
-  about - the last paragraph, in the harness's own terms. Opened, it is the
-  whole of it: the thinking is not cut short. A real turn's thinking runs to
-  about two hundred thousand characters across its steps, and the largest
-  single block seen in a real session was sixty-eight thousand.
+- The **top bar** carries the counts and the state: `running · 1.2K tok` while
+  the turn works, `✓ done · 12.3K tok` when it is done.
+- The **foot bar** carries the same state and what it cost: the tokens, how
+  long the turn took, how many steps it took, and the live detail - the
+  running tool's category and its one line, or the model's last thought when
+  no tool is in flight. That is the harness's own shape: its
+  `processActivity` falls back to the running reasoning's last paragraph when
+  nothing is running.
+- **The thinking folds** to the whole text of the step, unabridged, under a
+  `Step N` mark. It is not cut short: a real turn's thinking runs to about two
+  hundred thousand characters across its steps, and the largest single block
+  seen in a real session was sixty-eight thousand.
 - **The tools are one row each**, with the one line that says what they were
   asked to do, and their state.
 - **The counts are in the harness's order**: the busiest category first, ties
   by first use.
-- When the turn ends the panel folds into a `<details>`, in the manner of the
-  existing `conversation-activity` block.
+- A turn that is **working opens itself** - that is the one the reader is
+  watching. A finished turn folds away, and the reader opens it if they want
+  the work behind the answer.
 
-The last two turns travel; each carries thirty tools and six steps of
-thinking. The reasoning and the tool details are **plain text**, never
-Markdown: they are the model's own words, and nothing in them should be read
-as markup.
+The tokens are the turn's **output** tokens: DeepSeek reports no bucket of
+its own for the reasoning, so it is counted with the answer.
+
+The reasoning and the tool details are **plain text**, never Markdown: they
+are the model's own words, and nothing in them should be read as markup.
+
+## Where the block goes
+
+The transcript carries the work of each turn, and each answer says which turn
+it belongs to. The window puts the work of a turn in front of that turn's
+first answer, and a turn whose answer has not arrived yet keeps its work at
+the end, where the eye already is. The service pushes the turn that is
+running, and that push is the fresher of the two.
+
+The last three turns travel; each carries thirty tools and six steps of
+thinking.
 
 ## Tests
 
 - `desktop/service/test/dsh.test.mjs` — the projector, over the harness's own
   event shapes.
 - `desktop/service/test/dsh-process-ui.mjs` — the whole road: a log on disk,
-  the tailer, the projection, the websocket, and the panel. It seeds a log
+  the tailer, the projection, the websocket, and the block. It seeds a log
   and lets the service's own watcher read it.
 
 ## Still to do
 
-- The finished turns' processes are not kept in the chat's history; the panel
-  holds the last two. Folding each turn's process into the transcript, the way
-  the harness's own chat does, is the natural next step.
+- The finished turns' work is in the chat's history now, but only the last
+  three turns carry their thinking. Older turns show their answer alone.
 - The terminal view still prints only the reply and the tool names
   (`dsh-bridge.mjs`, `show()`).
 - The other agents have structured events too — Codex accumulates deltas it

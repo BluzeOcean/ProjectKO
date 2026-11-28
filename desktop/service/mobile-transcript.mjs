@@ -344,7 +344,7 @@ export class ConversationTranscripts {
       const key = info.size + ':' + info.mtimeMs;
       if (cached?.key === key) return cached.value;
       const records = readRecords(session.dshLog);
-      const { messages, activity } = messagesFrom(records);
+      const { messages, activity, processes } = messagesFrom(records);
       // The log is the chat's record whether or not anything is in it yet, so
       // an empty harness chat reads as "ready", never as "unreadable".
       const value = {
@@ -352,6 +352,7 @@ export class ConversationTranscripts {
         messages: messages.slice(-100),
         userMessages: messages.filter(item => item.role === 'user').length,
         activity,
+        processes,
         model: usageFrom(records).model,
         truncated: false,
       };

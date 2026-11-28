@@ -182,7 +182,35 @@ test('a turn that ended is done, and the next turn is the one that counts', () =
   assert.equal(turns[1].status, 'done');
 });
 
-test('the process travels bounded: two turns, thirty tools, and the thinking whole', () => {
+test('the bars carry what the turn spent and how long it took', () => {
+  const records = [
+    { at: '2026-11-28T10:00:00.000Z', event: { type: 'turn/start', data: { turn: 1 } } },
+    { at: '2026-11-28T10:00:00.000Z', event: { type: 'step/start', data: { turn: 1, step: 1 } } },
+    { at: '2026-11-28T10:00:05.000Z', event: { type: 'assistant/message', data: { turn: 1, step: 1, usage: { outputTokens: 1200 }, message: { content: [] } } } },
+    { at: '2026-11-28T10:00:06.000Z', event: { type: 'step/start', data: { turn: 1, step: 2 } } },
+    { at: '2026-11-28T10:00:11.000Z', event: { type: 'assistant/message', data: { turn: 1, step: 2, usage: { outputTokens: 900 }, message: { content: [] } } } },
+    { at: '2026-11-28T10:00:12.000Z', event: { type: 'turn/end', data: { turn: 1, reason: 'completed' } } },
+  ];
+  const { turns } = processFrom(records);
+  assert.equal(turns[0].tokens, 2100, 'the output of the turn, which is where the reasoning is counted');
+  assert.equal(turns[0].duration, 12000, 'twelve seconds, from the turn opening to the turn closing');
+  assert.equal(turns[0].steps, 2);
+  // A turn still running has spent nothing and has no end yet.
+  assert.equal(processFrom(records.slice(0, 3)).turns[0].duration, 0);
+});
+
+test('the transcript says which turn each answer belongs to', () => {
+  const { messages, processes } = messagesFrom([
+    { at, event: { type: 'query', data: { text: 'warm it up' } } },
+    { at, event: { type: 'turn/start', data: { turn: 7 } } },
+    { at, event: { type: 'assistant/message', data: { turn: 7, message: { content: [{ type: 'text', text: 'Warm.' }] } } } },
+  ]);
+  assert.equal(messages[0].turn, undefined, 'what the owner said belongs to no turn');
+  assert.equal(messages[1].turn, 7, 'the answer knows the turn it belongs to');
+  assert.equal(processes[0].turn, 7, 'and the work of that turn travels with the transcript');
+});
+
+test('the process travels bounded: three turns, thirty tools, and the thinking whole', () => {
   const many = [];
   for (let turnNumber = 1; turnNumber <= 4; turnNumber += 1) {
     many.push({ at, event: { type: 'turn/start', data: { turn: turnNumber } } });
@@ -190,7 +218,7 @@ test('the process travels bounded: two turns, thirty tools, and the thinking who
     for (let call = 0; call < 40; call += 1) many.push({ at, event: { type: 'tool/call', data: { turn: turnNumber, callId: `t${turnNumber}-${call}`, name: 'read', arguments: '{}' } } });
   }
   const { turns } = processFrom(many);
-  assert.equal(turns.length, 2, 'only the last two turns travel');
+  assert.equal(turns.length, 3, 'only the last three turns travel');
   assert.equal(turns[0].turn, 4, 'the newest turn comes first');
   const tools = turns[0].rows.filter(row => row.kind === 'tool');
   assert.equal(tools.length, 30, 'thirty tools a turn');

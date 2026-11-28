@@ -1,8 +1,8 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { api, onServiceEvent, pickFiles, reportError, speakDesktopText, uploadImage, useDesktop } from './client'
-import type { ChatSession, DshProcess as DshProcessValue, SystemEventsMode } from './types'
+import type { ChatSession, DshProcess as DshProcessValue, DshProcessTurn, SystemEventsMode } from './types'
 import SystemEvent, { type SystemEventData } from '../mobile/SystemEvent'
 import BackgroundWork, { type BackgroundCommand, type WorkingAgent } from '../mobile/BackgroundWork'
 import { AgentLogo, Icon } from './Icons'
@@ -21,8 +21,8 @@ import './conversation.css'
 import { keepUrl, linkTarget } from '../components/messageLinks'
 
 interface ToolActivity { id: string; name: string; status: 'running' | 'completed' | 'failed'; at: string }
-interface Message { id: string; role: 'user' | 'assistant' | 'system'; text: string; at: string; images?: ConversationImage[]; event?: SystemEventData }
-interface Transcript { supported: boolean; messages: Message[]; activity?: ToolActivity[]; agents?: WorkingAgent[]; commands?: BackgroundCommand[]; truncated?: boolean; prompt?: TerminalPromptData | null }
+interface Message { id: string; role: 'user' | 'assistant' | 'system'; text: string; at: string; turn?: number; images?: ConversationImage[]; event?: SystemEventData }
+interface Transcript { supported: boolean; messages: Message[]; activity?: ToolActivity[]; agents?: WorkingAgent[]; commands?: BackgroundCommand[]; processes?: DshProcessTurn[]; truncated?: boolean; prompt?: TerminalPromptData | null }
 interface Draft { text: string; paths: string[] }
 
 const time = (value: string) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -124,7 +124,7 @@ export default function Conversation({ session, connected, agentLabel, openTermi
     document.addEventListener('visibilitychange', visible)
     return () => { stopped = true; clearInterval(timer); document.removeEventListener('visibilitychange', visible) }
   }, [session.id, session.completionVersion, session.activity])
-  const messages = transcript?.messages || []
+  const messages = useMemo(() => transcript?.messages || [], [transcript?.messages])
   let readStart = 0
   for (let index = 0; index < messages.length; index++) if (messages[index].role === 'user') readStart = index
   const latestUserId = messages[readStart]?.role === 'user' ? messages[readStart].id : null
@@ -132,6 +132,30 @@ export default function Conversation({ session, connected, agentLabel, openTermi
   // the CLI appended (a finished background task, a slash command's output) is
   // not a reply and must not take the button away.
   const barAt = lastReplyIndex(messages, readStart)
+  // The work of each turn, and where it belongs: in front of the answer that
+  // turn produced. The transcript carries the finished turns; the service
+  // pushes the turn that is running, which is the fresher of the two.
+  const blocks = useMemo(() => {
+    const map = new Map<number, DshProcessTurn>()
+    for (const block of transcript?.processes || []) map.set(block.turn, block)
+    if (dshProcess?.id === session.id) for (const turn of dshProcess.process.turns) map.set(turn.turn, turn)
+    return map
+  }, [transcript?.processes, dshProcess, session.id])
+  // The reading order: a turn's work, then its answer. A turn whose answer has
+  // not arrived yet keeps its work at the end, where the eye already is.
+  const entries = useMemo(() => {
+    const list: ({ kind: 'message'; message: Message; index: number } | { kind: 'process'; block: DshProcessTurn })[] = []
+    const waiting = new Map(blocks)
+    messages.forEach((message, index) => {
+      if (message.turn !== undefined && waiting.has(message.turn)) {
+        list.push({ kind: 'process', block: waiting.get(message.turn)! })
+        waiting.delete(message.turn)
+      }
+      list.push({ kind: 'message', message, index })
+    })
+    for (const block of waiting.values()) list.push({ kind: 'process', block })
+    return list
+  }, [messages, blocks])
   useEffect(() => () => stopReading(), [latestUserId, session.id, stopReading])
   // A message rewound from the terminal no longer has an open editor.
   const openEdit = editing && (rewinding || messages.some(message => message.id === editing.id)) ? editing : null
@@ -237,7 +261,10 @@ export default function Conversation({ session, connected, agentLabel, openTermi
     <div className="conversation-scroll" ref={scroller} onScroll={() => { const box = scroller.current; if (!box) return; const nearEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 120; follow.current = nearEnd; setShowJump(!nearEnd) }}>
       <div className="conversation-column">
         {transcript?.truncated && <p className="conversation-note">Showing the latest part of a long conversation. The terminal keeps the full history.</p>}
-        {messages.map((message, index) => message.role === 'system' ? systemEvents !== 'hidden' && message.event && <SystemEvent key={`${message.id}:${systemEvents}`} event={message.event} time={message.at ? time(message.at) : undefined} expanded={systemEvents === 'full'}
+        {entries.map(entry => {
+          if (entry.kind === 'process') return <DshProcess key={`process-${entry.block.turn}-${entry.block.status}`} block={entry.block} />
+          const { message, index } = entry
+          return message.role === 'system' ? systemEvents !== 'hidden' && message.event && <SystemEvent key={`${message.id}:${systemEvents}`} event={message.event} time={message.at ? time(message.at) : undefined} expanded={systemEvents === 'full'}
           components={{ a: ({ href, children }) => <MessageLink href={href} sessionId={session.id}>{children}</MessageLink> }} fileLink={(file, label) => <MessageLink href={file} sessionId={session.id}>{label}</MessageLink>} />
         : <article key={message.id} data-index={index} className={`conversation-message ${message.role}`}>
           <header>{message.role === 'user' ? <span>You</span> : <span className="conversation-agent"><AgentLogo agent={session.agent} size={15} />{agentLabel}</span>}{message.at && <time>{time(message.at)}</time>}{message.role === 'assistant' && message.text.trim() && <CopyButton text={message.text} />}
@@ -261,7 +288,8 @@ export default function Conversation({ session, connected, agentLabel, openTermi
             activeId={speech.activeId} paused={speech.paused} loading={speech.loading} error={speech.error}
             onRead={() => readAloud(message.id)} onStop={speech.stop}
           />}
-        </article>)}
+        </article>
+        })}
         {!messages.length && <div className="conversation-empty">
           <AgentLogo agent={session.agent} size={34} />
           <h2>{!transcript ? 'Loading conversation…' : unreadable ? 'This conversation is in the terminal' : 'Ready when you are'}</h2>
@@ -273,7 +301,6 @@ export default function Conversation({ session, connected, agentLabel, openTermi
         {/* The harness panel carries the same tools, and more, so the old block
             would only say it twice. */}
         {session.agent !== 'dsh' && !!transcript?.activity?.length && <details className="conversation-activity"><summary>Recent tool activity</summary>{transcript.activity.map(item => <div key={item.id}><Icon name={item.status === 'running' ? 'terminal' : item.status === 'failed' ? 'bell' : 'history'} size={13} /><span>{item.name}</span><small>{item.status === 'running' && !running ? 'interrupted' : item.status}{item.at && ` · ${time(item.at)}`}</small></div>)}</details>}
-        {session.agent === 'dsh' && dshProcess?.id === session.id && <DshProcess process={dshProcess.process} working={running} />}
         {transcript?.prompt && <TerminalPrompt prompt={transcript.prompt} answering={answering} onAnswer={choice => void answer(transcript.prompt!, choice)} onOpenTerminal={openTerminal} />}
         {working && <p className="conversation-working"><i />{agentLabel} is working…</p>}
         {!transcript?.prompt && (session.activity === 'waiting' || stale || readError) && <div className="conversation-notice" role="status"><p>{readError || (session.activity === 'waiting' ? `${agentLabel} is waiting for you in the terminal.` : 'No new messages for a while. A permission prompt or question may be waiting in the terminal.')}</p><button type="button" onClick={openTerminal}><Icon name="terminal" size={14} />Open terminal</button></div>}
